@@ -2,7 +2,7 @@
 
 🦠 This repository is the open source website for NeuroNav (_NeuroScope 2.0_), a continuation of the [neuroscope.io](https://neuroscope.io/) project [Nanda, 2022].
 
-## Data available
+## Data available per neuron
 
 - NeuroScope's max activating dataset examples on 25 models
 - Neuron2Graph's neuron activation model, along with the explanation power
@@ -21,6 +21,45 @@ Future data ideas:
 - Subnetwork analysis: Identification of groups of neurons that often activate together.
 - Topological role: Information about the neuron's role in the overall network topology (e.g., hub, peripheral, connector, etc.) using weighted directional network summary statistics methods
 - (?) Logit attribution: How much does this neuron affect the output
+
+## Data available per layer
+
+- Top interesting neurons
+- Links to all neurons
+- Meta data
+
+## Data available per model
+
+- Top interesting neurons by layer
+- Links to all layers
+- Meta data
+
+## JSON response
+
+```
+> print(request.get("https://apartresearch.com/neuronav/api/GPT-2-XL/5/2332").json())
+
+{
+    "model" : "GPT-2 XL",
+    "available" : ["Neuron Graph", "GPT-4 Explanation", "Max Activating Dataset Example"],
+    "layer" : 5,
+    "neuron" : 2332,
+    "metadata" : {
+        ...
+    },
+    "neuroscope" : {
+        ...
+    },
+    "neuron2graph" : {
+        "explanation-score" : 0.56,
+        ...
+    },
+    "GPT-4" {
+        "explanation-score" : 0.43,
+        ...
+    }
+}
+```
 
 ## Models available
 
@@ -52,29 +91,6 @@ Future data ideas:
 | pythia-160m   | Random         | gelu                | The Pile                              | 12     | 3,072             | 36,864        | 84,934,656    |
 | pythia-350m   | Random         | gelu                | The Pile                              | 24     | 4,096             | 98,304        | 301,989,888   |
 
-## JSON response
+## Repo standards
 
-```
-> print(request.get("https://apartresearch.com/neuronav/api/GPT-2-XL/5/2332").json())
-
-{
-    "model" : "GPT-2 XL",
-    "available" : ["Neuron Graph", "GPT-4 Explanation", "Max Activating Dataset Example"],
-    "layer" : 5,
-    "neuron" : 2332,
-    "metadata" : {
-        ...
-    },
-    "neuroscope" : {
-        ...
-    },
-    "neuron2graph" : {
-        "explanation-score" : 0.56,
-        ...
-    },
-    "GPT-4" {
-        "explanation-score" : 0.43,
-        ...
-    }
-}
-```
+We use the [Gitmoji commit standards](gitmoji.dev).
