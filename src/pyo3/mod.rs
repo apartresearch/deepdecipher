@@ -9,7 +9,6 @@ fn start_server() {
 /// A Python module implemented in Rust.
 #[pymodule]
 fn neuronav(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(test, m)?)?;
     m.add_function(wrap_pyfunction!(start_server, m)?)?;
 
     Ok(())
