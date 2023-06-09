@@ -1,5 +1,5 @@
 use crate::server;
-use pyo3::{create_exception, exceptions::PyException, prelude::*};
+use pyo3::prelude::*;
 
 #[pyfunction]
 fn start_server() {
