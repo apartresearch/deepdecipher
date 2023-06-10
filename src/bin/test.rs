@@ -1,3 +1,9 @@
+use std::fs;
+
+use neuronav::data::NeuroscopePage;
+use scraper::Html;
+
+const FLOAT_REGEX: &str = r"(-?\d+(?:\.\d*)?)";
 pub fn main() {
-    neuronav::server::start_server().unwrap();
+    println!("{}", &format!(r"<h4>Max Range: <b>{FLOAT_REGEX}</b>."));
 }

@@ -24,6 +24,9 @@ serde_json = "1.0.96"
 half = { version = "2.2.1", features = ["serde"] }
 postcard = { version = "1.0.4", features = ["alloc"] }
 anyhow = "1.0.71"
+scraper = "0.16.0"
+regex = "1.8.4"
+itertools = "0.10.5"
 
 [features]
 python = ["dep:pyo3", "dep:numpy", "dep:ctrlc"]

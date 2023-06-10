@@ -1,4 +1,4 @@
-mod data;
+pub mod data;
 pub mod server;
 
 #[cfg(feature = "python")]
