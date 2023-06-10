@@ -1,6 +1,12 @@
-use std::{fs, path::Path, str::FromStr};
+use std::{
+    fs::{self, File},
+    io::{self, BufReader, Read, Write},
+    path::Path,
+    str::FromStr,
+};
 
 use anyhow::{bail, Context, Result};
+use flate2::{bufread::DeflateDecoder, write::DeflateEncoder, Compression};
 use itertools::Itertools;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -92,13 +98,25 @@ impl NeuroscopePage {
         )
         .with_context(|| format!("Failed to create directory for '{path:?}'"))?;
         let data = postcard::to_allocvec(&self).context("Failed to serialize neuroscope page.")?;
-        std::fs::write(path, data).context("Failed to write neuroscope page to file.")
+
+        let file =
+            File::create(path).with_context(|| format!("Failed to create file '{path:?}'."))?;
+        let mut encoder = DeflateEncoder::new(file, Compression::default());
+        encoder
+            .write_all(&data)
+            .context("Failed to compress neuroscope page.")
     }
 
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let path = path.as_ref();
-        let data = fs::read(path)
-            .with_context(|| format!("Failed to read neuroscope page from file '{path:?}'."))?;
+        let file = File::open(path).with_context(|| format!("Failed to open file '{path:?}'."))?;
+        let buf_reader = BufReader::new(file);
+        let decoder = DeflateDecoder::new(buf_reader);
+        let data = decoder
+            .bytes()
+            .collect::<io::Result<Vec<u8>>>()
+            .context("Failed to decompress neuroscope page.")?;
+
         postcard::from_bytes(&data)
             .with_context(|| format!("Failed to deserialize neuroscope page from file '{path:?}'."))
     }
