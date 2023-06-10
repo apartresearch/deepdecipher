@@ -33,8 +33,8 @@ where
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NeuroscopePage {
-    neuron_index: u32,
     layer_index: u32,
+    neuron_index: u32,
     texts: Vec<Text>,
 }
 
@@ -42,8 +42,8 @@ impl NeuroscopePage {
     fn from_html_header_and_texts(
         header_html: &str,
         texts: Vec<Text>,
-        neuron_index: u32,
         layer_index: u32,
+        neuron_index: u32,
     ) -> Result<Self> {
         let neuron_index_regex = Regex::new(r"<h2>Neuron (\d+) in Layer (\d+) </h2>")
             .context("Failed to create regex.")?;
@@ -53,10 +53,10 @@ impl NeuroscopePage {
             .at_most_one()
             .expect("Multiple neuron index headers found.") // TODO: Figure out how to anyhow this error.
             .context("Failed to find neuron index header.")?;
-        let html_layer_index = captures[1]
+        let html_layer_index = captures[2]
             .parse::<u32>()
             .context("Failed to parse layer index.")?;
-        let html_neuron_index = captures[2]
+        let html_neuron_index = captures[1]
             .parse::<u32>()
             .context("Failed to parse neuron index.")?;
 
@@ -70,7 +70,7 @@ impl NeuroscopePage {
         })
     }
 
-    pub fn from_html_str(html: &str, neuron_index: u32, layer_index: u32) -> Result<Self> {
+    pub fn from_html_str(html: &str, layer_index: u32, neuron_index: u32) -> Result<Self> {
         let mut sections = html.split("<hr>");
         let header = sections.next().context("Tag &lt;hr&gt; not found.")?;
         let nothing = sections
@@ -87,7 +87,7 @@ impl NeuroscopePage {
             })
             .collect::<Result<Vec<Text>>>()?;
 
-        Self::from_html_header_and_texts(header, texts, neuron_index, layer_index)
+        Self::from_html_header_and_texts(header, texts, layer_index, neuron_index)
     }
 
     pub fn to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {

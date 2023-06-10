@@ -38,9 +38,9 @@ struct PyNeuroscopePage {
 #[pymethods]
 impl PyNeuroscopePage {
     #[new]
-    fn new(html: &str, neuron_index: u32, layer_index: u32) -> PyResult<Self> {
+    fn new(html: &str, layer_index: u32, neuron_index: u32) -> PyResult<Self> {
         Ok(PyNeuroscopePage {
-            object: NeuroscopePage::from_html_str(html, neuron_index, layer_index)
+            object: NeuroscopePage::from_html_str(html, layer_index, neuron_index)
                 .with_context(|| format!("Failed to parse html of neuroscope page for neuron index {neuron_index} on layer {layer_index}."))?,
         })
     }
