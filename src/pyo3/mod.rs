@@ -2,7 +2,7 @@ use crate::{
     data::{NeuronViewerObject, NeuroscopePage},
     server,
 };
-use anyhow::Context;
+use anyhow::{Context, Result};
 use pyo3::prelude::*;
 
 #[pyfunction]
@@ -45,8 +45,26 @@ impl PyNeuroscopePage {
         })
     }
 
-    fn __str__(&self) -> String {
+    fn to_json(&self) -> Result<String> {
+        serde_json::to_string(&self.object).context("Failed to serialize neuroscope page.")
+    }
+
+    fn __repr__(&self) -> String {
         format!("{:?}", self.object)
+    }
+
+    fn to_file(&self, path: &str) -> Result<()> {
+        self.object
+            .to_file(path)
+            .with_context(|| format!("Failed to write neuroscope page to file '{path:?}'."))
+    }
+
+    #[staticmethod]
+    fn from_file(path: &str) -> Result<Self> {
+        Ok(PyNeuroscopePage {
+            object: NeuroscopePage::from_file(path)
+                .with_context(|| format!("Failed to read neuroscope page from file '{path:?}'."))?,
+        })
     }
 }
 
