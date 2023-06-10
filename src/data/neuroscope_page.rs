@@ -1,9 +1,8 @@
-use std::str::FromStr;
+use std::{fs, path::Path, str::FromStr};
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use itertools::Itertools;
 use regex::Regex;
-use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 
 const FLOAT_REGEX: &str = r"-?\d+(?:\.\d*)?";
@@ -67,62 +66,54 @@ impl NeuroscopePage {
 
     pub fn from_html_str(html: &str, neuron_index: u32, layer_index: u32) -> Result<Self> {
         let mut sections = html.split("<hr>");
-        let header = sections.next().context("Tag <hr> not found.")?;
-        let nothing = sections.next().context("Second <hr> tag not found.")?;
-        assert_eq!(nothing, "", "Space between first two <hr> tags not empty.");
+        let header = sections.next().context("Tag &lt;hr&gt; not found.")?;
+        let nothing = sections
+            .next()
+            .context("Second &lt;hr&gt; tag not found.")?;
+        if !nothing.trim().is_empty() {
+            bail!("Space between first two &lt;hr&gt; tags not empty.");
+        }
 
         let texts = sections
-            .map(Text::from_html_str)
+            .enumerate()
+            .map(|(index, html)| {
+                Text::from_html_str(html).with_context(|| format!("Failed to parse text {index}."))
+            })
             .collect::<Result<Vec<Text>>>()?;
 
         Self::from_html_header_and_texts(header, texts, neuron_index, layer_index)
     }
 
-    pub fn from_html(document: Html, neuron_index: u32, layer_index: u32) -> Result<Self> {
-        let index_scraper = Selector::parse("h1+ h2").expect("Invalid selector.");
-        let index_text = document
-            .select(&index_scraper)
-            .next()
-            .context("Neuron index not found.")?
-            .text()
-            .next()
-            .context("No text in neuron index header.")?;
-        let values = index_text
-            .strip_prefix("Neuron ")
-            .context("Neuron index header doesn't start with 'Neuron '")?
-            .split(" in Layer ")
-            .map(|s| s.trim().parse::<u32>())
-            .collect::<Result<Vec<u32>, _>>()
-            .context("Failed to parse neuron index header.")?;
-        if values.len() != 2 {
-            return Err(anyhow::anyhow!(
-                "Neuron index header doesn't contain exactly one ' in Layer '"
-            ));
-        }
+    pub fn to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+        let path = path.as_ref();
+        fs::create_dir_all(
+            path.parent()
+                .with_context(|| format!("Invalid path '{path:?}'"))?,
+        )
+        .with_context(|| format!("Failed to create directory for '{path:?}'"))?;
+        let data = postcard::to_allocvec(&self).context("Failed to serialize neuroscope page.")?;
+        std::fs::write(path, data).context("Failed to write neuroscope page to file.")
+    }
 
-        assert_eq!(values, vec![layer_index, neuron_index,]);
-
-        let text_selector = Selector::parse(".colored-tokens").expect("Invalid selector.");
-        let meta_data_selector = Selector::parse("h4").expect("Invalid selector.");
-
-        let texts = document
-            .select(&text_selector)
-            .map(|text| text.text().next().unwrap().to_string())
-            .collect::<Vec<String>>();
-        println!("{texts:?}");
-
-        todo!()
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let path = path.as_ref();
+        let data = fs::read(path)
+            .with_context(|| format!("Failed to read neuroscope page from file '{path:?}'."))?;
+        postcard::from_bytes(&data)
+            .with_context(|| format!("Failed to deserialize neuroscope page from file '{path:?}'."))
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Text {
-    max_range: f32,
     min_range: f32,
-    max_act: f32,
+    max_range: f32,
     min_act: f32,
+    max_act: f32,
     data_index: u64,
     max_activating_token_index: u32,
+    tokens: Vec<String>,
+    activations: Vec<f32>,
 }
 
 impl Text {
@@ -156,6 +147,38 @@ impl Text {
             "Max Activating Token Index",
         )?;
 
+        let text_regex = Regex::new(r"ColoredTokens,\s*(.*\})\s*\)\s*</script>\s*</details>")
+            .context("Failed to create regex.")?;
+        let text: String = regex(&text_regex, html, "Text")?;
+        let text_json = serde_json::from_str::<serde_json::Value>(&text)
+            .context("Failed to parse text JSON.")?;
+        let tokens = text_json
+            .get("tokens")
+            .context("Failed to get tokens from text JSON.")?
+            .as_array()
+            .context("Tokens JSON is not an array.")?
+            .iter()
+            .map(|token_json| token_json.as_str().context("Token not a string"))
+            .collect::<Result<Vec<_>>>()?;
+        let tokens = tokens.into_iter().map(str::to_owned).collect::<Vec<_>>();
+        let activations = text_json
+            .get("values")
+            .context("Failed to get activations from text JSON.")?
+            .as_array()
+            .context("Activations JSON is not an array.")?
+            .iter()
+            .map(|activation_json| {
+                activation_json
+                    .as_f64()
+                    .context("Activation not a float")
+                    .map(|activation| activation as f32)
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        if tokens.len() != activations.len() {
+            bail!("Tokens and activations have different lengths.")
+        }
+
         Ok(Self {
             max_activating_token_index,
             max_range,
@@ -163,6 +186,8 @@ impl Text {
             max_act,
             min_act,
             data_index,
+            tokens,
+            activations,
         })
     }
 }
