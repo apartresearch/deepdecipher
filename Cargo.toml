@@ -11,7 +11,25 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 
+# Web server
 actix-web = "4.3.1"
+
+# Serialization
+serde = "1.0.164"
+serde_json = "1.0.96"
+postcard = { version = "1.0.4", features = ["alloc"] }
+
+# f16
+half = { version = "2.2.1", features = ["serde"] }
+
+# Error handling
+anyhow = "1.0.71"
+
+# Scraping
+regex = "1.8.4"
+
+# Iterators
+itertools = "0.10.5"
 
 # Interfacing with Python
 pyo3 = { version = "0.18.3", features = ["extension-module", "anyhow"], optional = true }
@@ -19,14 +37,8 @@ numpy = { version = "0.18", optional = true }
 
 # SIGINT handling
 ctrlc = { version = "3.2.5", optional = true }
-serde = "1.0.164"
-serde_json = "1.0.96"
-half = { version = "2.2.1", features = ["serde"] }
-postcard = { version = "1.0.4", features = ["alloc"] }
-anyhow = "1.0.71"
-scraper = "0.16.0"
-regex = "1.8.4"
-itertools = "0.10.5"
+brotli = "3.3.4"
+flate2 = "1.0.26"
 
 [features]
 python = ["dep:pyo3", "dep:numpy", "dep:ctrlc"]
