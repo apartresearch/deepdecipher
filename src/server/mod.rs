@@ -1,6 +1,8 @@
 use std::path::Path;
 
-use actix_web::{get, rt, web, App, HttpServer, Responder};
+use actix_web::{
+    get, http::header::ContentType, rt, web, App, HttpResponse, HttpServer, Responder,
+};
 
 use crate::data::NeuroscopePage;
 
@@ -11,8 +13,13 @@ async fn index(indices: web::Path<(u32, u32)>) -> impl Responder {
         .join("solu-1l")
         .join("neuroscope")
         .join(format!("l{layer_index}n{neuron_index}.postcard",));
-    let page = NeuroscopePage::from_file(path).unwrap();
-    serde_json::to_string(&page).unwrap()
+    match NeuroscopePage::from_file(path) {
+        Ok(page) => HttpResponse::Ok().content_type(ContentType::json()).body(
+            serde_json::to_string(&page)
+                .expect("Failed to serialize page to JSON. This should always be possible."),
+        ),
+        Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
+    }
 }
 
 pub fn start_server() -> std::io::Result<()> {

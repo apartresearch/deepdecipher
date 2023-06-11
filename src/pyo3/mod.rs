@@ -1,13 +1,38 @@
 use crate::{
-    data::{NeuronViewerObject, NeuroscopePage},
+    data::{retrieve, NeuronViewerObject, NeuroscopePage},
     server,
 };
 use anyhow::{Context, Result};
 use pyo3::prelude::*;
+use tokio::runtime::Runtime;
+
+#[pyfunction]
+fn debug() {
+    println!("Hello from Rust!");
+}
 
 #[pyfunction]
 fn start_server() {
     server::start_server().unwrap();
+}
+
+#[pyfunction]
+fn scrape_layer_to_files(
+    data_path: &str,
+    model: &str,
+    layer_index: u32,
+    num_neurons: u32,
+) -> PyResult<()> {
+    println!("Outside of runtime.");
+    Runtime::new()
+        .context("Failed to start async runtime to scrape neuroscope.")?
+        .block_on(async {
+            println!("Scraping layer {layer_index} of model {model} to {data_path}.");
+            retrieve::neuroscope::scrape_layer_to_files(data_path, model, layer_index, num_neurons)
+                .await
+                .context("Failed to scrape layer.")
+        })?;
+    Ok(())
 }
 
 #[pyclass(name = "NeuronViewerObject")]
@@ -71,7 +96,9 @@ impl PyNeuroscopePage {
 /// A Python module implemented in Rust.
 #[pymodule]
 fn neuronav(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(debug, m)?)?;
     m.add_function(wrap_pyfunction!(start_server, m)?)?;
+    m.add_function(wrap_pyfunction!(scrape_layer_to_files, m)?)?;
     m.add_class::<PyNeuronViewerObject>()?;
     m.add_class::<PyNeuroscopePage>()?;
     Ok(())
