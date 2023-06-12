@@ -23,7 +23,6 @@ fn scrape_layer_to_files(
     layer_index: u32,
     num_neurons: u32,
 ) -> PyResult<()> {
-    println!("Outside of runtime.");
     Runtime::new()
         .context("Failed to start async runtime to scrape neuroscope.")?
         .block_on(async {
