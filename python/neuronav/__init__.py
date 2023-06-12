@@ -3,5 +3,4 @@ from .neuronav import (
     start_server,
     scrape_layer_to_files,
     NeuronViewerObject,
-    NeuroscopePage,
 )

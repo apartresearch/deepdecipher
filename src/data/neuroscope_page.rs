@@ -10,6 +10,9 @@ use flate2::{bufread::DeflateDecoder, write::DeflateEncoder, Compression};
 use itertools::Itertools;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
+
+use super::TokenDictionary;
 
 const FLOAT_REGEX: &str = r"-?\d+(?:\.\d*)?";
 
@@ -70,7 +73,12 @@ impl NeuroscopePage {
         })
     }
 
-    pub fn from_html_str(html: &str, layer_index: u32, neuron_index: u32) -> Result<Self> {
+    pub fn from_html_str(
+        html: &str,
+        token_dictionary: &TokenDictionary,
+        layer_index: u32,
+        neuron_index: u32,
+    ) -> Result<Self> {
         let mut sections = html.split("<hr>");
         let header = sections.next().context("Tag &lt;hr&gt; not found.")?;
         let nothing = sections
@@ -83,7 +91,8 @@ impl NeuroscopePage {
         let texts = sections
             .enumerate()
             .map(|(index, html)| {
-                Text::from_html_str(html).with_context(|| format!("Failed to parse text {index}."))
+                Text::from_html_str(html, token_dictionary)
+                    .with_context(|| format!("Failed to parse text {index}."))
             })
             .collect::<Result<Vec<Text>>>()?;
 
@@ -122,6 +131,12 @@ impl NeuroscopePage {
     }
 }
 
+#[derive(Debug, Clone, Error)]
+#[error("Token not in dictionary: '{token}'")]
+struct TokenNotInDictionaryError {
+    token: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Text {
     min_range: f32,
@@ -130,12 +145,12 @@ pub struct Text {
     max_act: f32,
     data_index: u64,
     max_activating_token_index: u32,
-    tokens: Vec<String>,
+    tokens: Vec<u32>,
     activations: Vec<f32>,
 }
 
 impl Text {
-    pub fn from_html_str(html: &str) -> Result<Self> {
+    pub fn from_html_str(html: &str, token_dictionary: &TokenDictionary) -> Result<Self> {
         let max_range_regex = Regex::new(&format!(r"<h4>Max Range: <b>({FLOAT_REGEX})</b>."))
             .context("Failed to create regex.")?;
         let max_range = regex(&max_range_regex, html, "Max Range")?;
@@ -178,7 +193,22 @@ impl Text {
             .iter()
             .map(|token_json| token_json.as_str().context("Token not a string"))
             .collect::<Result<Vec<_>>>()?;
-        let tokens = tokens.into_iter().map(str::to_owned).collect::<Vec<_>>();
+        let tokens = tokens
+            .into_iter()
+            .map(|token| {
+                let token = token
+                    .replace(' ', "Ġ")
+                    .replace('\n', "Ċ")
+                    .replace('\t', "ĉ")
+                    .replace('\r', "č");
+                token_dictionary
+                    .token_index(&token)
+                    .ok_or_else(|| TokenNotInDictionaryError {
+                        token: token.to_string(),
+                    })
+                    .unwrap_or(12343)
+            })
+            .collect::<Vec<_>>();
         let activations = text_json
             .get("values")
             .context("Failed to get activations from text JSON.")?
