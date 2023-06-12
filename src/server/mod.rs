@@ -6,11 +6,12 @@ use actix_web::{
 
 use crate::data::NeuroscopePage;
 
-#[get("/api/solu-1l/neuroscope/{layer_index}/{neuron_index}")]
-async fn index(indices: web::Path<(u32, u32)>) -> impl Responder {
-    let (layer_index, neuron_index) = indices.into_inner();
+#[get("/api/{model}/neuroscope/{layer_index}/{neuron_index}")]
+async fn index(indices: web::Path<(String, u32, u32)>) -> impl Responder {
+    let (model, layer_index, neuron_index) = indices.into_inner();
+    let model = model.as_str();
     let path = Path::new("data")
-        .join("solu-1l")
+        .join(model)
         .join("neuroscope")
         .join(format!("l{layer_index}n{neuron_index}.postcard",));
     match NeuroscopePage::from_file(path) {
