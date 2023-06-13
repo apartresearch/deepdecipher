@@ -94,3 +94,46 @@ Future data ideas:
 ## Repo standards
 
 We use the [Gitmoji commit standards](gitmoji.dev).
+
+## Contributor setup
+This guide will ensure you have the right environment and start a small instance of Neuronav that serves only Neuroscope data on the `solu-1l` model.
+Tested in Windows Subsystem for Linux with Ubuntu 22.04.2 LTS.
+1. Ensure you have a working Python installation (at least version 3.7, tested with version 3.10.7).
+2. Ensure you have a working Rust toolchain (if you can use the `cargo` command it should be fine). 
+   See [here](https://www.rust-lang.org/tools/install) to get one.
+   Any version from the last few years should work.
+   The newest one definitely will.
+3. Clone the repo and move to the root of the repo.
+4. Set up a python environment using `python -m venv .env`.
+5. Activate the environment.
+6. Install the `maturin` package by running `python -m pip install maturin`.
+7. Build the package by running `maturin develop --release`.
+   The package will now be installed in your environment.
+8. Now start python interpreter and run `import neuronav as nrnv`.
+   If this works, neuronav is installed correctly.
+9. Run `nrnv.scrape_layer_to_files("data", "solu-1l", 0, 512)` to scrape the first 512 neurons of the `solu-1l` model from Neuroscope.
+   This will take a while.
+   You can change the model name and number of neurons to scrape if you want.
+   The `data` folder will be created if it doesn't exist.
+10. Exit the Python interpreter and run `python -m neuronav` in the terminal to start the server.
+    It will automatically use the data you scraped in the previous step.
+11. Visit `http://localhost:8080/api/solu-1l/neuroscope/0/9` in the browser and you should see a JSON response with all the Neuroscope information on the 9th neuron of the `solu-1l` model.
+
+### Windows notes
+On Windows, Maturin works less well, but there are work arounds.
+1. Make sure you clone the project into a path with no spaces.
+2. When building with Maturin, if you get the error `Invalid python interpreter version` or `Unsupported Python interpreter`, this is likely because Maturin fails to find your environment's interpreter.
+To fix this, instead of building with `maturin develop`, use `maturin build --release -i py.exe` (maybe replace `py.exe` with e.g. `python3.exe` if that is how you call Python) and then call `python -m pip install .`.
+The `-i` argument tells Maturin the name of the Python interpreter to use.
+
+### M1 notes
+Problems arise when your Python version does not match your machines architecture.
+This can happen on M1 chips, since it is possible to run x86 Python even if the architecture is ARM.
+In this case you can get an error that looks like 
+```
+error[E0463]: can't find crate for `core`
+  |
+  = note: the `x86_64-apple-darwin` target may not be installed
+  = help: consider downloading the target with `rustup target add x86_64-apple-darwin
+``` 
+Simply download the x86 target with the suggested command and everything should work.
