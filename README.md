@@ -2,7 +2,7 @@
 
 🦠 This repository is the open source website for NeuroNav (_NeuroScope 2.0_), a continuation of the [neuroscope.io](https://neuroscope.io/) project [Nanda, 2022].
 
-Contributers, see [below](#contributer-setup) for a setup guide.
+Contributers, see [below](#contributor-setup) for a setup guide.
 
 ## Data available per neuron
 
