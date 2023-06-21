@@ -5,7 +5,23 @@ const app = express();
 const port = 3000;
 
 app.get("/:model_name/:source_name/:layer_index/:neuron_index", (req, res) => {
+  res.sendFile(path.join(__dirname, "neuron.html"));
+});
+
+app.get("/:model_name/:layer_index", (req, res) => {
+  res.sendFile(path.join(__dirname, "layer.html"));
+});
+
+app.get("/:model_name", (req, res) => {
+  res.sendFile(path.join(__dirname, "model.html"));
+});
+
+app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
+});
+
+app.get("/:model_name/:source_name/:layer_index", (req, res) => {
+  res.sendFile(path.join(__dirname, "layer.html"));
 });
 
 app.get(
