@@ -2,6 +2,13 @@
 <html>
   <head>
     <title>NeuroNav</title>
+    <!-- Link css/style.css -->
+    <!-- <link
+      rel="stylesheet"
+      type="text/css"
+      crossorigin="anonymous"
+      href="/css/style.css"
+    /> -->
     <style>
       .token {
         margin: 0;
@@ -25,7 +32,6 @@
         padding: 0.2em 0;
         line-height: 1.6em;
         max-width: 50em;
-        color: white;
       }
 
       .meta-info {
@@ -67,13 +73,10 @@
       }
 
       body {
-        font-family: sans-serif;
-        background-color: black;
+        font-family: "IBM Plex Sans", sans-serif;
       }
 
       .collapsible {
-        background-color: black;
-        color: white;
         cursor: pointer;
         padding: 0.5em;
         width: 100%;
@@ -100,6 +103,7 @@
     <div id="visualization"></div>
     <div id="full_tokens_section"></div>
     <div id="tooltip"></div>
+    <!-- <script src="/js/neuron.js" type="text/javascript"></script> -->
     <script>
       // When hovering, make tooltip pick that location and show the data-tooltip attribute
       // When not hovering, make tooltip disappear
@@ -137,6 +141,8 @@
         div.setAttribute("data-tooltip", token + "\n" + activation);
         return div;
       };
+
+      const constructGraph = (g) => {};
 
       // Fetch data from the server
       fetch(
