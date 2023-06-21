@@ -2,6 +2,13 @@
 <html>
   <head>
     <title>NeuroNav</title>
+    <!-- Link css/style.css -->
+    <!-- <link
+      rel="stylesheet"
+      type="text/css"
+      crossorigin="anonymous"
+      href="/css/style.css"
+    /> -->
     <style>
       .token {
         margin: 0;
@@ -10,6 +17,15 @@
         color: rgba(0, 0, 0, 0.8);
         white-space: pre-wrap;
         border: 1px solid rgba(34, 0, 0, 0.1);
+      }
+
+      .not_available {
+        background-color: rgba(255, 0, 0, 0.1);
+        border: 1px dashed rgba(255, 0, 0, 0.5);
+        color: rgba(255, 0, 0, 0.8);
+        border-radius: 0.5em;
+        padding: 0.4em 1em;
+        display: inline-block;
       }
 
       h2 {
@@ -25,7 +41,6 @@
         padding: 0.2em 0;
         line-height: 1.6em;
         max-width: 50em;
-        color: white;
       }
 
       .meta-info {
@@ -67,13 +82,10 @@
       }
 
       body {
-        font-family: sans-serif;
-        background-color: black;
+        font-family: "IBM Plex Sans", sans-serif;
       }
 
       .collapsible {
-        background-color: black;
-        color: white;
         cursor: pointer;
         padding: 0.5em;
         width: 100%;
@@ -93,13 +105,46 @@
         background-color: #f1f1f1;
         border: 1px solid grey;
       }
+
+      .section-header {
+        margin: 0.5em 0;
+        padding: 0;
+        font-size: 1.2em;
+        line-height: 1em;
+        white-space: wrap;
+      }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.2.0/d3.min.js"></script>
+    <script src="/js/viz-standalone.js" type="application/javascript"></script>
+    <!-- <script src="https://dagrejs.github.io/project/dagre-d3/v0.5.0/dagre-d3.min.js"></script> -->
   </head>
   <body>
+    <div id="meta"></div>
+    <div id="n2g">
+      <h2 class="section-header">
+        Neuron semantic graph.
+        <a href="https://n2g.apartresearch.com">Read what this is</a>.
+      </h2>
+    </div>
+    <div id="gpt4">
+      <h2 class="section-header">
+        Neuron explanation by GPT-4.
+        <a
+          href="https://openaipublic.blob.core.windows.net/neuron-explainer/paper/index.html"
+          >Read what this is</a
+        >.
+      </h2>
+    </div>
+    <div id="neuroscope">
+      <h2 class="section-header">
+        Max activating dataset examples for this neuron.
+      </h2>
+    </div>
     <div id="visualization"></div>
     <div id="full_tokens_section"></div>
     <div id="tooltip"></div>
+    <!-- <script src="/js/neuron.js" type="text/javascript"></script> -->
+
     <script>
       // When hovering, make tooltip pick that location and show the data-tooltip attribute
       // When not hovering, make tooltip disappear
@@ -126,7 +171,7 @@
       };
 
       // Parse model_name, source_name, layer_index, and neuron_index from the URL
-      const [_, model_name, source_name, layer_index, neuron_index] =
+      const [_, viz, model_name, source_name, layer_index, neuron_index] =
         location.pathname.split("/");
 
       const generate_token_viz = (token, activation, color) => {
@@ -138,141 +183,218 @@
         return div;
       };
 
-      // Fetch data from the server
-      fetch(
-        `http://localhost:3000/api/${model_name}/${source_name}/${layer_index}/${neuron_index}`
-      )
-        .then((response) => response.json())
-        .then((data) => {
-          console.log(data);
-          // Add a header for the model name
-          const header = document.createElement("div");
-          header.id = "header";
-          header.classList.add("meta");
-          document.getElementById("visualization").appendChild(header);
-          // Add a header for the source_name, layer_index and neuron_index
-          const meta = document.createElement("div");
-          meta.id = "meta";
-          meta.classList.add("meta");
-          document.getElementById("visualization").appendChild(meta);
-          const meta_info = document.createElement("h2");
-          meta_info.textContent =
-            "Model: " +
-            model_name +
-            "\nSource: " +
-            capitalizeWords(source_name) +
-            "\nNeuron: " +
-            neuron_index +
-            " in layer " +
-            layer_index;
-          document.getElementById("meta").appendChild(meta_info);
-          // Add a paragraph for explainer text
-          const explainer = document.createElement("p");
-          explainer.textContent =
-            "This visualization shows the most activating tokens for the neuron. The tokens are colored by their activation value. Hover over a token to see its activation value. These text samples are the samples from the dataset that the neuron activates the most to. They are truncated around the most activating token with a window of [-50, 5]. You can click on the '💬 Show all tokens in sample' button to see all tokens of that sample.";
-          document.getElementById("meta").appendChild(explainer);
+      const constructGraph = (g) => {};
 
-          for (var j = 0; j < data.texts.length; j++) {
-            // Add a header for the current text
-            const header = document.createElement("h2");
-            header.classList.add("text-title");
-            header.innerHTML =
-              "Text " +
-              j +
-              "<span class='meta-info'>" +
-              data.texts[j].min_act +
-              " to " +
-              data.texts[j].max_act +
-              " activation within the range " +
-              data.texts[j].min_range +
-              " to " +
-              data.texts[j].max_range +
-              ". Data index " +
-              data.texts[j].data_index +
-              ". Max activating token located at index " +
-              data.texts[j].max_activating_token_index +
-              " of the text of length " +
-              data.texts[j].tokens.length +
-              "." +
-              "</span>";
-            // "Text {i + 1}";
-            document.getElementById("visualization").appendChild(header);
-            const token_string = document.createElement("div");
-            token_string.id = "token_string_" + j;
-            token_string.classList.add("token_string");
-            document.getElementById("visualization").appendChild(token_string);
-
-            // Get the tokens and activations for the current text
-            const tokens = data.texts[j].tokens;
-            const activations = data.texts[j].activations;
-            const abs_activations = activations.map(Math.abs);
-
-            // Get the index of the token with the maximum activation
-            const maxActivationIndex = abs_activations.indexOf(
-              Math.max(...abs_activations)
-            );
-
-            // Scale for coloring the tokens based on activations
-            const colorScale = d3
-              .scaleLinear()
-              .domain([
-                Math.min(...abs_activations),
-                Math.max(...abs_activations),
-              ])
-              .range(["#EFEEFF", "#761C6D", "#CC4346", "#F99006", "#F9FC9C"]);
-
-            // Determine the start and end of the slice
-            const start = Math.max(0, maxActivationIndex - 50);
-            const end = Math.min(tokens.length, maxActivationIndex + 4 + 1); // "+1" because slice end index is exclusive
-
-            // Get the slice of tokens and activations
-            const truncated_tokens = tokens.slice(start, end);
-            const truncated_activations = activations.slice(start, end);
-
-            // Add each token to the visualization
-            truncated_tokens.forEach((token, i) => {
-              const activation = truncated_activations[i];
-              document
-                .getElementById("token_string_" + j)
-                .appendChild(
-                  generate_token_viz(token, activation, colorScale(activation))
-                );
-            });
-
-            // Create a collapsible button
-            var collapsible = document.createElement("button");
-            collapsible.textContent = "💬 Show all tokens in sample";
-            collapsible.className = "collapsible";
-            document.getElementById("visualization").appendChild(collapsible);
-
-            var content = document.createElement("div");
-            content.className = "content";
-
-            // Add each token to the full tokens section
-            tokens.forEach((token, i) => {
-              content.appendChild(
-                generate_token_viz(
-                  token,
-                  activations[i],
-                  colorScale(activations[i])
-                )
-              );
-            });
-
-            document.getElementById("visualization").appendChild(content);
-
-            // Add click event to the collapsible button
-            collapsible.addEventListener("click", function () {
-              this.classList.toggle("active");
-              var content = this.nextElementSibling;
-              if (content.style.maxHeight) {
-                content.style.maxHeight = null;
+      if (source_name != "all") {
+        // Put an h1 in the #meta that says that only /all/ are supported for visualization
+        const supporting = document.createElement("h1");
+        console.log("MEME MACHINE");
+        supporting.innerHTML =
+          source_name +
+          " is not supported. Go to <a href='http://localhost:3000/viz/" +
+          model_name +
+          "/all/" +
+          layer_index +
+          "/" +
+          neuron_index +
+          "'>/all/</a> to visualize everything.";
+        document.getElementById("meta").appendChild(supporting);
+      } else {
+        // Fetch data from the server
+        fetch(
+          `http://localhost:3000/api/${model_name}/${source_name}/${layer_index}/${neuron_index}`
+        )
+          .then((response) => response.json())
+          .then((data) => {
+            if (source_name == "all") {
+              // If Neuron2Graph data is available
+              if (data["neuron2graph"] != null) {
+                Viz.instance().then(function (viz) {
+                  let svg = document.body.appendChild(
+                    viz.renderSVGElement(data["neuron2graph"])
+                  );
+                  document.getElementById("n2g").appendChild(svg);
+                });
               } else {
-                content.style.maxHeight = content.scrollHeight + "px";
+                // Write in a div with class not_available that the data is not available
+                const not_available = document.createElement("div");
+                not_available.classList.add("not_available");
+                not_available.textContent =
+                  "The Neuron to Graph data for this neuron is not available.";
+                document.getElementById("n2g").appendChild(not_available);
               }
-            });
-          }
-        });
+
+              if (data["gpt-4"] != null) {
+                // If GPT-4 data is available
+                const gpt4 = document.createElement("div");
+                gpt4.classList.add("gpt4");
+                gpt4.innerHTML = data["gpt-4"];
+                document.getElementById("gpt4").appendChild(gpt4);
+              } else {
+                // Write in a div with class not_available that the data is not available
+                const not_available = document.createElement("div");
+                not_available.classList.add("not_available");
+                not_available.textContent =
+                  "The GPT-4 data for this neuron is not available.";
+                document.getElementById("gpt4").appendChild(not_available);
+              }
+
+              // Add a header for the model name
+              const header = document.createElement("div");
+              header.id = "header";
+              header.classList.add("meta");
+              document.getElementById("visualization").appendChild(header);
+              // Add a header for the source_name, layer_index and neuron_index
+              const meta = document.createElement("div");
+              meta.id = "meta";
+              meta.classList.add("meta");
+              document.getElementById("visualization").appendChild(meta);
+              const meta_info = document.createElement("h2");
+              meta_info.textContent =
+                "Model: " +
+                model_name +
+                "\nSource: " +
+                capitalizeWords(source_name) +
+                "\nNeuron: " +
+                neuron_index +
+                " in layer " +
+                layer_index;
+              document.getElementById("meta").appendChild(meta_info);
+              // Add a paragraph for explainer text
+              const explainer = document.createElement("p");
+              explainer.textContent =
+                "This visualization shows the most activating tokens for the neuron. The tokens are colored by their activation value. Hover over a token to see its activation value. These text samples are the samples from the dataset that the neuron activates the most to. They are truncated around the most activating token with a window of [-50, 5]. You can click on the '💬 Show all tokens in sample' button to see all tokens of that sample.";
+              document.getElementById("meta").appendChild(explainer);
+
+              if (data["neuroscope"] != null) {
+                for (var j = 0; j < data.neuroscope.texts.length; j++) {
+                  // Add a header for the current text
+                  const header = document.createElement("h2");
+                  header.classList.add("text-title");
+                  header.innerHTML =
+                    "Text " +
+                    j +
+                    "<span class='meta-info'>" +
+                    data.neuroscope.texts[j].min_act +
+                    " to " +
+                    data.neuroscope.texts[j].max_act +
+                    " activation within the range " +
+                    data.neuroscope.texts[j].min_range +
+                    " to " +
+                    data.neuroscope.texts[j].max_range +
+                    ". Data index " +
+                    data.neuroscope.texts[j].data_index +
+                    ". Max activating token located at index " +
+                    data.neuroscope.texts[j].max_activating_token_index +
+                    " of the text of length " +
+                    data.neuroscope.texts[j].tokens.length +
+                    "." +
+                    "</span>";
+                  // "Text {i + 1}";
+                  document.getElementById("visualization").appendChild(header);
+                  const token_string = document.createElement("div");
+                  token_string.id = "token_string_" + j;
+                  token_string.classList.add("token_string");
+                  document
+                    .getElementById("visualization")
+                    .appendChild(token_string);
+
+                  // Get the tokens and activations for the current text
+                  const tokens = data.neuroscope.texts[j].tokens;
+                  const activations = data.neuroscope.texts[j].activations;
+                  const abs_activations = activations.map(Math.abs);
+
+                  // Get the index of the token with the maximum activation
+                  const maxActivationIndex = abs_activations.indexOf(
+                    Math.max(...abs_activations)
+                  );
+
+                  // Scale for coloring the tokens based on activations
+                  const colorScale = d3
+                    .scaleLinear()
+                    .domain([
+                      Math.min(...abs_activations),
+                      Math.max(...abs_activations),
+                    ])
+                    .range([
+                      "#EFEEFF",
+                      "#761C6D",
+                      "#CC4346",
+                      "#F99006",
+                      "#F9FC9C",
+                    ]);
+
+                  // Determine the start and end of the slice
+                  const start = Math.max(0, maxActivationIndex - 50);
+                  const end = Math.min(
+                    tokens.length,
+                    maxActivationIndex + 4 + 1
+                  ); // "+1" because slice end index is exclusive
+
+                  // Get the slice of tokens and activations
+                  const truncated_tokens = tokens.slice(start, end);
+                  const truncated_activations = activations.slice(start, end);
+
+                  // Add each token to the visualization
+                  truncated_tokens.forEach((token, i) => {
+                    const activation = truncated_activations[i];
+                    document
+                      .getElementById("token_string_" + j)
+                      .appendChild(
+                        generate_token_viz(
+                          token,
+                          activation,
+                          colorScale(activation)
+                        )
+                      );
+                  });
+
+                  // Create a collapsible button
+                  var collapsible = document.createElement("button");
+                  collapsible.textContent = "💬 Show all tokens in sample";
+                  collapsible.className = "collapsible";
+                  document
+                    .getElementById("visualization")
+                    .appendChild(collapsible);
+
+                  var content = document.createElement("div");
+                  content.className = "content";
+
+                  // Add each token to the full tokens section
+                  tokens.forEach((token, i) => {
+                    content.appendChild(
+                      generate_token_viz(
+                        token,
+                        activations[i],
+                        colorScale(activations[i])
+                      )
+                    );
+                  });
+
+                  document.getElementById("visualization").appendChild(content);
+
+                  // Add click event to the collapsible button
+                  collapsible.addEventListener("click", function () {
+                    this.classList.toggle("active");
+                    var content = this.nextElementSibling;
+                    if (content.style.maxHeight) {
+                      content.style.maxHeight = null;
+                    } else {
+                      content.style.maxHeight = content.scrollHeight + "px";
+                    }
+                  });
+                }
+              }
+            } else {
+              // Write in a div with class not_available that the data is not available
+              const not_available = document.createElement("div");
+              not_available.classList.add("not_available");
+              not_available.textContent =
+                "The neuroscope data for this neuron is not available.";
+              document.getElementById("neuroscope").appendChild(not_available);
+            }
+          });
+      }
     </script>
   </body>
 </html>

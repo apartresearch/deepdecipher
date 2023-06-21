@@ -4,24 +4,36 @@ const path = require("path");
 const app = express();
 const port = 3000;
 
-app.get("/:model_name/:source_name/:layer_index/:neuron_index", (req, res) => {
-  res.sendFile(path.join(__dirname, "neuron.html"));
-});
+app.get(
+  "/viz/:model_name/:source_name/:layer_index/:neuron_index",
+  (req, res) => {
+    res.sendFile(path.join(__dirname, "neuron.html"));
+  }
+);
 
-app.get("/:model_name/:layer_index", (req, res) => {
+app.get("/viz/:model_name/:layer_index", (req, res) => {
   res.sendFile(path.join(__dirname, "layer.html"));
 });
 
-app.get("/:model_name", (req, res) => {
+app.get("/viz/:model_name", (req, res) => {
   res.sendFile(path.join(__dirname, "model.html"));
 });
 
-app.get("/", (req, res) => {
+app.get("/viz/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-app.get("/:model_name/:source_name/:layer_index", (req, res) => {
+app.get("/viz/:model_name/:source_name/:layer_index", (req, res) => {
   res.sendFile(path.join(__dirname, "layer.html"));
+});
+
+// Fetch js and css from the server
+app.get("/js/:filename", (req, res) => {
+  res.sendFile(path.join(__dirname, "js", req.params.filename));
+});
+
+app.get("/css/:filename", (req, res) => {
+  res.sendFile(path.join(__dirname, "css", req.params.filename));
 });
 
 app.get(

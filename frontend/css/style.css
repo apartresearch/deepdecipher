@@ -1,0 +1,90 @@
+.token {
+  margin: 0;
+  padding: 0.2em 0;
+  line-height: 1.6em;
+  color: rgba(0, 0, 0, 0.8);
+  white-space: pre-wrap;
+  border: 1px solid rgba(34, 0, 0, 0.1);
+}
+
+h2 {
+  white-space: pre-wrap;
+}
+
+.token:hover {
+  filter: brightness(1.5);
+}
+
+.meta {
+  margin: 0;
+  padding: 0.2em 0;
+  line-height: 1.6em;
+  max-width: 50em;
+  color: white;
+}
+
+.meta-info {
+  font-size: 0.8em;
+  color: rgba(0, 0, 0, 0.5);
+  margin-left: 1em;
+}
+
+.text-title {
+  margin: 0;
+  font-size: 1.2em;
+  padding: 0.25em 0.5em;
+  line-height: 1em;
+  white-space: pre-wrap;
+  border: 1px solid grey;
+  border-bottom: none;
+  background-color: #f1f1f1;
+}
+
+#tooltip {
+  position: absolute;
+  padding: 0.5em;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  white-space: pre-wrap;
+  border-radius: 0.5em;
+  font-size: 1.2em;
+  line-height: 1.6em;
+  text-align: center;
+}
+#tooltip:not([data-tooltip-persistent]) {
+  pointer-events: none;
+}
+
+.token_string {
+  border: 1px solid grey;
+  padding: 0.5em;
+  background-color: #f1f1f1;
+}
+
+body {
+  font-family: sans-serif;
+  background-color: black;
+}
+
+.collapsible {
+  background-color: black;
+  color: white;
+  cursor: pointer;
+  padding: 0.5em;
+  width: 100%;
+  border: none;
+  text-align: left;
+  outline: none;
+  border: 1px solid grey;
+  border-top: none;
+  border-bottom: none;
+}
+
+.content {
+  padding: 0 18px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease-out;
+  background-color: #f1f1f1;
+  border: 1px solid grey;
+}
