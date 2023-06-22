@@ -221,8 +221,8 @@ impl FromStr for TokenSearch {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct NeuronIndex {
-    layer_index: u32,
-    neuron_index: u32,
+    layer: u32,
+    neuron: u32,
 }
 
 impl NeuronIndex {
@@ -230,13 +230,13 @@ impl NeuronIndex {
         let layer_index = flat_index as u32 / layer_size;
         let neuron_index = flat_index as u32 % layer_size;
         Self {
-            layer_index,
-            neuron_index,
+            layer: layer_index,
+            neuron: neuron_index,
         }
     }
 
     fn flat_index(&self, layer_size: u32) -> usize {
-        (self.layer_index * layer_size + self.neuron_index) as usize
+        (self.layer * layer_size + self.neuron) as usize
     }
 }
 
@@ -248,10 +248,10 @@ impl FromStr for NeuronIndex {
             .collect_tuple()
             .context("Expected all neuron strings to be of the form 'layer_index_neuron_index'.")?;
         Ok(NeuronIndex {
-            layer_index: layer_index
+            layer: layer_index
                 .parse::<u32>()
                 .with_context(|| format!("Layer index '{layer_index}' not a valid integer"))?,
-            neuron_index: neuron_index
+            neuron: neuron_index
                 .parse::<u32>()
                 .with_context(|| format!("Neuron index '{neuron_index}' not a valid integer"))?,
         })
@@ -276,8 +276,8 @@ pub async fn neuron2graph_page(
         .await?
         .similar_neurons(
             NeuronIndex {
-                layer_index,
-                neuron_index,
+                layer: layer_index,
+                neuron: neuron_index,
             },
             0.4,
         )?
@@ -285,8 +285,8 @@ pub async fn neuron2graph_page(
         .map(
             |(
                 NeuronIndex {
-                    layer_index,
-                    neuron_index,
+                    layer: layer_index,
+                    neuron: neuron_index,
                 },
                 similarity,
             )| {
