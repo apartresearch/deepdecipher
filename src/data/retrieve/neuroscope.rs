@@ -1,15 +1,17 @@
 use std::{
+    fs::{self, File},
     io::{self, Write},
     panic,
     path::{Path, PathBuf},
     sync::Arc,
 };
 
-use crate::data::NeuroscopePage;
+use crate::data::{LayerMetadata, ModelMetadata, NeuroscopePage};
 
 use anyhow::{Context, Result};
 use itertools::Itertools;
 use reqwest::Client;
+use scraper::{Html, Selector};
 use tokio::{sync::Semaphore, task::JoinSet};
 
 const NEUROSCOPE_BASE_URL: &str = "https://neuroscope.io/";
@@ -157,5 +159,76 @@ pub async fn scrape_layer_to_files<P: AsRef<Path>, S: AsRef<str>>(
     println!("\rPages scraped: {num_neurons}/{num_neurons}");
     io::stdout().flush().unwrap();
 
+    Ok(())
+}
+
+pub async fn scrape_model_metadata<S: AsRef<str>>(model: S) -> Result<ModelMetadata> {
+    let model = model.as_ref();
+    let url = NEUROSCOPE_BASE_URL;
+    let client = Client::new();
+    let response = client.get(url).send().await?;
+    let page = response.text().await?;
+    let document = Html::parse_document(&page);
+    let model_name_selector = Selector::parse("td:nth-child(1) a").unwrap();
+    let model_index = document
+        .select(&model_name_selector)
+        .map(|element| {
+            element
+                .text()
+                .next()
+                .expect("Model name should be a non-empty string.")
+        })
+        .position(|name| name == model)
+        .with_context(|| format!("Neuroscope has no model with name {model}."))?;
+    let row_selector = Selector::parse("tr").unwrap();
+    let model_row = document.select(&row_selector).nth(model_index + 1).unwrap();
+    let row_element_selector = Selector::parse("td").unwrap();
+    let row_elements: Vec<_> = model_row
+        .select(&row_element_selector)
+        .map(|element| {
+            element
+                .text()
+                .next()
+                .expect("Model row element should be a non-empty string.")
+        })
+        .collect();
+    let activation_function = row_elements[2].to_owned();
+    let dataset = row_elements[3].to_owned();
+    let num_layers = row_elements[4].replace(',', "").parse::<u32>().unwrap();
+    let num_neurons_per_layer = row_elements[5].replace(',', "").parse::<u32>().unwrap();
+    let layers: Vec<_> = (0..num_layers)
+        .map(|_| LayerMetadata {
+            num_neurons: num_neurons_per_layer,
+        })
+        .collect();
+    let num_total_neurons = row_elements[6].replace(',', "").parse::<u32>().unwrap();
+    let num_total_parameters = row_elements[7].replace(',', "").parse::<u32>().unwrap();
+
+    Ok::<_, anyhow::Error>(ModelMetadata {
+        name: model.to_owned(),
+        layers,
+        activation_function,
+        num_total_neurons,
+        num_total_parameters,
+        dataset,
+    })
+}
+
+pub async fn scrape_model_metadata_to_file<P: AsRef<Path>, S: AsRef<str>>(
+    data_path: P,
+    model: S,
+) -> Result<()> {
+    let model = model.as_ref();
+    let model_metadata = scrape_model_metadata(model).await?;
+    let model_metadata_path = data_path.as_ref().join(model).join("metadata.json");
+    fs::create_dir_all(
+        model_metadata_path
+            .parent()
+            .with_context(|| format!("Invalid path '{model_metadata_path:?}'"))?,
+    )
+    .with_context(|| format!("Failed to create directory for '{model_metadata_path:?}'"))?;
+    let model_metadata_file = File::create(model_metadata_path)?;
+
+    serde_json::to_writer(model_metadata_file, &model_metadata)?;
     Ok(())
 }

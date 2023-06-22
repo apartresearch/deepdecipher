@@ -7,11 +7,6 @@ use pyo3::prelude::*;
 use tokio::runtime::Runtime;
 
 #[pyfunction]
-fn debug() {
-    println!("Hello from Rust!");
-}
-
-#[pyfunction]
 fn start_server() {
     server::start_server().unwrap();
 }
@@ -30,6 +25,19 @@ fn scrape_layer_to_files(
             retrieve::neuroscope::scrape_layer_to_files(data_path, model, layer_index, num_neurons)
                 .await
                 .context("Failed to scrape layer.")
+        })?;
+    Ok(())
+}
+
+#[pyfunction]
+fn scrape_model_metadata_to_file(data_path: &str, model: &str) -> PyResult<()> {
+    Runtime::new()
+        .context("Failed to start async runtime to scrape neuroscope.")?
+        .block_on(async {
+            println!("Scraping metadata of model {model} to {data_path}.");
+            retrieve::neuroscope::scrape_model_metadata_to_file(data_path, model)
+                .await
+                .context("Failed to scrape model metadata.")
         })?;
     Ok(())
 }
@@ -95,9 +103,9 @@ impl PyNeuroscopePage {
 /// A Python module implemented in Rust.
 #[pymodule]
 fn neuronav(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(debug, m)?)?;
     m.add_function(wrap_pyfunction!(start_server, m)?)?;
     m.add_function(wrap_pyfunction!(scrape_layer_to_files, m)?)?;
+    m.add_function(wrap_pyfunction!(scrape_model_metadata_to_file, m)?)?;
     m.add_class::<PyNeuronViewerObject>()?;
     m.add_class::<PyNeuroscopePage>()?;
     Ok(())
