@@ -36,7 +36,7 @@ if (source_name != "all") {
   supporting.innerHTML =
     source_name +
     " is not supported. Go to <a href='" +
-    base_url +
+    base_url_ui +
     base_ext_ui +
     "" +
     model_name +
@@ -49,7 +49,7 @@ if (source_name != "all") {
 } else {
   // Fetch data from the server
   fetch(
-    `${base_url}/api/${model_name}/${source_name}/${layer_index}/${neuron_index}`
+    `${base_url_api}${base_ext_api}${model_name}/${source_name}/${layer_index}/${neuron_index}`
   )
     .then((response) => response.json())
     .then((data) => {
@@ -57,8 +57,9 @@ if (source_name != "all") {
         // If Neuron2Graph data is available
         if (data["neuron2graph"] != null) {
           Viz.instance().then(function (viz) {
+            console.log(data);
             let svg = document.body.appendChild(
-              viz.renderSVGElement(data["neuron2graph"])
+              viz.renderSVGElement(data.neuron2graph.graph)
             );
             document.getElementById("n2g").appendChild(svg);
           });
@@ -152,19 +153,19 @@ if (source_name != "all") {
           const [prev_url, next_url, layer_url, model_url] = [
             (layer_index_n == 0) & (neuron_index_n == 0)
               ? alert("This is the first neuron in the model.")
-              : `${base_url}${base_ext_ui}/${model_name}/${source_name}/${
+              : `${base_url_ui}${base_ext_ui}/${model_name}/${source_name}/${
                   neuron_index_n != 0 ? layer_index_n : layer_index_n - 1
                 }/${neuron_index_n != 0 ? neuron_index_n - 1 : last_neuron}`,
             (layer_index_n == last_layer) & (neuron_index_n == last_neuron)
               ? alert("This is the last neuron in the model.")
-              : `${base_url}${base_ext_ui}/${model_name}/${source_name}/${
+              : `${base_url_ui}${base_ext_ui}/${model_name}/${source_name}/${
                   neuron_index_n != last_neuron
                     ? layer_index_n
                     : layer_index_n + 1
                 }/${neuron_index_n != last_neuron ? neuron_index_n + 1 : 0}`,
             ,
-            `${base_url}${base_ext_ui}/${model_name}/${source_name}/${layer_index_n}`,
-            `${base_url}${base_ext_ui}/${model_name}/${source_name}`,
+            `${base_url_ui}${base_ext_ui}/${model_name}/${source_name}/${layer_index_n}`,
+            `${base_url_ui}${base_ext_ui}/${model_name}/${source_name}`,
           ];
           surrounding_neurons.innerHTML = `<td class='meta-data' data-tooltip='Visit the current model page'><a href='${model_url}'>Model</a></td><td class='meta-data first' data-tooltip='Visit the previous neuron page'><a href='${prev_url}'>Previous</a></td><td class='meta-data' data-tooltip='Visit the current layer page'><a href='${layer_url}'>Layer</a></td><td class='meta-data' data-tooltip='Visit the next neuron page'><a href='${next_url}'>Next</a></td>`;
           document
@@ -273,14 +274,14 @@ if (source_name != "all") {
               }
             });
           }
+        } else {
+          // Write in a div with class not_available that the data is not available
+          const not_available = document.createElement("div");
+          not_available.classList.add("not_available");
+          not_available.textContent =
+            "The max activation dataset examples for this neuron are not available.";
+          document.getElementById("neuroscope").appendChild(not_available);
         }
-      } else {
-        // Write in a div with class not_available that the data is not available
-        const not_available = document.createElement("div");
-        not_available.classList.add("not_available");
-        not_available.textContent =
-          "The neuroscope data for this neuron is not available.";
-        document.getElementById("neuroscope").appendChild(not_available);
       }
     });
 }

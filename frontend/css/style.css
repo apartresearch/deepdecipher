@@ -48,6 +48,21 @@ h2 {
   background-color: #f1f1f1;
 }
 
+#search {
+  padding: 0.3em 0.8em;
+}
+
+.code {
+  margin: 0;
+  padding: 0.1em 0;
+  line-height: 1.6em;
+  color: rgba(0, 0, 0, 0.8);
+  background-color: rgba(0, 0, 0, 0.05);
+  white-space: pre-wrap;
+  border: 1px solid rgba(34, 0, 0, 0.1);
+  font-family: "IBM Plex Mono", monospace;
+}
+
 #tooltip {
   position: absolute;
   padding: 0.5em;
@@ -131,4 +146,28 @@ body {
 
 h1 {
   margin: 0.5em 0;
+}
+
+#search-message {
+  margin: 0.5em 0;
+  font-size: 0.8em;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.results {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  max-width: 40em;
+}
+
+.result {
+  min-width: 9em;
+  padding: 0.5em 0.2em;
+  text-decoration: none;
+  color: black;
+}
+
+.result:hover {
+  color: rgba(0, 0, 0, 0.7);
 }
