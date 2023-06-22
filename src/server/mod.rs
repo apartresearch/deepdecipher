@@ -15,6 +15,7 @@ use tokio::sync::Mutex;
 use crate::data::NeuroscopePage;
 pub mod neuron2graph;
 use neuron2graph::NeuronStore;
+mod metadata;
 
 async fn neuroscope_page(
     model: &str,
@@ -47,36 +48,25 @@ async fn all(state: web::Data<State>, indices: web::Path<(String, u32, u32)>) ->
     let (model, layer_index, neuron_index) = indices.into_inner();
     let model = model.as_str();
 
-    let neuroscope_page = neuroscope_page(model, layer_index, neuron_index).await;
-    let neuron2graph_page =
-        neuron2graph::neuron2graph_page(state.as_ref(), model, layer_index, neuron_index).await;
+    let mut value = json!({});
 
-    match (neuroscope_page, neuron2graph_page) {
-        (Ok(neuroscope_page), Ok(neuron2graph_page)) => {
-            HttpResponse::Ok().content_type(ContentType::json()).body(
-                json!({
-                    "neuroscope": neuroscope_page,
-                    "neuron2graph": neuron2graph_page,
-                })
-                .to_string(),
-            )
-        }
-        (Ok(neuroscope_page), _) => HttpResponse::Ok().content_type(ContentType::json()).body(
-            json!({
-                "neuroscope": neuroscope_page,
-            })
-            .to_string(),
-        ),
-        (_, Ok(neuron2graph_page)) => HttpResponse::Ok().content_type(ContentType::json()).body(
-            json!({
-                "neuron2graph": neuron2graph_page,
-            })
-            .to_string(),
-        ),
-        _ => HttpResponse::Ok()
-            .content_type(ContentType::json())
-            .body(json!({}).to_string()),
+    if let Ok(neuroscope_page) = neuroscope_page(model, layer_index, neuron_index).await {
+        value["neuroscope"] = neuroscope_page;
     }
+
+    if let Ok(neuron2graph_page) =
+        neuron2graph::neuron2graph_page(state.as_ref(), model, layer_index, neuron_index).await
+    {
+        value["neuron2graph"] = neuron2graph_page;
+    }
+
+    if let Ok(metadata_page) = metadata::model_page(model) {
+        value["metadata"] = metadata_page;
+    }
+
+    HttpResponse::Ok()
+        .content_type(ContentType::json())
+        .body(value.to_string())
 }
 
 pub struct State {
@@ -116,6 +106,8 @@ pub fn start_server() -> std::io::Result<()> {
         HttpServer::new(move || {
             App::new()
                 .app_data(state.clone())
+                .service(metadata::model)
+                .service(metadata::layer)
                 .service(neuroscope)
                 .service(neuron2graph::neuron_2_graph)
                 .service(neuron2graph::neuron2graph_search)
