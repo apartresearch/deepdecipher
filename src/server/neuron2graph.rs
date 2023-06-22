@@ -58,12 +58,12 @@ impl Display for TokenSearchType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NeuronStore {
+pub struct NeuronStoreRaw {
     activating: HashMap<String, HashSet<String>>,
     important: HashMap<String, HashSet<String>>,
 }
 
-impl NeuronStore {
+impl NeuronStoreRaw {
     pub fn load(model: &str) -> Result<Self> {
         let neuron_store_path = Path::new("data")
             .join(model)
@@ -77,8 +77,52 @@ impl NeuronStore {
         )
         .with_context(|| format!("Failed to parse neuron store for model '{model}'."))
     }
+}
 
-    pub fn get(&self, search_type: TokenSearchType, token: &str) -> Option<&HashSet<String>> {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NeuronStore {
+    activating: HashMap<String, HashSet<NeuronIndex>>,
+    important: HashMap<String, HashSet<NeuronIndex>>,
+}
+
+impl NeuronStore {
+    pub fn load(model: &str) -> Result<Self> {
+        let NeuronStoreRaw {
+            activating,
+            important,
+        } = NeuronStoreRaw::load(model)?;
+
+        let activating = activating
+            .into_iter()
+            .map(|(key, value)| {
+                Ok((
+                    key,
+                    value
+                        .into_iter()
+                        .map(NeuronIndex::from_str)
+                        .collect::<Result<HashSet<_>>>()?,
+                ))
+            })
+            .collect::<Result<HashMap<_, _>>>()?;
+        let important = important
+            .into_iter()
+            .map(|(key, value)| {
+                Ok((
+                    key,
+                    value
+                        .into_iter()
+                        .map(NeuronIndex::from_str)
+                        .collect::<Result<HashSet<_>>>()?,
+                ))
+            })
+            .collect::<Result<HashMap<_, _>>>()?;
+        Ok(Self {
+            activating,
+            important,
+        })
+    }
+
+    pub fn get(&self, search_type: TokenSearchType, token: &str) -> Option<&HashSet<NeuronIndex>> {
         match search_type {
             TokenSearchType::Activating => self.activating.get(token),
             TokenSearchType::Important => self.important.get(token),
@@ -92,10 +136,44 @@ pub struct TokenSearch {
     search_types: Vec<TokenSearchType>,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+impl TokenSearch {
+    pub fn from_str(token_search_string: &str) -> Result<Self> {
+        let (search_type_str, token) = token_search_string
+            .split(':')
+            .collect_tuple()
+            .context("Token search string should be of the form 'search_type:token'.")?;
+        let search_types = TokenSearchType::from_str(search_type_str)?;
+        Ok(TokenSearch {
+            token: token.to_string(),
+            search_types,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct NeuronIndex {
     layer_index: u32,
     neuron_index: u32,
+}
+
+impl NeuronIndex {
+    pub fn from_str<S: AsRef<str>>(neuron_index_string: S) -> Result<Self> {
+        let (layer_index, neuron_index) = neuron_index_string
+            .as_ref()
+            .split('_')
+            .collect_tuple()
+            .context(
+            "Expected all neuron strings to be of the form 'layer_index_neuron_index'.",
+        )?;
+        Ok(NeuronIndex {
+            layer_index: layer_index
+                .parse::<u32>()
+                .with_context(|| format!("Layer index '{layer_index}' not a valid integer"))?,
+            neuron_index: neuron_index
+                .parse::<u32>()
+                .with_context(|| format!("Neuron index '{neuron_index}' not a valid integer"))?,
+        })
+    }
 }
 
 pub async fn neuron2graph_search_page(
@@ -109,17 +187,7 @@ pub async fn neuron2graph_search_page(
     let neuron_store = state.neuron_store(model).await?;
     let token_searches = query
         .split(',')
-        .map(|token_search_string| {
-            let (search_type_str, token) = token_search_string
-                .split(':')
-                .collect_tuple()
-                .context("Token search string should be of the form 'search_type:token'.")?;
-            let search_types = TokenSearchType::from_str(search_type_str)?;
-            Ok(TokenSearch {
-                token: token.to_string(),
-                search_types,
-            })
-        })
+        .map(TokenSearch::from_str)
         .collect::<Result<Vec<_>>>()?;
     let results = token_searches
         .into_iter()
@@ -138,28 +206,10 @@ pub async fn neuron2graph_search_page(
                 })
                 .collect::<HashSet<_>>()
         })
-        .reduce(|a, b| {
-            a.intersection(&b)
-                .map(|str| str.to_owned())
-                .collect::<HashSet<String>>()
-        })
+        .reduce(|a, b| a.intersection(&b).copied().collect::<HashSet<_>>())
         .with_context(|| "At least one token search should be provided.")?
         .into_iter()
-        .map(|neuron_string| {
-            let (layer_index, neuron_index) = neuron_string.split('_').collect_tuple().context(
-                "Expected all neuron strings to be of the form 'layer_index_neuron_index'.",
-            )?;
-            Ok(NeuronIndex {
-                layer_index: layer_index
-                    .parse::<u32>()
-                    .with_context(|| format!("Layer index '{layer_index}' not a valid integer"))?,
-                neuron_index: neuron_index.parse::<u32>().with_context(|| {
-                    format!("Neuron index '{neuron_index}' not a valid integer")
-                })?,
-            })
-        })
-        .collect::<Result<Vec<_>>>()
-        .with_context(|| "Failed to parse neuron strings into layer and neuron indices.")?;
+        .collect::<Vec<_>>();
 
     Ok(json!(results))
 }
