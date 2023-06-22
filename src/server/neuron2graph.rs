@@ -1,4 +1,5 @@
 use std::{
+    cmp::Ordering,
     collections::{HashMap, HashSet},
     fmt::Display,
     fs,
@@ -161,7 +162,7 @@ impl NeuronStore {
         let index = neuron_index.flat_index(self.layer_size);
         let related_neurons = self.related_neurons.slice(s![index, ..]);
         let self_count1 = *self.related_neurons.get([index, index]).unwrap();
-        let related_neurons = related_neurons
+        let mut similar_neurons: Vec<_> = related_neurons
             .iter()
             .copied()
             .enumerate()
@@ -180,7 +181,12 @@ impl NeuronStore {
                 )
             })
             .collect();
-        Ok(related_neurons)
+        similar_neurons.sort_by(|(_, similarity1), (_, similarity2)| {
+            similarity2
+                .partial_cmp(similarity1)
+                .unwrap_or(Ordering::Equal)
+        });
+        Ok(similar_neurons)
     }
 
     pub fn get(&self, search_type: TokenSearchType, token: &str) -> Option<&HashSet<NeuronIndex>> {
@@ -265,13 +271,33 @@ pub async fn neuron2graph_page(
         .join(format!("{layer_index}_{neuron_index}"))
         .join("graph");
     let graph = fs::read_to_string(path).map(|page| json!(page)).with_context(|| format!("Failed to read neuron2graph page for neuron {neuron_index} in layer {layer_index} of model '{model}'."))?;
-    let similar_neurons = state.neuron_store(model).await?.similar_neurons(
-        NeuronIndex {
-            layer_index,
-            neuron_index,
-        },
-        0.4,
-    )?;
+    let similar_neurons = state
+        .neuron_store(model)
+        .await?
+        .similar_neurons(
+            NeuronIndex {
+                layer_index,
+                neuron_index,
+            },
+            0.4,
+        )?
+        .into_iter()
+        .map(
+            |(
+                NeuronIndex {
+                    layer_index,
+                    neuron_index,
+                },
+                similarity,
+            )| {
+                json!({
+                    "layer_index": layer_index,
+                    "neuron_index": neuron_index,
+                    "similarity": similarity,
+                })
+            },
+        )
+        .collect::<Vec<_>>();
     Ok(json!({
         "graph": graph,
         "similar": similar_neurons,}))
