@@ -1,7 +1,7 @@
 from .neuronav import (
-    debug,
     start_server,
     scrape_layer_to_files,
+    scrape_model_metadata_to_file,
     NeuronViewerObject,
     NeuroscopePage,
 )
