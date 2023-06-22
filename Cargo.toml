@@ -46,6 +46,7 @@ reqwest = "0.11.18"
 thiserror = "1.0.40"
 env_logger = "0.10.0"
 log = "0.4.19"
+ndarray = { version = "0.15.6", features = ["serde"] }
 
 [features]
 python = ["dep:pyo3", "dep:numpy", "dep:ctrlc"]

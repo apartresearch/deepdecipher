@@ -1,31 +1,19 @@
 use std::{
     collections::{HashMap, HashSet},
     fmt::Display,
-    fs::{self, File},
+    fs,
     path::Path,
+    str::FromStr,
 };
 
 use actix_web::{get, http::header::ContentType, web, HttpResponse, Responder};
 use anyhow::{bail, Context, Result};
 use itertools::Itertools;
+use ndarray::{s, Array2};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use super::State;
-
-pub async fn neuron2graph_page(
-    model: &str,
-    layer_index: u32,
-    neuron_index: u32,
-) -> Result<serde_json::Value> {
-    let path = Path::new("data")
-        .join(model)
-        .join("neuron2graph")
-        .join(format!("layer_{layer_index}",))
-        .join(format!("{layer_index}_{neuron_index}"))
-        .join("graph");
-    fs::read_to_string(path).map(|page| json!(page)).with_context(|| format!("Failed to read neuron2graph page for neuron {neuron_index} in layer {layer_index} of model '{model}'."))
-}
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum TokenSearchType {
@@ -41,7 +29,7 @@ impl TokenSearchType {
         }
     }
 
-    pub fn from_str(s: &str) -> Result<Vec<Self>> {
+    pub fn list_from_str(s: &str) -> Result<Vec<Self>> {
         match s {
             "activating" => Ok(vec![Self::Activating]),
             "important" => Ok(vec![Self::Important]),
@@ -70,19 +58,21 @@ impl NeuronStoreRaw {
             .join("neuron2graph-search")
             .join("neuron_store.json");
         let neuron_store_path = neuron_store_path.as_path();
-        serde_json::from_reader(
-            File::open(neuron_store_path).with_context(|| {
-                format!("Could not find neuron store file for model '{model}'.")
-            })?,
-        )
-        .with_context(|| format!("Failed to parse neuron store for model '{model}'."))
+        let neuron_store_string = fs::read_to_string(neuron_store_path)
+            .with_context(|| format!("Could not find neuron store file for model '{model}'."))?;
+
+        serde_json::from_str(&neuron_store_string)
+            .with_context(|| format!("Failed to parse neuron store for model '{model}'."))
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NeuronStore {
+    layer_size: u32,
+    num_layers: u32,
     activating: HashMap<String, HashSet<NeuronIndex>>,
     important: HashMap<String, HashSet<NeuronIndex>>,
+    related_neurons: Array2<u32>,
 }
 
 impl NeuronStore {
@@ -91,14 +81,14 @@ impl NeuronStore {
             activating,
             important,
         } = NeuronStoreRaw::load(model)?;
-
         let activating = activating
             .into_iter()
             .map(|(key, value)| {
                 Ok((
                     key,
                     value
-                        .into_iter()
+                        .iter()
+                        .map(String::as_str)
                         .map(NeuronIndex::from_str)
                         .collect::<Result<HashSet<_>>>()?,
                 ))
@@ -110,16 +100,87 @@ impl NeuronStore {
                 Ok((
                     key,
                     value
-                        .into_iter()
+                        .iter()
+                        .map(String::as_str)
                         .map(NeuronIndex::from_str)
                         .collect::<Result<HashSet<_>>>()?,
                 ))
             })
             .collect::<Result<HashMap<_, _>>>()?;
+        let layer_size = 3072;
+        let num_layers = 6;
+        let num_neurons = (layer_size * num_layers) as usize;
+        let mut related_neurons: Array2<u32> = Array2::zeros((num_neurons, num_neurons));
+        for (_token, neuron_indices) in activating.iter().chain(important.iter()) {
+            for &neuron_index in neuron_indices {
+                let index1 = neuron_index.flat_index(layer_size);
+                for &other_neuron_index in neuron_indices {
+                    let index2 = other_neuron_index.flat_index(layer_size);
+                    related_neurons[[index1, index2]] += 1;
+                }
+            }
+        }
+
         Ok(Self {
+            layer_size,
+            num_layers,
             activating,
             important,
+            related_neurons,
         })
+    }
+
+    pub fn similarity(&self, neuron_index1: NeuronIndex, neuron_index2: NeuronIndex) -> f32 {
+        let index1 = neuron_index1.flat_index(self.layer_size);
+        let self_count1 = self.related_neurons[[index1, index1]];
+        let index2 = neuron_index2.flat_index(self.layer_size);
+        let self_count2 = self.related_neurons[[index2, index2]];
+        (self.related_neurons[[index1, index2]] as f32)
+            / (self_count1.max(self_count2).max(1) as f32)
+    }
+
+    pub fn similarity_matrix(&self) -> Array2<f32> {
+        let num_neurons = (self.layer_size * self.num_layers) as usize;
+        let mut matrix = Array2::zeros((num_neurons, num_neurons));
+        for i in 0..(self.layer_size * 6) as usize {
+            let self_count1 = self.related_neurons[[i, i]];
+            for j in 0..(self.layer_size * 6) as usize {
+                let self_count2 = self.related_neurons[[j, j]];
+                matrix[[i, j]] = (self.related_neurons[[i, j]] as f32)
+                    / (self_count1.max(self_count2).max(1) as f32);
+            }
+        }
+        matrix
+    }
+
+    pub fn similar_neurons(
+        &self,
+        neuron_index: NeuronIndex,
+        threshold: f32,
+    ) -> Result<Vec<(NeuronIndex, f32)>> {
+        let index = neuron_index.flat_index(self.layer_size);
+        let related_neurons = self.related_neurons.slice(s![index, ..]);
+        let self_count1 = *self.related_neurons.get([index, index]).unwrap();
+        let related_neurons = related_neurons
+            .iter()
+            .copied()
+            .enumerate()
+            .map(|(index2, common_token_count)| {
+                let self_count2 = self.related_neurons[[index2, index2]];
+                (
+                    index2,
+                    (common_token_count as f32) / (self_count1.max(self_count2) as f32),
+                )
+            })
+            .filter(|&(index2, similarity)| index2 != index && similarity >= threshold)
+            .map(|(index2, similarity)| {
+                (
+                    NeuronIndex::from_flat_index(self.layer_size, index2),
+                    similarity,
+                )
+            })
+            .collect();
+        Ok(related_neurons)
     }
 
     pub fn get(&self, search_type: TokenSearchType, token: &str) -> Option<&HashSet<NeuronIndex>> {
@@ -136,13 +197,15 @@ pub struct TokenSearch {
     search_types: Vec<TokenSearchType>,
 }
 
-impl TokenSearch {
-    pub fn from_str(token_search_string: &str) -> Result<Self> {
+impl FromStr for TokenSearch {
+    type Err = anyhow::Error;
+
+    fn from_str(token_search_string: &str) -> Result<Self> {
         let (search_type_str, token) = token_search_string
             .split(':')
             .collect_tuple()
             .context("Token search string should be of the form 'search_type:token'.")?;
-        let search_types = TokenSearchType::from_str(search_type_str)?;
+        let search_types = TokenSearchType::list_from_str(search_type_str)?;
         Ok(TokenSearch {
             token: token.to_string(),
             search_types,
@@ -157,14 +220,27 @@ pub struct NeuronIndex {
 }
 
 impl NeuronIndex {
-    pub fn from_str<S: AsRef<str>>(neuron_index_string: S) -> Result<Self> {
+    fn from_flat_index(layer_size: u32, flat_index: usize) -> Self {
+        let layer_index = flat_index as u32 / layer_size;
+        let neuron_index = flat_index as u32 % layer_size;
+        Self {
+            layer_index,
+            neuron_index,
+        }
+    }
+
+    fn flat_index(&self, layer_size: u32) -> usize {
+        (self.layer_index * layer_size + self.neuron_index) as usize
+    }
+}
+
+impl FromStr for NeuronIndex {
+    type Err = anyhow::Error;
+    fn from_str(neuron_index_string: &str) -> Result<Self> {
         let (layer_index, neuron_index) = neuron_index_string
-            .as_ref()
             .split('_')
             .collect_tuple()
-            .context(
-            "Expected all neuron strings to be of the form 'layer_index_neuron_index'.",
-        )?;
+            .context("Expected all neuron strings to be of the form 'layer_index_neuron_index'.")?;
         Ok(NeuronIndex {
             layer_index: layer_index
                 .parse::<u32>()
@@ -174,6 +250,31 @@ impl NeuronIndex {
                 .with_context(|| format!("Neuron index '{neuron_index}' not a valid integer"))?,
         })
     }
+}
+
+pub async fn neuron2graph_page(
+    state: &State,
+    model: &str,
+    layer_index: u32,
+    neuron_index: u32,
+) -> Result<serde_json::Value> {
+    let path = Path::new("data")
+        .join(model)
+        .join("neuron2graph")
+        .join(format!("layer_{layer_index}",))
+        .join(format!("{layer_index}_{neuron_index}"))
+        .join("graph");
+    let graph = fs::read_to_string(path).map(|page| json!(page)).with_context(|| format!("Failed to read neuron2graph page for neuron {neuron_index} in layer {layer_index} of model '{model}'."))?;
+    let similar_neurons = state.neuron_store(model).await?.similar_neurons(
+        NeuronIndex {
+            layer_index,
+            neuron_index,
+        },
+        0.4,
+    )?;
+    Ok(json!({
+        "graph": graph,
+        "similar": similar_neurons,}))
 }
 
 pub async fn neuron2graph_search_page(
@@ -215,11 +316,14 @@ pub async fn neuron2graph_search_page(
 }
 
 #[get("/api/{model}/neuron2graph/{layer_index}/{neuron_index}")]
-pub async fn neuron_2_graph(indices: web::Path<(String, u32, u32)>) -> impl Responder {
+pub async fn neuron_2_graph(
+    state: web::Data<State>,
+    indices: web::Path<(String, u32, u32)>,
+) -> impl Responder {
     let (model, layer_index, neuron_index) = indices.into_inner();
     let model = model.as_str();
 
-    match neuron2graph_page(model, layer_index, neuron_index).await {
+    match neuron2graph_page(state.as_ref(), model, layer_index, neuron_index).await {
         Ok(page) => HttpResponse::Ok()
             .content_type(ContentType::json())
             .body(page.to_string()),

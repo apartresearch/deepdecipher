@@ -13,7 +13,7 @@ use serde_json::json;
 use tokio::sync::Mutex;
 
 use crate::data::NeuroscopePage;
-mod neuron2graph;
+pub mod neuron2graph;
 use neuron2graph::NeuronStore;
 
 async fn neuroscope_page(
@@ -43,12 +43,13 @@ async fn neuroscope(indices: web::Path<(String, u32, u32)>) -> impl Responder {
 }
 
 #[get("/api/{model}/all/{layer_index}/{neuron_index}")]
-async fn all(indices: web::Path<(String, u32, u32)>) -> impl Responder {
+async fn all(state: web::Data<State>, indices: web::Path<(String, u32, u32)>) -> impl Responder {
     let (model, layer_index, neuron_index) = indices.into_inner();
     let model = model.as_str();
 
     let neuroscope_page = neuroscope_page(model, layer_index, neuron_index).await;
-    let neuron2graph_page = neuron2graph::neuron2graph_page(model, layer_index, neuron_index).await;
+    let neuron2graph_page =
+        neuron2graph::neuron2graph_page(state.as_ref(), model, layer_index, neuron_index).await;
 
     match (neuroscope_page, neuron2graph_page) {
         (Ok(neuroscope_page), Ok(neuron2graph_page)) => {
