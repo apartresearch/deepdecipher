@@ -23,6 +23,10 @@ app.get("/viz/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
 app.get("/viz/:model_name/:source_name/:layer_index", (req, res) => {
   res.sendFile(path.join(__dirname, "layer.html"));
 });
