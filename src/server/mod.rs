@@ -112,6 +112,12 @@ struct TokenSearch {
     search_types: Vec<TokenSearchType>,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+struct NeuronIndex {
+    layer_index: u32,
+    neuron_index: u32,
+}
+
 async fn neuron2graph_search_page(
     state: &State,
     model: &str,
@@ -157,7 +163,24 @@ async fn neuron2graph_search_page(
                 .map(|str| str.to_owned())
                 .collect::<HashSet<String>>()
         })
-        .with_context(|| "At least one token search should be provided.")?;
+        .with_context(|| "At least one token search should be provided.")?
+        .into_iter()
+        .map(|neuron_string| {
+            let (layer_index, neuron_index) = neuron_string.split('_').collect_tuple().context(
+                "Expected all neuron strings to be of the form 'layer_index_neuron_index'.",
+            )?;
+            Ok(NeuronIndex {
+                layer_index: layer_index
+                    .parse::<u32>()
+                    .with_context(|| format!("Layer index '{layer_index}' not a valid integer"))?,
+                neuron_index: neuron_index.parse::<u32>().with_context(|| {
+                    format!("Neuron index '{neuron_index}' not a valid integer")
+                })?,
+            })
+        })
+        .collect::<Result<Vec<_>>>()
+        .with_context(|| "Failed to parse neuron strings into layer and neuron indices.")?;
+
     Ok(json!(results))
 }
 
