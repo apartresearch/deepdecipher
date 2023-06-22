@@ -291,8 +291,8 @@ pub async fn neuron2graph_page(
                 similarity,
             )| {
                 json!({
-                    "layer_index": layer_index,
-                    "neuron_index": neuron_index,
+                    "layer": layer_index,
+                    "neuron": neuron_index,
                     "similarity": similarity,
                 })
             },
