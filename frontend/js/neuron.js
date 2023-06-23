@@ -1,19 +1,3 @@
-// When hovering, make tooltip pick that location and show the data-tooltip attribute
-// When not hovering, make tooltip disappear
-const tooltip = document.getElementById("tooltip");
-let target = null;
-document.addEventListener("mousemove", (e) => {
-  target = e.target;
-  if (target.hasAttribute("data-tooltip")) {
-    tooltip.style.left = e.pageX + 10 + "px";
-    tooltip.style.top = e.pageY + 10 + "px";
-    tooltip.style.display = "block";
-    tooltip.textContent = target.getAttribute("data-tooltip");
-  } else {
-    tooltip.style.display = "none";
-  }
-});
-
 // Parse model_name, source_name, layer_index, and neuron_index from the URL
 const [_, viz, model_name, source_name, layer_index, neuron_index] =
   location.pathname.split("/");
@@ -27,12 +11,9 @@ const generate_token_viz = (token, activation, color) => {
   return div;
 };
 
-const constructGraph = (g) => {};
-
 if (source_name != "all") {
   // Put an h1 in the #meta that says that only /all/ are supported for visualization
   const supporting = document.createElement("h1");
-  console.log("MEME MACHINE");
   supporting.innerHTML =
     source_name +
     " is not supported. Go to <a href='" +
