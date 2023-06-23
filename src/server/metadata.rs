@@ -2,6 +2,7 @@ use std::{fs, path::Path};
 
 use actix_web::{get, http::header::ContentType, web, HttpResponse, Responder};
 use anyhow::{Context, Result};
+use serde_json::json;
 
 use crate::data::ModelMetadata;
 
@@ -28,11 +29,12 @@ pub fn layer_page(model_name: &str, layer_index: u32) -> Result<serde_json::Valu
 pub async fn model(indices: web::Path<String>) -> impl Responder {
     let model_name = indices.into_inner();
     let model_name = model_name.as_str();
+    let model_metadata = model_page(model_name).unwrap_or_else(|_| json!(null));
 
     match model_page(model_name) {
         Ok(page) => HttpResponse::Ok()
             .content_type(ContentType::json())
-            .body(page.to_string()),
+            .body(json!({"model": model_metadata, "metadata": page}).to_string()),
         Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
     }
 }
@@ -41,11 +43,12 @@ pub async fn model(indices: web::Path<String>) -> impl Responder {
 pub async fn layer(indices: web::Path<(String, u32)>) -> impl Responder {
     let (model_name, layer_index) = indices.into_inner();
     let model_name = model_name.as_str();
+    let model_metadata = model_page(model_name).unwrap_or_else(|_| json!(null));
 
     match layer_page(model_name, layer_index) {
         Ok(page) => HttpResponse::Ok()
             .content_type(ContentType::json())
-            .body(page.to_string()),
+            .body(json!({"model": model_metadata, "metadata": page}).to_string()),
         Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
     }
 }
