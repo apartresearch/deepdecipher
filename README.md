@@ -100,9 +100,9 @@ Tested in Windows Subsystem for Linux with Ubuntu 22.04.2 LTS.
    The package will now be installed in your environment.
 8. Now start python interpreter and run `import neuronav as nrnv`.
    If this works, neuronav is installed correctly.
-9. Run `nrnv.scrape_layer_to_files("data", "solu-1l", 0, 512)` to scrape the first 512 neurons of the `solu-1l` model from Neuroscope.
-   This will take a while.
-   You can change the model name and number of neurons to scrape if you want.
+9. Run `nrnv.scrape_model_to_files("data", "solu-1l")` to scrape the `solu-1l` model from Neuroscope.
+   This will take a while depending on your internet connection.
+   You can change the model name if you want, but be aware that larger models will take even longer.
    The `data` folder will be created if it doesn't exist.
 10. Exit the Python interpreter and run `python -m neuronav` in the terminal to start the server.
     It will automatically use the data you scraped in the previous step.
