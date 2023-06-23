@@ -11,26 +11,16 @@ use serde::{Deserialize, Serialize};
 use crate::data::NeuronIndex;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct NeuroscopeLayerPage {
-    num_neurons: u32,
+pub struct NeuroscopeModelPage {
     important_neurons: Vec<(NeuronIndex, f32)>,
 }
 
-impl NeuroscopeLayerPage {
+impl NeuroscopeModelPage {
     pub fn new(mut important_neurons: Vec<(NeuronIndex, f32)>) -> Self {
-        important_neurons.sort_unstable_by(
-            |(_, self_activation_range), (_, other_activation_range)| {
-                self_activation_range.total_cmp(other_activation_range)
-            },
-        );
-        Self {
-            num_neurons: important_neurons.len() as u32,
-            important_neurons,
-        }
-    }
-
-    pub fn num_neurons(&self) -> u32 {
-        self.num_neurons
+        important_neurons.sort_unstable_by(|(_, self_importance), (_, other_importance)| {
+            self_importance.total_cmp(other_importance)
+        });
+        Self { important_neurons }
     }
 
     pub fn important_neurons(&self) -> &[(NeuronIndex, f32)] {

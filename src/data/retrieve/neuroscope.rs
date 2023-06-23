@@ -1,5 +1,4 @@
 use std::{
-    fs::{self, File},
     io::{self, Write},
     panic,
     path::{Path, PathBuf},
@@ -7,7 +6,8 @@ use std::{
 };
 
 use crate::data::{
-    neuroscope::NeuroscopeLayerPage, LayerMetadata, ModelMetadata, NeuronIndex, NeuroscopePage,
+    neuroscope::{NeuroscopeLayerPage, NeuroscopeModelPage},
+    LayerMetadata, ModelMetadata, NeuronIndex, NeuroscopePage,
 };
 
 use anyhow::{Context, Result};
@@ -132,7 +132,7 @@ pub async fn scrape_layer_to_files<P: AsRef<Path>, S: AsRef<str>>(
     model: S,
     layer_index: u32,
     num_neurons: u32,
-) -> Result<()> {
+) -> Result<NeuroscopeLayerPage> {
     let data_path = data_path.as_ref();
 
     let mut join_set = JoinSet::new();
@@ -193,7 +193,7 @@ pub async fn scrape_layer_to_files<P: AsRef<Path>, S: AsRef<str>>(
     println!("\rPages scraped: {num_neurons}/{num_neurons}");
     io::stdout().flush().unwrap();
 
-    Ok(())
+    Ok(layer_page)
 }
 
 pub async fn scrape_model_metadata<S: AsRef<str>>(model: S) -> Result<ModelMetadata> {
@@ -254,15 +254,37 @@ pub async fn scrape_model_metadata_to_file<P: AsRef<Path>, S: AsRef<str>>(
 ) -> Result<()> {
     let model = model.as_ref();
     let model_metadata = scrape_model_metadata(model).await?;
-    let model_metadata_path = data_path.as_ref().join(model).join("metadata.json");
-    fs::create_dir_all(
-        model_metadata_path
-            .parent()
-            .with_context(|| format!("Invalid path '{model_metadata_path:?}'"))?,
-    )
-    .with_context(|| format!("Failed to create directory for '{model_metadata_path:?}'"))?;
-    let model_metadata_file = File::create(model_metadata_path)?;
+    model_metadata.to_file(data_path)
+}
 
-    serde_json::to_writer(model_metadata_file, &model_metadata)?;
+pub async fn scrape_model_to_files<P: AsRef<Path>, S: AsRef<str>>(
+    data_path: P,
+    model: S,
+) -> Result<()> {
+    let model = model.as_ref();
+    let data_path = data_path.as_ref();
+
+    let model_metadata = scrape_model_metadata(model).await?;
+    model_metadata.to_file(data_path)?;
+
+    let mut layer_pages = Vec::with_capacity(model_metadata.layers.len());
+    for (layer_index, LayerMetadata { num_neurons }) in model_metadata.layers.iter().enumerate() {
+        let layer_page =
+            scrape_layer_to_files(data_path, model, layer_index as u32, *num_neurons).await?;
+        layer_pages.push(layer_page)
+    }
+    let neuron_importance: Vec<(NeuronIndex, f32)> = layer_pages
+        .into_iter()
+        .flat_map(|layer_page| layer_page.important_neurons().to_vec())
+        .collect();
+    let model_page = NeuroscopeModelPage::new(neuron_importance);
+    model_page.to_file(
+        data_path
+            .join(model)
+            .join("neuroscope")
+            .join("model")
+            .with_extension("postcard"),
+    )?;
+
     Ok(())
 }
