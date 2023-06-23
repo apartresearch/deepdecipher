@@ -11,6 +11,8 @@ use itertools::Itertools;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
+use crate::data::NeuronIndex;
+
 const FLOAT_REGEX: &str = r"-?\d+(?:\.\d*)?";
 
 fn regex<T>(regex: &Regex, html: &str, search_name: &str) -> Result<T>
@@ -33,8 +35,7 @@ where
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NeuroscopePage {
-    layer_index: u32,
-    neuron_index: u32,
+    neuron_index: NeuronIndex,
     texts: Vec<Text>,
 }
 
@@ -42,8 +43,7 @@ impl NeuroscopePage {
     fn from_html_header_and_texts(
         header_html: &str,
         texts: Vec<Text>,
-        layer_index: u32,
-        neuron_index: u32,
+        neuron_index: NeuronIndex,
     ) -> Result<Self> {
         let neuron_index_regex = Regex::new(r"<h2>Neuron (\d+) in Layer (\d+) </h2>")
             .context("Failed to create regex.")?;
@@ -59,18 +59,20 @@ impl NeuroscopePage {
         let html_neuron_index = captures[1]
             .parse::<u32>()
             .context("Failed to parse neuron index.")?;
+        let html_neuron_index = NeuronIndex {
+            layer: html_layer_index,
+            neuron: html_neuron_index,
+        };
 
-        assert_eq!(layer_index, html_layer_index);
         assert_eq!(neuron_index, html_neuron_index);
 
         Ok(Self {
             neuron_index,
-            layer_index,
             texts,
         })
     }
 
-    pub fn from_html_str(html: &str, layer_index: u32, neuron_index: u32) -> Result<Self> {
+    pub fn from_html_str(html: &str, neuron_index: NeuronIndex) -> Result<Self> {
         let mut sections = html.split("<hr>");
         let header = sections.next().context("Tag &lt;hr&gt; not found.")?;
         let nothing = sections
@@ -87,7 +89,7 @@ impl NeuroscopePage {
             })
             .collect::<Result<Vec<Text>>>()?;
 
-        Self::from_html_header_and_texts(header, texts, layer_index, neuron_index)
+        Self::from_html_header_and_texts(header, texts, neuron_index)
     }
 
     pub fn to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
@@ -120,14 +122,22 @@ impl NeuroscopePage {
         postcard::from_bytes(&data)
             .with_context(|| format!("Failed to deserialize neuroscope page from file '{path:?}'."))
     }
+
+    pub fn neuron_index(&self) -> NeuronIndex {
+        self.neuron_index
+    }
+
+    pub fn texts(&self) -> &[Text] {
+        self.texts.as_slice()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Text {
     min_range: f32,
     max_range: f32,
-    min_act: f32,
-    max_act: f32,
+    min_activation: f32,
+    max_activation: f32,
     data_index: u64,
     max_activating_token_index: u32,
     tokens: Vec<String>,
@@ -201,11 +211,19 @@ impl Text {
             max_activating_token_index,
             max_range,
             min_range,
-            max_act,
-            min_act,
+            max_activation: max_act,
+            min_activation: min_act,
             data_index,
             tokens,
             activations,
         })
+    }
+
+    pub fn min_activation(&self) -> f32 {
+        self.min_activation
+    }
+
+    pub fn max_activation(&self) -> f32 {
+        self.max_activation
     }
 }
