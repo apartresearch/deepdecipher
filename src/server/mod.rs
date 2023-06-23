@@ -48,11 +48,12 @@ async fn neuroscope_model_page(model: &str) -> Result<serde_json::Value> {
 #[get("/api/{model}/neuroscope/{layer_index}/{neuron_index}")]
 async fn neuroscope(indices: web::Path<(String, u32, u32)>) -> impl Responder {
     let (model, layer_index, neuron_index) = indices.into_inner();
-    let model = model.as_str();
+    let model_name = model.as_str();
+    let model_metadata = metadata::model_page(model_name).unwrap_or_else(|_| json!(null));
 
-    match neuroscope_page(model, layer_index, neuron_index).await {
+    match neuroscope_page(model_name, layer_index, neuron_index).await {
         Ok(page) => HttpResponse::Ok().content_type(ContentType::json()).body(
-            serde_json::to_string(&page)
+            serde_json::to_string(&json!({"model": model_metadata, "neuroscope": page}))
                 .expect("Failed to serialize page to JSON. This should always be possible."),
         ),
         Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
@@ -62,11 +63,12 @@ async fn neuroscope(indices: web::Path<(String, u32, u32)>) -> impl Responder {
 #[get("/api/{model}/neuroscope/{layer_index}")]
 async fn neuroscope_layer(indices: web::Path<(String, u32)>) -> impl Responder {
     let (model, layer_index) = indices.into_inner();
-    let model = model.as_str();
+    let model_name = model.as_str();
+    let model_metadata = metadata::model_page(model_name).unwrap_or_else(|_| json!(null));
 
-    match neuroscope_layer_page(model, layer_index).await {
+    match neuroscope_layer_page(model_name, layer_index).await {
         Ok(page) => HttpResponse::Ok().content_type(ContentType::json()).body(
-            serde_json::to_string(&page)
+            serde_json::to_string(&json!({"model": model_metadata, "neuroscope": page}))
                 .expect("Failed to serialize page to JSON. This should always be possible."),
         ),
         Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
@@ -76,11 +78,12 @@ async fn neuroscope_layer(indices: web::Path<(String, u32)>) -> impl Responder {
 #[get("/api/{model}/neuroscope")]
 async fn neuroscope_model(indices: web::Path<String>) -> impl Responder {
     let model = indices.into_inner();
-    let model = model.as_str();
+    let model_name = model.as_str();
+    let model_metadata = metadata::model_page(model_name).unwrap_or_else(|_| json!(null));
 
-    match neuroscope_model_page(model).await {
+    match neuroscope_model_page(model_name).await {
         Ok(page) => HttpResponse::Ok().content_type(ContentType::json()).body(
-            serde_json::to_string(&page)
+            serde_json::to_string(&json!({"model": model_metadata, "neuroscope": page}))
                 .expect("Failed to serialize page to JSON. This should always be possible."),
         ),
         Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),

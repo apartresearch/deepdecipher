@@ -14,7 +14,7 @@ use ndarray::{s, Array2};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::data::NeuronIndex;
+use crate::{data::NeuronIndex, server::metadata};
 
 use super::State;
 
@@ -310,12 +310,14 @@ pub async fn neuron_2_graph(
     indices: web::Path<(String, u32, u32)>,
 ) -> impl Responder {
     let (model, layer_index, neuron_index) = indices.into_inner();
-    let model = model.as_str();
+    let model_name = model.as_str();
+    let model_metadata = metadata::model_page(model_name).unwrap_or_else(|_| json!(null));
 
-    match neuron2graph_page(state.as_ref(), model, layer_index, neuron_index).await {
-        Ok(page) => HttpResponse::Ok()
-            .content_type(ContentType::json())
-            .body(page.to_string()),
+    match neuron2graph_page(state.as_ref(), model_name, layer_index, neuron_index).await {
+        Ok(page) => HttpResponse::Ok().content_type(ContentType::json()).body(
+            serde_json::to_string(&json!({"model": model_metadata, "neuron2graph": page}))
+                .expect("Failed to serialize page to JSON. This should always be possible."),
+        ),
         Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
     }
 }
@@ -326,12 +328,14 @@ pub async fn neuron2graph_search(
     model: web::Path<String>,
     web::Query(query): web::Query<serde_json::Value>,
 ) -> impl Responder {
-    let model = model.as_str();
+    let model_name = model.as_str();
+    let model_metadata = metadata::model_page(model_name).unwrap_or_else(|_| json!(null));
 
-    match neuron2graph_search_page(state.as_ref(), model, query).await {
-        Ok(page) => HttpResponse::Ok()
-            .content_type(ContentType::json())
-            .body(page.to_string()),
+    match neuron2graph_search_page(state.as_ref(), model_name, query).await {
+        Ok(page) => HttpResponse::Ok().content_type(ContentType::json()).body(
+            serde_json::to_string(&json!({"model": model_metadata, "neuron2graph": page}))
+                .expect("Failed to serialize page to JSON. This should always be possible."),
+        ),
         Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
     }
 }
