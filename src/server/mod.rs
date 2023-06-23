@@ -91,6 +91,42 @@ async fn all(state: web::Data<State>, indices: web::Path<(String, u32, u32)>) ->
         .body(value.to_string())
 }
 
+#[get("/api/{model}/all/{layer_index}")]
+async fn all_layer(indices: web::Path<(String, u32)>) -> impl Responder {
+    let (model, layer_index) = indices.into_inner();
+    let model = model.as_str();
+
+    let mut value = json!({});
+
+    if let Ok(neuroscope_page) = neuroscope_layer_page(model, layer_index).await {
+        value["neuroscope"] = neuroscope_page;
+    }
+
+    if let Ok(metadata_page) = metadata::layer_page(model, layer_index) {
+        value["metadata"] = metadata_page;
+    }
+
+    HttpResponse::Ok()
+        .content_type(ContentType::json())
+        .body(value.to_string())
+}
+
+#[get("/api/{model}/all")]
+async fn all_model(indices: web::Path<String>) -> impl Responder {
+    let model = indices.into_inner();
+    let model = model.as_str();
+
+    let mut value = json!({});
+
+    if let Ok(metadata_page) = metadata::model_page(model) {
+        value["metadata"] = metadata_page;
+    }
+
+    HttpResponse::Ok()
+        .content_type(ContentType::json())
+        .body(value.to_string())
+}
+
 pub struct State {
     neuron_stores: Arc<Mutex<HashMap<String, NeuronStore>>>,
 }
@@ -135,6 +171,8 @@ pub fn start_server() -> std::io::Result<()> {
                 .service(neuron2graph::neuron_2_graph)
                 .service(neuron2graph::neuron2graph_search)
                 .service(all)
+                .service(all_layer)
+                .service(all_model)
         })
         .bind((url, port))?
         .run(),
