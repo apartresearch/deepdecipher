@@ -14,6 +14,8 @@ use ndarray::{s, Array2};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
+use crate::data::NeuronIndex;
+
 use super::State;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -215,45 +217,6 @@ impl FromStr for TokenSearch {
         Ok(TokenSearch {
             token: token.to_string(),
             search_types,
-        })
-    }
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub struct NeuronIndex {
-    layer: u32,
-    neuron: u32,
-}
-
-impl NeuronIndex {
-    fn from_flat_index(layer_size: u32, flat_index: usize) -> Self {
-        let layer_index = flat_index as u32 / layer_size;
-        let neuron_index = flat_index as u32 % layer_size;
-        Self {
-            layer: layer_index,
-            neuron: neuron_index,
-        }
-    }
-
-    fn flat_index(&self, layer_size: u32) -> usize {
-        (self.layer * layer_size + self.neuron) as usize
-    }
-}
-
-impl FromStr for NeuronIndex {
-    type Err = anyhow::Error;
-    fn from_str(neuron_index_string: &str) -> Result<Self> {
-        let (layer_index, neuron_index) = neuron_index_string
-            .split('_')
-            .collect_tuple()
-            .context("Expected all neuron strings to be of the form 'layer_index_neuron_index'.")?;
-        Ok(NeuronIndex {
-            layer: layer_index
-                .parse::<u32>()
-                .with_context(|| format!("Layer index '{layer_index}' not a valid integer"))?,
-            neuron: neuron_index
-                .parse::<u32>()
-                .with_context(|| format!("Neuron index '{neuron_index}' not a valid integer"))?,
         })
     }
 }

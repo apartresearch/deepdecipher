@@ -12,7 +12,7 @@ use anyhow::Result;
 use serde_json::json;
 use tokio::sync::Mutex;
 
-use crate::data::NeuroscopePage;
+use crate::data::{NeuroscopeLayerPage, NeuroscopePage};
 pub mod neuron2graph;
 use neuron2graph::NeuronStore;
 mod metadata;
@@ -29,12 +29,34 @@ async fn neuroscope_page(
     NeuroscopePage::from_file(path).map(|page| json!(page))
 }
 
+async fn neuroscope_layer_page(model: &str, layer_index: u32) -> Result<serde_json::Value> {
+    let path = Path::new("data")
+        .join(model)
+        .join("neuroscope")
+        .join(format!("l{layer_index}.postcard",));
+    NeuroscopeLayerPage::from_file(path).map(|page| json!(page))
+}
+
 #[get("/api/{model}/neuroscope/{layer_index}/{neuron_index}")]
 async fn neuroscope(indices: web::Path<(String, u32, u32)>) -> impl Responder {
     let (model, layer_index, neuron_index) = indices.into_inner();
     let model = model.as_str();
 
     match neuroscope_page(model, layer_index, neuron_index).await {
+        Ok(page) => HttpResponse::Ok().content_type(ContentType::json()).body(
+            serde_json::to_string(&page)
+                .expect("Failed to serialize page to JSON. This should always be possible."),
+        ),
+        Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
+    }
+}
+
+#[get("/api/{model}/neuroscope/{layer_index}")]
+async fn neuroscope_layer(indices: web::Path<(String, u32)>) -> impl Responder {
+    let (model, layer_index) = indices.into_inner();
+    let model = model.as_str();
+
+    match neuroscope_layer_page(model, layer_index).await {
         Ok(page) => HttpResponse::Ok().content_type(ContentType::json()).body(
             serde_json::to_string(&page)
                 .expect("Failed to serialize page to JSON. This should always be possible."),
@@ -109,6 +131,7 @@ pub fn start_server() -> std::io::Result<()> {
                 .service(metadata::model)
                 .service(metadata::layer)
                 .service(neuroscope)
+                .service(neuroscope_layer)
                 .service(neuron2graph::neuron_2_graph)
                 .service(neuron2graph::neuron2graph_search)
                 .service(all)

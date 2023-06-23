@@ -1,5 +1,5 @@
 use crate::{
-    data::{retrieve, NeuronViewerObject, NeuroscopePage},
+    data::{retrieve, NeuronIndex, NeuronViewerObject, NeuroscopePage},
     server,
 };
 use anyhow::{Context, Result};
@@ -71,9 +71,14 @@ struct PyNeuroscopePage {
 impl PyNeuroscopePage {
     #[new]
     fn new(html: &str, layer_index: u32, neuron_index: u32) -> PyResult<Self> {
+        let neuron_index = NeuronIndex {
+            layer: layer_index,
+            neuron: neuron_index,
+        };
         Ok(PyNeuroscopePage {
-            object: NeuroscopePage::from_html_str(html, layer_index, neuron_index)
-                .with_context(|| format!("Failed to parse html of neuroscope page for neuron index {neuron_index} on layer {layer_index}."))?,
+            object: NeuroscopePage::from_html_str(html, neuron_index).with_context(|| {
+                format!("Failed to parse html of neuroscope page for neuron {neuron_index}.")
+            })?,
         })
     }
 
