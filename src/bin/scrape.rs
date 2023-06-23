@@ -6,7 +6,7 @@ pub fn main() -> Result<()> {
     let data_path = "data";
     let model = "solu-1l";
     let layer_index = 0;
-    let num_neurons = 10;
+    let num_neurons = 2048;
     println!("Outside of runtime.");
     Runtime::new()
         .context("Failed to start async runtime to scrape neuroscope.")?
