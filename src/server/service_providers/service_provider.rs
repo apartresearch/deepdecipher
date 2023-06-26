@@ -6,7 +6,10 @@ use async_trait::async_trait;
 use delegate::delegate;
 use serde::{Deserialize, Serialize};
 
-use super::{metadata::Metadata, neuron2graph::Neuron2Graph, neuroscope::Neuroscope};
+use super::{
+    metadata::Metadata, neuron2graph::Neuron2Graph, neuron2graph_search::Neuron2GraphSearch,
+    neuroscope::Neuroscope,
+};
 use crate::server::State;
 
 #[allow(unused_variables)]
@@ -49,6 +52,7 @@ pub enum ServiceProvider {
     Metadata,
     Neuroscope,
     Neuron2Graph,
+    Neuron2GraphSearch,
 }
 
 impl ServiceProvider {
@@ -61,6 +65,7 @@ impl ServiceProvider {
             ServiceProvider::Metadata => Metadata,
             ServiceProvider::Neuroscope => Neuroscope,
             ServiceProvider::Neuron2Graph => Neuron2Graph,
+            ServiceProvider::Neuron2GraphSearch => Neuron2GraphSearch,
         } {
             pub fn model_page<'a>(
                 &'a self,

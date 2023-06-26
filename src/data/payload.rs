@@ -52,6 +52,13 @@ impl Default for Payload {
             Service::new("neuron2graph".to_string(), neuron2graph_service_provider);
         result.add_service(neuron2graph_service).unwrap();
 
+        let neuron2graph_service_provider = ServiceProvider::Neuron2GraphSearch;
+        let neuron2graph_service = Service::new(
+            "neuron2graph-search".to_string(),
+            neuron2graph_service_provider,
+        );
+        result.add_service(neuron2graph_service).unwrap();
+
         result
     }
 }
