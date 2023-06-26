@@ -11,7 +11,17 @@ pub struct Payload {
 }
 
 impl Payload {
+    pub fn initialize() -> Self {
+        let metadata_service_provider = ServiceProvider::Metadata;
+        let metadata_service = Service::new("metadata".to_string(), metadata_service_provider);
+        let services = HashMap::from([("metadata".to_string(), metadata_service)]);
+        Self { services }
+    }
+
     pub fn add_service(&mut self, service: Service) -> Result<()> {
+        if service.name() == "metadata" {
+            bail!("A payload always contains a 'metadata' service. Another cannot be added.")
+        }
         if self.services.contains_key(service.name()) {
             bail!("A service named '{}' already exists.", service.name());
         }
@@ -30,13 +40,7 @@ impl Payload {
 
 impl Default for Payload {
     fn default() -> Self {
-        let mut result = Self {
-            services: HashMap::new(),
-        };
-
-        let metadata_service_provider = ServiceProvider::Metadata;
-        let metadata_service = Service::new("metadata".to_string(), metadata_service_provider);
-        result.add_service(metadata_service).unwrap();
+        let mut result = Self::initialize();
 
         let neuroscope_service_provider = ServiceProvider::Neuroscope;
         let neuroscope_service =
