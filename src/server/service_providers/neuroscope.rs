@@ -20,7 +20,7 @@ pub struct Neuroscope;
 impl ServiceProviderTrait for Neuroscope {
     async fn model_page(
         &self,
-        _service: &str,
+        _service_name: &str,
         _state: &State,
         _query: web::Query<serde_json::Value>,
         model_name: &str,
@@ -34,7 +34,7 @@ impl ServiceProviderTrait for Neuroscope {
 
     async fn layer_page(
         &self,
-        _service: &str,
+        _service_name: &str,
         _state: &State,
         _query: web::Query<serde_json::Value>,
         model_name: &str,
@@ -49,7 +49,7 @@ impl ServiceProviderTrait for Neuroscope {
 
     async fn neuron_page(
         &self,
-        _service: &str,
+        _service_name: &str,
         _state: &State,
         _query: web::Query<serde_json::Value>,
         model_name: &str,

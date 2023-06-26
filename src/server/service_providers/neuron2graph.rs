@@ -18,7 +18,7 @@ pub struct Neuron2Graph;
 impl ServiceProviderTrait for Neuron2Graph {
     async fn neuron_page(
         &self,
-        _service: &str,
+        _service_name: &str,
         state: &State,
         _query: web::Query<serde_json::Value>,
         model: &str,

@@ -69,7 +69,7 @@ impl ServiceProvider {
         } {
             pub fn model_page<'a>(
                 &'a self,
-                service: &'a str,
+                service_name: &'a str,
                 state: &'a State,
                 query: web::Query<serde_json::Value>,
                 model_name: &'a str,
@@ -77,7 +77,7 @@ impl ServiceProvider {
 
             pub fn layer_page<'a>(
                 &'a self,
-                service: &'a str,
+                service_name: &'a str,
                 state: &'a State,
                 query: web::Query<serde_json::Value>,
                 model_name: &'a str,
@@ -86,7 +86,7 @@ impl ServiceProvider {
 
             pub fn neuron_page<'a>(
                 &'a self,
-                service: &'a str,
+                service_name: &'a str,
                 state: &'a State,
                 query: web::Query<serde_json::Value>,
                 model_name: &'a str,

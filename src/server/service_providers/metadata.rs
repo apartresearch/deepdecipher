@@ -17,7 +17,7 @@ pub struct Metadata;
 impl ServiceProviderTrait for Metadata {
     async fn model_page(
         &self,
-        _service: &str,
+        _service_name: &str,
         _state: &State,
         _query: web::Query<serde_json::Value>,
         model_name: &str,
@@ -30,7 +30,7 @@ impl ServiceProviderTrait for Metadata {
 
     async fn layer_page(
         &self,
-        _service: &str,
+        _service_name: &str,
         _state: &State,
         _query: web::Query<serde_json::Value>,
         model_name: &str,
@@ -49,7 +49,7 @@ impl ServiceProviderTrait for Metadata {
 
     async fn neuron_page(
         &self,
-        _service: &str,
+        _service_name: &str,
         _state: &State,
         _query: web::Query<serde_json::Value>,
         _model_name: &str,
