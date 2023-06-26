@@ -1,5 +1,5 @@
 use crate::{
-    data::{retrieve, NeuronIndex, NeuronViewerObject, NeuroscopePage},
+    data::{retrieve, NeuronIndex, NeuronViewerObject, NeuroscopeNeuronPage},
     server,
 };
 use anyhow::{Context, Result};
@@ -77,7 +77,7 @@ impl PyNeuronViewerObject {
 
 #[pyclass(name = "NeuroscopePage")]
 struct PyNeuroscopePage {
-    object: NeuroscopePage,
+    object: NeuroscopeNeuronPage,
 }
 
 #[pymethods]
@@ -89,7 +89,7 @@ impl PyNeuroscopePage {
             neuron: neuron_index,
         };
         Ok(PyNeuroscopePage {
-            object: NeuroscopePage::from_html_str(html, neuron_index).with_context(|| {
+            object: NeuroscopeNeuronPage::from_html_str(html, neuron_index).with_context(|| {
                 format!("Failed to parse html of neuroscope page for neuron {neuron_index}.")
             })?,
         })
@@ -112,7 +112,7 @@ impl PyNeuroscopePage {
     #[staticmethod]
     fn from_file(path: &str) -> Result<Self> {
         Ok(PyNeuroscopePage {
-            object: NeuroscopePage::from_file(path)
+            object: NeuroscopeNeuronPage::from_file(path)
                 .with_context(|| format!("Failed to read neuroscope page from file '{path:?}'."))?,
         })
     }

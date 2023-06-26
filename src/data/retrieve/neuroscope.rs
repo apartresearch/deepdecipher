@@ -7,7 +7,7 @@ use std::{
 
 use crate::data::{
     neuroscope::{NeuroscopeLayerPage, NeuroscopeModelPage},
-    LayerMetadata, ModelMetadata, NeuronIndex, NeuroscopePage,
+    LayerMetadata, ModelMetadata, NeuronIndex, NeuroscopeNeuronPage,
 };
 
 use anyhow::{Context, Result};
@@ -46,12 +46,12 @@ pub fn neuron_page_url(model: &str, neuron_index: NeuronIndex) -> String {
 pub async fn scrape_neuron_page<S: AsRef<str>>(
     model: S,
     neuron_index: NeuronIndex,
-) -> Result<NeuroscopePage> {
+) -> Result<NeuroscopeNeuronPage> {
     let url = neuron_page_url(model.as_ref(), neuron_index);
     let client = Client::new();
     let res = client.get(&url).send().await?;
     let page = res.text().await?;
-    let page = NeuroscopePage::from_html_str(&page, neuron_index)?;
+    let page = NeuroscopeNeuronPage::from_html_str(&page, neuron_index)?;
     Ok(page)
 }
 
@@ -63,7 +63,7 @@ pub async fn scrape_neuron_page_to_file<S: AsRef<str>, P: AsRef<Path>>(
     let model = model.as_ref();
     let page_path = neuron_data_path(data_path, model, neuron_index);
     let page = if page_path.exists() {
-        NeuroscopePage::from_file(page_path).with_context(|| format!("File for neuroscape page exists, but cannot be loaded. Neuron {neuron_index} in model '{model}'."))?
+        NeuroscopeNeuronPage::from_file(page_path).with_context(|| format!("File for neuroscape page exists, but cannot be loaded. Neuron {neuron_index} in model '{model}'."))?
     } else {
         let page = scrape_neuron_page(model, neuron_index).await?;
         page.to_file(page_path).with_context(|| format!("Failed to write neuroscope page to file for neuron {neuron_index} in model '{model}'."))?;
@@ -82,7 +82,7 @@ pub async fn scrape_layer(
     model: &str,
     layer_index: u32,
     num_neurons: u32,
-) -> Result<Vec<NeuroscopePage>> {
+) -> Result<Vec<NeuroscopeNeuronPage>> {
     let mut join_set = JoinSet::new();
 
     for neuron_index in 0..num_neurons {

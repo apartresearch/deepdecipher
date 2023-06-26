@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::Path, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use actix_web::{
     get,
@@ -12,103 +12,177 @@ use anyhow::Result;
 use serde_json::json;
 use tokio::sync::Mutex;
 
-use crate::data::{NeuroscopeLayerPage, NeuroscopeModelPage, NeuroscopePage};
-pub mod neuron2graph;
-use neuron2graph::NeuronStore;
-mod metadata;
+use crate::data::{NeuronStore, Payload};
 
-async fn neuroscope_page(
-    model: &str,
-    layer_index: u32,
-    neuron_index: u32,
-) -> Result<serde_json::Value> {
-    let path = Path::new("data")
-        .join(model)
-        .join("neuroscope")
-        .join(format!("l{layer_index}n{neuron_index}.postcard",));
-    NeuroscopePage::from_file(path).map(|page| json!(page))
-}
+mod service;
+pub use service::Service;
+mod service_providers;
+pub use service_providers::ServiceProvider;
 
-async fn neuroscope_layer_page(model: &str, layer_index: u32) -> Result<serde_json::Value> {
-    let path = Path::new("data")
-        .join(model)
-        .join("neuroscope")
-        .join(format!("l{layer_index}.postcard",));
-    NeuroscopeLayerPage::from_file(path).map(|page| json!(page))
-}
+#[get("/api/{model_name}/{service}")]
+pub async fn model(
+    state: web::Data<State>,
+    indices: web::Path<(String, String)>,
+    query: web::Query<serde_json::Value>,
+) -> impl Responder {
+    let (model_name, service_name) = indices.into_inner();
+    let model_name = model_name.as_str();
+    let service_name = service_name.as_str();
 
-async fn neuroscope_model_page(model: &str) -> Result<serde_json::Value> {
-    let path = Path::new("data")
-        .join(model)
-        .join("neuroscope")
-        .join("model.postcard");
-    NeuroscopeModelPage::from_file(path).map(|page| json!(page))
-}
+    if let Some(service) = state.payload().service(service_name) {
+        let service_json = if service.name() == "metadata" {
+            service.model_page(state.as_ref(), query, model_name).await
+        } else {
+            match service
+                .model_page(state.as_ref(), query.clone(), model_name)
+                .await
+            {
+                Ok(service_json) => {
+                    let metadata_json = ServiceProvider::Metadata
+                        .model_page("metadata", state.as_ref(), query, model_name)
+                        .await
+                        .unwrap_or(serde_json::Value::Null);
 
-#[get("/api/{model}/neuroscope/{layer_index}/{neuron_index}")]
-async fn neuroscope(indices: web::Path<(String, u32, u32)>) -> impl Responder {
-    let (model, layer_index, neuron_index) = indices.into_inner();
-    let model_name = model.as_str();
-    let model_metadata = metadata::model_page(model_name).unwrap_or_else(|_| json!(null));
-
-    match neuroscope_page(model_name, layer_index, neuron_index).await {
-        Ok(page) => HttpResponse::Ok().content_type(ContentType::json()).body(
-            serde_json::to_string(&json!({"model": model_metadata, "neuroscope": page}))
-                .expect("Failed to serialize page to JSON. This should always be possible."),
-        ),
-        Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
+                    Ok(json!({
+                        "metadata": metadata_json,
+                        "data": service_json
+                    }))
+                }
+                Err(error) => Err(error),
+            }
+        };
+        match service_json {
+            Ok(page) => HttpResponse::Ok()
+                .content_type(ContentType::json())
+                .body(page.to_string()),
+            Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
+        }
+    } else {
+        HttpResponse::NotFound().body(format!("Service '{service_name}' not found.",))
     }
 }
 
-#[get("/api/{model}/neuroscope/{layer_index}")]
-async fn neuroscope_layer(indices: web::Path<(String, u32)>) -> impl Responder {
-    let (model, layer_index) = indices.into_inner();
-    let model_name = model.as_str();
-    let model_metadata = metadata::model_page(model_name).unwrap_or_else(|_| json!(null));
+#[get("/api/{model_name}/{service}/{layer_index}")]
+pub async fn layer(
+    state: web::Data<State>,
+    indices: web::Path<(String, String, u32)>,
+    query: web::Query<serde_json::Value>,
+) -> impl Responder {
+    let (model_name, service_name, layer_index) = indices.into_inner();
+    let model_name = model_name.as_str();
+    let service_name = service_name.as_str();
 
-    match neuroscope_layer_page(model_name, layer_index).await {
-        Ok(page) => HttpResponse::Ok().content_type(ContentType::json()).body(
-            serde_json::to_string(&json!({"model": model_metadata, "neuroscope": page}))
-                .expect("Failed to serialize page to JSON. This should always be possible."),
-        ),
-        Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
+    if let Some(service) = state.payload().service(service_name) {
+        let service_json = if service.name() == "metadata" {
+            service
+                .layer_page(state.as_ref(), query, model_name, layer_index)
+                .await
+        } else {
+            match service
+                .layer_page(state.as_ref(), query.clone(), model_name, layer_index)
+                .await
+            {
+                Ok(service_json) => {
+                    let metadata_json = ServiceProvider::Metadata
+                        .layer_page("metadata", state.as_ref(), query, model_name, layer_index)
+                        .await
+                        .unwrap_or(serde_json::Value::Null);
+
+                    Ok(json!({
+                        "metadata": metadata_json,
+                        "data": service_json
+                    }))
+                }
+                Err(error) => Err(error),
+            }
+        };
+        match service_json {
+            Ok(page) => HttpResponse::Ok()
+                .content_type(ContentType::json())
+                .body(page.to_string()),
+            Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
+        }
+    } else {
+        HttpResponse::NotFound().body(format!("Service '{service_name}' not found.",))
     }
 }
 
-#[get("/api/{model}/neuroscope")]
-async fn neuroscope_model(indices: web::Path<String>) -> impl Responder {
-    let model = indices.into_inner();
-    let model_name = model.as_str();
-    let model_metadata = metadata::model_page(model_name).unwrap_or_else(|_| json!(null));
+#[get("/api/{model_name}/{service}/{layer_index}/{neuron_index}")]
+pub async fn neuron(
+    state: web::Data<State>,
+    indices: web::Path<(String, String, u32, u32)>,
+    query: web::Query<serde_json::Value>,
+) -> impl Responder {
+    let (model_name, service_name, layer_index, neuron_index) = indices.into_inner();
+    let model_name = model_name.as_str();
+    let service_name = service_name.as_str();
 
-    match neuroscope_model_page(model_name).await {
-        Ok(page) => HttpResponse::Ok().content_type(ContentType::json()).body(
-            serde_json::to_string(&json!({"model": model_metadata, "neuroscope": page}))
-                .expect("Failed to serialize page to JSON. This should always be possible."),
-        ),
-        Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
+    if let Some(service) = state.payload().service(service_name) {
+        let service_json = if service.name() == "metadata" {
+            service
+                .neuron_page(state.as_ref(), query, model_name, layer_index, neuron_index)
+                .await
+        } else {
+            match service
+                .neuron_page(
+                    state.as_ref(),
+                    query.clone(),
+                    model_name,
+                    layer_index,
+                    neuron_index,
+                )
+                .await
+            {
+                Ok(service_json) => {
+                    let metadata_json = ServiceProvider::Metadata
+                        .neuron_page(
+                            "metadata",
+                            state.as_ref(),
+                            query,
+                            model_name,
+                            layer_index,
+                            neuron_index,
+                        )
+                        .await
+                        .unwrap_or(serde_json::Value::Null);
+
+                    Ok(json!({
+                        "metadata": metadata_json,
+                        "data": service_json
+                    }))
+                }
+                Err(error) => Err(error),
+            }
+        };
+        match service_json {
+            Ok(page) => HttpResponse::Ok()
+                .content_type(ContentType::json())
+                .body(page.to_string()),
+            Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
+        }
+    } else {
+        HttpResponse::NotFound().body(format!("Service '{service_name}' not found.",))
     }
 }
 
-#[get("/api/{model}/all/{layer_index}/{neuron_index}")]
-async fn all(state: web::Data<State>, indices: web::Path<(String, u32, u32)>) -> impl Responder {
-    let (model, layer_index, neuron_index) = indices.into_inner();
-    let model = model.as_str();
+#[get("/api/{model_name}/all")]
+async fn all_model(
+    state: web::Data<State>,
+    indices: web::Path<String>,
+    query: web::Query<serde_json::Value>,
+) -> impl Responder {
+    let model_name = indices.into_inner();
+    let model_name = model_name.as_str();
 
     let mut value = json!({});
 
-    if let Ok(neuroscope_page) = neuroscope_page(model, layer_index, neuron_index).await {
-        value["neuroscope"] = neuroscope_page;
-    }
-
-    if let Ok(neuron2graph_page) =
-        neuron2graph::neuron2graph_page(state.as_ref(), model, layer_index, neuron_index).await
-    {
-        value["neuron2graph"] = neuron2graph_page;
-    }
-
-    if let Ok(metadata_page) = metadata::model_page(model) {
-        value["metadata"] = metadata_page;
+    for service in state.payload().services() {
+        if let Ok(page) = service
+            .model_page(state.as_ref(), query.clone(), model_name)
+            .await
+        {
+            value[service.name()] = page;
+        }
     }
 
     HttpResponse::Ok()
@@ -116,19 +190,24 @@ async fn all(state: web::Data<State>, indices: web::Path<(String, u32, u32)>) ->
         .body(value.to_string())
 }
 
-#[get("/api/{model}/all/{layer_index}")]
-async fn all_layer(indices: web::Path<(String, u32)>) -> impl Responder {
-    let (model, layer_index) = indices.into_inner();
-    let model = model.as_str();
+#[get("/api/{model_name}/all/{layer_index}")]
+async fn all_layer(
+    state: web::Data<State>,
+    indices: web::Path<(String, u32)>,
+    query: web::Query<serde_json::Value>,
+) -> impl Responder {
+    let (model_name, layer_index) = indices.into_inner();
+    let model_name = model_name.as_str();
 
     let mut value = json!({});
 
-    if let Ok(neuroscope_page) = neuroscope_layer_page(model, layer_index).await {
-        value["neuroscope"] = neuroscope_page;
-    }
-
-    if let Ok(metadata_page) = metadata::layer_page(model, layer_index) {
-        value["metadata"] = metadata_page;
+    for service in state.payload().services() {
+        if let Ok(page) = service
+            .layer_page(state.as_ref(), query.clone(), model_name, layer_index)
+            .await
+        {
+            value[service.name()] = page;
+        }
     }
 
     HttpResponse::Ok()
@@ -136,19 +215,30 @@ async fn all_layer(indices: web::Path<(String, u32)>) -> impl Responder {
         .body(value.to_string())
 }
 
-#[get("/api/{model}/all")]
-async fn all_model(indices: web::Path<String>) -> impl Responder {
-    let model = indices.into_inner();
-    let model = model.as_str();
+#[get("/api/{model_name}/all/{layer_index}/{neuron_index}")]
+async fn all_neuron(
+    state: web::Data<State>,
+    indices: web::Path<(String, u32, u32)>,
+    query: web::Query<serde_json::Value>,
+) -> impl Responder {
+    let (model_name, layer_index, neuron_index) = indices.into_inner();
+    let model_name = model_name.as_str();
 
     let mut value = json!({});
 
-    if let Ok(neuroscope_page) = neuroscope_model_page(model).await {
-        value["neuroscope"] = neuroscope_page;
-    }
-
-    if let Ok(metadata_page) = metadata::model_page(model) {
-        value["metadata"] = metadata_page;
+    for service in state.payload().services() {
+        if let Ok(page) = service
+            .neuron_page(
+                state.as_ref(),
+                query.clone(),
+                model_name,
+                layer_index,
+                neuron_index,
+            )
+            .await
+        {
+            value[service.name()] = page;
+        }
     }
 
     HttpResponse::Ok()
@@ -158,29 +248,36 @@ async fn all_model(indices: web::Path<String>) -> impl Responder {
 
 pub struct State {
     neuron_stores: Arc<Mutex<HashMap<String, NeuronStore>>>,
+    payload: Payload,
 }
 
 impl State {
-    pub fn new() -> Self {
+    pub fn new(payload: Payload) -> Self {
         Self {
             neuron_stores: Arc::new(Mutex::new(HashMap::new())),
+            payload,
         }
     }
 
-    pub async fn neuron_store(&self, model: &str) -> Result<NeuronStore> {
+    pub fn payload(&self) -> &Payload {
+        &self.payload
+    }
+
+    pub async fn neuron_store(&self, model_name: &str) -> Result<NeuronStore> {
         let mut neuron_stores = self.neuron_stores.lock().await;
-        if !neuron_stores.contains_key(model) {
-            log::info!("Neuron store doesn't exist for model '{model}', loading from disk");
-            neuron_stores.insert(model.to_string(), NeuronStore::load(model)?);
+        if !neuron_stores.contains_key(model_name) {
+            log::info!("Neuron store doesn't exist for model '{model_name}', loading from disk");
+            neuron_stores.insert(model_name.to_string(), NeuronStore::load(model_name)?);
         }
-        assert!(neuron_stores.contains_key(model));
-        Ok(neuron_stores.get(model).unwrap().clone())
+        assert!(neuron_stores.contains_key(model_name));
+        Ok(neuron_stores.get(model_name).unwrap().clone())
     }
 }
 
 impl Default for State {
     fn default() -> Self {
-        Self::new()
+        let payload = Payload::default();
+        Self::new(payload)
     }
 }
 
@@ -188,21 +285,17 @@ pub fn start_server() -> std::io::Result<()> {
     let url = "127.0.0.1";
     let port = 8080;
     println!("Serving neuronav on http://{url}:{port}/");
-    let state = web::Data::new(State::new());
+    let state = web::Data::new(State::default());
     rt::System::new().block_on(
         HttpServer::new(move || {
             App::new()
                 .app_data(state.clone())
-                .service(metadata::model)
-                .service(metadata::layer)
-                .service(neuroscope)
-                .service(neuroscope_layer)
-                .service(neuroscope_model)
-                .service(neuron2graph::neuron_2_graph)
-                .service(neuron2graph::neuron2graph_search)
-                .service(all)
-                .service(all_layer)
                 .service(all_model)
+                .service(all_layer)
+                .service(all_neuron)
+                .service(model)
+                .service(layer)
+                .service(neuron)
         })
         .bind((url, port))?
         .run(),
