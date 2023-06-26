@@ -1,6 +1,6 @@
 # DeepDecipher
 
-🦠 This repository is the open source website for DeepDecipher, a continuation of the [neuroscope.io](https://neuroscope.io/) project [Nanda, 2022].
+🦠 Official repository and open-source website for DeepDecipher By Albert, Esben, Alex and Fazl
 
 Contributers, see [below](#contributor-setup) for a setup guide. See [the data available](#data-available-per-neuron) through the official API (TBD).
 
