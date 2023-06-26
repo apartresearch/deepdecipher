@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use actix_web::{
     get,
@@ -28,7 +28,7 @@ enum PageIndex {
 
 async fn service_page(
     state: &State,
-    query: web::Query<serde_json::Value>,
+    query: &serde_json::Value,
     service: &Service,
     model_name: &str,
     page_index: PageIndex,
@@ -50,7 +50,7 @@ async fn service_page(
 
 async fn response(
     state: web::Data<State>,
-    query: web::Query<serde_json::Value>,
+    query: &serde_json::Value,
     service_name: impl AsRef<str>,
     model_name: impl AsRef<str>,
     page_index: PageIndex,
@@ -61,7 +61,7 @@ async fn response(
     if let Some(service) = state.payload().service(service_name) {
         let metadata_json = service_page(
             state.as_ref(),
-            query.clone(),
+            query,
             state.payload().metadata_service(),
             model_name,
             page_index,
@@ -98,18 +98,12 @@ async fn all_response(
     page_index: PageIndex,
 ) -> impl Responder {
     let model_name = model_name.as_ref();
+    let query = query.deref();
 
     let mut value = json!({});
 
     for service in state.payload().services() {
-        if let Ok(page) = service_page(
-            state.as_ref(),
-            query.clone(),
-            service,
-            model_name,
-            page_index,
-        )
-        .await
+        if let Ok(page) = service_page(state.as_ref(), query, service, model_name, page_index).await
         {
             value[service.name()] = page;
         }
@@ -127,7 +121,14 @@ pub async fn model(
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
     let (model_name, service_name) = indices.into_inner();
-    response(state, query, service_name, model_name, PageIndex::Model).await
+    response(
+        state,
+        query.deref(),
+        service_name,
+        model_name,
+        PageIndex::Model,
+    )
+    .await
 }
 
 #[get("/api/{model_name}/{service}/{layer_index}")]
@@ -139,7 +140,7 @@ pub async fn layer(
     let (model_name, service_name, layer_index) = indices.into_inner();
     response(
         state,
-        query,
+        query.deref(),
         service_name,
         model_name,
         PageIndex::Layer(layer_index),
@@ -156,7 +157,7 @@ pub async fn neuron(
     let (model_name, service_name, layer_index, neuron_index) = indices.into_inner();
     response(
         state,
-        query,
+        query.deref(),
         service_name,
         model_name,
         PageIndex::Neuron(layer_index, neuron_index),

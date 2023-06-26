@@ -1,6 +1,6 @@
 use std::{future::Future, pin::Pin};
 
-use actix_web::web;
+
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use delegate::delegate;
@@ -19,7 +19,7 @@ pub trait ServiceProviderTrait: Clone + Serialize + Deserialize<'static> + Send 
         &self,
         service_name: &str,
         state: &State,
-        query: web::Query<serde_json::Value>,
+        query: &serde_json::Value,
         model_name: &str,
     ) -> Result<serde_json::Value> {
         bail!("No model page exists for service '{}'.", service_name);
@@ -28,7 +28,7 @@ pub trait ServiceProviderTrait: Clone + Serialize + Deserialize<'static> + Send 
         &self,
         service_name: &str,
         state: &State,
-        query: web::Query<serde_json::Value>,
+        query: &serde_json::Value,
         model_name: &str,
         layer_index: u32,
     ) -> Result<serde_json::Value> {
@@ -38,7 +38,7 @@ pub trait ServiceProviderTrait: Clone + Serialize + Deserialize<'static> + Send 
         &self,
         service_name: &str,
         state: &State,
-        query: web::Query<serde_json::Value>,
+        query: &serde_json::Value,
         model_name: &str,
         layer_index: u32,
         neuron_index: u32,
@@ -71,7 +71,7 @@ impl ServiceProvider {
                 &'a self,
                 service_name: &'a str,
                 state: &'a State,
-                query: web::Query<serde_json::Value>,
+                query: &'a serde_json::Value,
                 model_name: &'a str,
             ) -> Pin<Box<dyn Future<Output = Result<serde_json::Value>> + Send + 'a>>;
 
@@ -79,7 +79,7 @@ impl ServiceProvider {
                 &'a self,
                 service_name: &'a str,
                 state: &'a State,
-                query: web::Query<serde_json::Value>,
+                query: &'a serde_json::Value,
                 model_name: &'a str,
                 layer_index: u32,
             ) -> Pin<Box<dyn Future<Output = Result<serde_json::Value>> + Send + 'a >>;
@@ -88,7 +88,7 @@ impl ServiceProvider {
                 &'a self,
                 service_name: &'a str,
                 state: &'a State,
-                query: web::Query<serde_json::Value>,
+                query: &'a serde_json::Value,
                 model_name: &'a str,
                 layer_index: u32,
                 neuron_index: u32,

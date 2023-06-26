@@ -1,4 +1,4 @@
-use actix_web::web;
+
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
@@ -28,30 +28,30 @@ impl Service {
     pub async fn model_page(
         &self,
         state: &State,
-        query: web::Query<serde_json::Value>,
+        query: &serde_json::Value,
         model_name: &str,
     ) -> Result<serde_json::Value> {
         self.provider
-            .model_page(self.name(), state, query.clone(), model_name)
+            .model_page(self.name(), state, query, model_name)
             .await
     }
 
     pub async fn layer_page(
         &self,
         state: &State,
-        query: web::Query<serde_json::Value>,
+        query: &serde_json::Value,
         model_name: &str,
         layer_index: u32,
     ) -> Result<serde_json::Value> {
         self.provider
-            .layer_page(self.name(), state, query.clone(), model_name, layer_index)
+            .layer_page(self.name(), state, query, model_name, layer_index)
             .await
     }
 
     pub async fn neuron_page(
         &self,
         state: &State,
-        query: web::Query<serde_json::Value>,
+        query: &serde_json::Value,
         model_name: &str,
         layer_index: u32,
         neuron_index: u32,
@@ -60,7 +60,7 @@ impl Service {
             .neuron_page(
                 self.name(),
                 state,
-                query.clone(),
+                query,
                 model_name,
                 layer_index,
                 neuron_index,
