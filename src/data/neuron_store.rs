@@ -1,22 +1,16 @@
-use std::{
-    cmp::Ordering,
-    collections::{HashMap, HashSet},
-    fmt::Display,
-    fs,
-    path::Path,
-    str::FromStr,
-};
+use std::cmp::Ordering;
+use std::collections::{HashMap, HashSet};
+use std::fs;
+use std::path::Path;
+use std::{fmt::Display, str::FromStr};
 
-use actix_web::{get, http::header::ContentType, web, HttpResponse, Responder};
 use anyhow::{bail, Context, Result};
 use itertools::Itertools;
 use ndarray::{s, Array2};
-use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde::Deserialize;
+use serde::Serialize;
 
-use crate::{data::NeuronIndex, server::metadata};
-
-use super::State;
+use super::NeuronIndex;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum TokenSearchType {
@@ -45,6 +39,28 @@ impl TokenSearchType {
 impl Display for TokenSearchType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.to_str())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TokenSearch {
+    pub token: String,
+    pub search_types: Vec<TokenSearchType>,
+}
+
+impl FromStr for TokenSearch {
+    type Err = anyhow::Error;
+
+    fn from_str(token_search_string: &str) -> Result<Self> {
+        let (search_type_str, token) = token_search_string
+            .split(':')
+            .collect_tuple()
+            .context("Token search string should be of the form 'search_type:token'.")?;
+        let search_types = TokenSearchType::list_from_str(search_type_str)?;
+        Ok(TokenSearch {
+            token: token.to_string(),
+            search_types,
+        })
     }
 }
 
@@ -196,146 +212,5 @@ impl NeuronStore {
             TokenSearchType::Activating => self.activating.get(token),
             TokenSearchType::Important => self.important.get(token),
         }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TokenSearch {
-    token: String,
-    search_types: Vec<TokenSearchType>,
-}
-
-impl FromStr for TokenSearch {
-    type Err = anyhow::Error;
-
-    fn from_str(token_search_string: &str) -> Result<Self> {
-        let (search_type_str, token) = token_search_string
-            .split(':')
-            .collect_tuple()
-            .context("Token search string should be of the form 'search_type:token'.")?;
-        let search_types = TokenSearchType::list_from_str(search_type_str)?;
-        Ok(TokenSearch {
-            token: token.to_string(),
-            search_types,
-        })
-    }
-}
-
-pub async fn neuron2graph_page(
-    state: &State,
-    model: &str,
-    layer_index: u32,
-    neuron_index: u32,
-) -> Result<serde_json::Value> {
-    let path = Path::new("data")
-        .join(model)
-        .join("neuron2graph")
-        .join(format!("layer_{layer_index}",))
-        .join(format!("{layer_index}_{neuron_index}"))
-        .join("graph");
-    let graph = fs::read_to_string(path).map(|page| json!(page)).with_context(|| format!("Failed to read neuron2graph page for neuron {neuron_index} in layer {layer_index} of model '{model}'."))?;
-    let similar_neurons = state
-        .neuron_store(model)
-        .await?
-        .similar_neurons(
-            NeuronIndex {
-                layer: layer_index,
-                neuron: neuron_index,
-            },
-            0.4,
-        )?
-        .into_iter()
-        .map(
-            |(
-                NeuronIndex {
-                    layer: layer_index,
-                    neuron: neuron_index,
-                },
-                similarity,
-            )| {
-                json!({
-                    "layer": layer_index,
-                    "neuron": neuron_index,
-                    "similarity": similarity,
-                })
-            },
-        )
-        .collect::<Vec<_>>();
-    Ok(json!({
-        "graph": graph,
-        "similar": similar_neurons,}))
-}
-
-pub async fn neuron2graph_search_page(
-    state: &State,
-    model: &str,
-    query: serde_json::Value,
-) -> Result<serde_json::Value> {
-    let query = query["query"]
-        .as_str()
-        .context("Query should contain an entry 'query' with a string value.")?;
-    let neuron_store = state.neuron_store(model).await?;
-    let token_searches = query
-        .split(',')
-        .map(TokenSearch::from_str)
-        .collect::<Result<Vec<_>>>()?;
-    let results = token_searches
-        .into_iter()
-        .map(|token_search| {
-            let TokenSearch {
-                token,
-                search_types,
-            } = token_search;
-            search_types
-                .into_iter()
-                .flat_map(|search_type| {
-                    neuron_store
-                        .get(search_type, token.as_str())
-                        .cloned()
-                        .unwrap_or_default()
-                })
-                .collect::<HashSet<_>>()
-        })
-        .reduce(|a, b| a.intersection(&b).copied().collect::<HashSet<_>>())
-        .with_context(|| "At least one token search should be provided.")?
-        .into_iter()
-        .collect::<Vec<_>>();
-
-    Ok(json!(results))
-}
-
-#[get("/api/{model}/neuron2graph/{layer_index}/{neuron_index}")]
-pub async fn neuron_2_graph(
-    state: web::Data<State>,
-    indices: web::Path<(String, u32, u32)>,
-) -> impl Responder {
-    let (model, layer_index, neuron_index) = indices.into_inner();
-    let model_name = model.as_str();
-    let model_metadata = metadata::model_page(model_name).unwrap_or_else(|_| json!(null));
-
-    match neuron2graph_page(state.as_ref(), model_name, layer_index, neuron_index).await {
-        Ok(page) => HttpResponse::Ok().content_type(ContentType::json()).body(
-            serde_json::to_string(&json!({"model": model_metadata, "neuron2graph": page}))
-                .expect("Failed to serialize page to JSON. This should always be possible."),
-        ),
-        Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
-    }
-}
-
-#[get("/api/{model}/neuron2graph-search")]
-pub async fn neuron2graph_search(
-    state: web::Data<State>,
-    model: web::Path<String>,
-    web::Query(query): web::Query<serde_json::Value>,
-) -> impl Responder {
-    let model_name = model.as_str();
-    let model_metadata = metadata::model_page(model_name).unwrap_or_else(|_| json!(null));
-
-    match neuron2graph_search_page(state.as_ref(), model_name, query).await {
-        Ok(page) => HttpResponse::Ok().content_type(ContentType::json()).body(
-            serde_json::to_string(&json!({"model": model_metadata, "neuron2graph": page}))
-                .expect("Failed to serialize page to JSON. This should always be possible."),
-        ),
-        Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
     }
 }

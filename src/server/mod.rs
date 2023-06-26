@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::Path, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use actix_web::{
     get,
@@ -12,43 +12,12 @@ use anyhow::Result;
 use serde_json::json;
 use tokio::sync::Mutex;
 
-use crate::data::{NeuroscopeLayerPage, NeuroscopeModelPage, NeuroscopePage, Payload};
-pub mod neuron2graph;
-use neuron2graph::NeuronStore;
-mod metadata;
+use crate::data::{NeuronStore, Payload};
 
 mod service;
 pub use service::Service;
 mod service_providers;
 pub use service_providers::ServiceProvider;
-
-async fn neuroscope_page(
-    model_name: &str,
-    layer_index: u32,
-    neuron_index: u32,
-) -> Result<serde_json::Value> {
-    let path = Path::new("data")
-        .join(model_name)
-        .join("neuroscope")
-        .join(format!("l{layer_index}n{neuron_index}.postcard",));
-    NeuroscopePage::from_file(path).map(|page| json!(page))
-}
-
-async fn neuroscope_layer_page(model_name: &str, layer_index: u32) -> Result<serde_json::Value> {
-    let path = Path::new("data")
-        .join(model_name)
-        .join("neuroscope")
-        .join(format!("l{layer_index}.postcard",));
-    NeuroscopeLayerPage::from_file(path).map(|page| json!(page))
-}
-
-async fn neuroscope_model_page(model_name: &str) -> Result<serde_json::Value> {
-    let path = Path::new("data")
-        .join(model_name)
-        .join("neuroscope")
-        .join("model.postcard");
-    NeuroscopeModelPage::from_file(path).map(|page| json!(page))
-}
 
 #[get("/api/{model_name}/{service}")]
 pub async fn model(
@@ -61,14 +30,35 @@ pub async fn model(
     let service_name = service_name.as_str();
 
     if let Some(service) = state.payload().service(service_name) {
-        match service.model_page(state.as_ref(), query, model_name).await {
+        let service_json = if service.name() == "metadata" {
+            service.model_page(state.as_ref(), query, model_name).await
+        } else {
+            match service
+                .model_page(state.as_ref(), query.clone(), model_name)
+                .await
+            {
+                Ok(service_json) => {
+                    let metadata_json = ServiceProvider::Metadata
+                        .model_page("metadata", state.as_ref(), query, model_name)
+                        .await
+                        .unwrap_or(serde_json::Value::Null);
+
+                    Ok(json!({
+                        "metadata": metadata_json,
+                        "data": service_json
+                    }))
+                }
+                Err(error) => Err(error),
+            }
+        };
+        match service_json {
             Ok(page) => HttpResponse::Ok()
                 .content_type(ContentType::json())
                 .body(page.to_string()),
             Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
         }
     } else {
-        HttpResponse::NotFound().body(format!("Service {service_name} not found.",))
+        HttpResponse::NotFound().body(format!("Service '{service_name}' not found.",))
     }
 }
 
@@ -83,17 +73,37 @@ pub async fn layer(
     let service_name = service_name.as_str();
 
     if let Some(service) = state.payload().service(service_name) {
-        match service
-            .layer_page(state.as_ref(), query, model_name, layer_index)
-            .await
-        {
+        let service_json = if service.name() == "metadata" {
+            service
+                .layer_page(state.as_ref(), query, model_name, layer_index)
+                .await
+        } else {
+            match service
+                .layer_page(state.as_ref(), query.clone(), model_name, layer_index)
+                .await
+            {
+                Ok(service_json) => {
+                    let metadata_json = ServiceProvider::Metadata
+                        .layer_page("metadata", state.as_ref(), query, model_name, layer_index)
+                        .await
+                        .unwrap_or(serde_json::Value::Null);
+
+                    Ok(json!({
+                        "metadata": metadata_json,
+                        "data": service_json
+                    }))
+                }
+                Err(error) => Err(error),
+            }
+        };
+        match service_json {
             Ok(page) => HttpResponse::Ok()
                 .content_type(ContentType::json())
                 .body(page.to_string()),
             Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
         }
     } else {
-        HttpResponse::NotFound().body(format!("Service {service_name} not found.",))
+        HttpResponse::NotFound().body(format!("Service '{service_name}' not found.",))
     }
 }
 
@@ -108,17 +118,50 @@ pub async fn neuron(
     let service_name = service_name.as_str();
 
     if let Some(service) = state.payload().service(service_name) {
-        match service
-            .neuron_page(state.as_ref(), query, model_name, layer_index, neuron_index)
-            .await
-        {
+        let service_json = if service.name() == "metadata" {
+            service
+                .neuron_page(state.as_ref(), query, model_name, layer_index, neuron_index)
+                .await
+        } else {
+            match service
+                .neuron_page(
+                    state.as_ref(),
+                    query.clone(),
+                    model_name,
+                    layer_index,
+                    neuron_index,
+                )
+                .await
+            {
+                Ok(service_json) => {
+                    let metadata_json = ServiceProvider::Metadata
+                        .neuron_page(
+                            "metadata",
+                            state.as_ref(),
+                            query,
+                            model_name,
+                            layer_index,
+                            neuron_index,
+                        )
+                        .await
+                        .unwrap_or(serde_json::Value::Null);
+
+                    Ok(json!({
+                        "metadata": metadata_json,
+                        "data": service_json
+                    }))
+                }
+                Err(error) => Err(error),
+            }
+        };
+        match service_json {
             Ok(page) => HttpResponse::Ok()
                 .content_type(ContentType::json())
                 .body(page.to_string()),
             Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
         }
     } else {
-        HttpResponse::NotFound().body(format!("Service {service_name} not found.",))
+        HttpResponse::NotFound().body(format!("Service '{service_name}' not found.",))
     }
 }
 

@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::data::ModelMetadata;
+use crate::{data::ModelMetadata, server::State};
 
 use super::ServiceProviderTrait;
 
@@ -17,8 +17,8 @@ pub struct Metadata;
 impl ServiceProviderTrait for Metadata {
     async fn model_page(
         &self,
-        _service: &crate::server::Service,
-        _state: &crate::server::State,
+        _service: &str,
+        _state: &State,
         _query: web::Query<serde_json::Value>,
         model_name: &str,
     ) -> Result<serde_json::Value> {
@@ -30,8 +30,8 @@ impl ServiceProviderTrait for Metadata {
 
     async fn layer_page(
         &self,
-        _service: &crate::server::Service,
-        _state: &crate::server::State,
+        _service: &str,
+        _state: &State,
         _query: web::Query<serde_json::Value>,
         model_name: &str,
         layer_index: u32,
@@ -49,8 +49,8 @@ impl ServiceProviderTrait for Metadata {
 
     async fn neuron_page(
         &self,
-        _service: &crate::server::Service,
-        _state: &crate::server::State,
+        _service: &str,
+        _state: &State,
         _query: web::Query<serde_json::Value>,
         _model_name: &str,
         _layer_index: u32,

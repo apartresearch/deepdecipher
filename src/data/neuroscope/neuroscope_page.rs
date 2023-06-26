@@ -34,12 +34,12 @@ where
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NeuroscopePage {
+pub struct NeuroscopeNeuronPage {
     neuron_index: NeuronIndex,
     texts: Vec<Text>,
 }
 
-impl NeuroscopePage {
+impl NeuroscopeNeuronPage {
     fn from_html_header_and_texts(
         header_html: &str,
         texts: Vec<Text>,

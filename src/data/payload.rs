@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::server::{Service, ServiceProvider, State};
+use crate::server::{Service, ServiceProvider};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Payload {
@@ -37,6 +37,16 @@ impl Default for Payload {
         let metadata_service_provider = ServiceProvider::Metadata;
         let metadata_service = Service::new("metadata".to_string(), metadata_service_provider);
         result.add_service(metadata_service).unwrap();
+
+        let neuroscope_service_provider = ServiceProvider::Neuroscope;
+        let neuroscope_service =
+            Service::new("neuroscope".to_string(), neuroscope_service_provider);
+        result.add_service(neuroscope_service).unwrap();
+
+        let neuron2graph_service_provider = ServiceProvider::Neuron2Graph;
+        let neuron2graph_service =
+            Service::new("neuron2graph".to_string(), neuron2graph_service_provider);
+        result.add_service(neuron2graph_service).unwrap();
 
         result
     }
