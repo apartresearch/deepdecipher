@@ -1,6 +1,5 @@
 use std::{collections::HashSet, str::FromStr};
 
-use actix_web::web;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -17,9 +16,9 @@ pub struct Neuron2GraphSearch;
 impl ServiceProviderTrait for Neuron2GraphSearch {
     async fn model_page(
         &self,
-        _service: &str,
+        _service_name: &str,
         state: &State,
-        web::Query(query): web::Query<serde_json::Value>,
+        query: &serde_json::Value,
         model_name: &str,
     ) -> Result<serde_json::Value> {
         let query = query["query"]

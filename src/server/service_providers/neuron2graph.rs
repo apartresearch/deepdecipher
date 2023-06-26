@@ -1,6 +1,5 @@
 use std::{fs, path::Path};
 
-use actix_web::web;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 
@@ -18,9 +17,9 @@ pub struct Neuron2Graph;
 impl ServiceProviderTrait for Neuron2Graph {
     async fn neuron_page(
         &self,
-        _service: &str,
+        _service_name: &str,
         state: &State,
-        _query: web::Query<serde_json::Value>,
+        _query: &serde_json::Value,
         model: &str,
         layer_index: u32,
         neuron_index: u32,

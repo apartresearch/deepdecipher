@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use actix_web::{
     get,
@@ -19,37 +19,66 @@ pub use service::Service;
 mod service_providers;
 pub use service_providers::ServiceProvider;
 
-#[get("/api/{model_name}/{service}")]
-pub async fn model(
+#[derive(Clone, Copy, Debug)]
+enum PageIndex {
+    Model,
+    Layer(u32),
+    Neuron(u32, u32),
+}
+
+async fn service_page(
+    state: &State,
+    query: &serde_json::Value,
+    service: &Service,
+    model_name: &str,
+    page_index: PageIndex,
+) -> Result<serde_json::Value> {
+    match page_index {
+        PageIndex::Model => service.model_page(state, query, model_name).await,
+        PageIndex::Layer(layer_index) => {
+            service
+                .layer_page(state, query, model_name, layer_index)
+                .await
+        }
+        PageIndex::Neuron(layer_index, neuron_index) => {
+            service
+                .neuron_page(state, query, model_name, layer_index, neuron_index)
+                .await
+        }
+    }
+}
+
+async fn response(
     state: web::Data<State>,
-    indices: web::Path<(String, String)>,
-    query: web::Query<serde_json::Value>,
+    query: &serde_json::Value,
+    service_name: impl AsRef<str>,
+    model_name: impl AsRef<str>,
+    page_index: PageIndex,
 ) -> impl Responder {
-    let (model_name, service_name) = indices.into_inner();
-    let model_name = model_name.as_str();
-    let service_name = service_name.as_str();
+    let service_name = service_name.as_ref();
+    let model_name = model_name.as_ref();
 
     if let Some(service) = state.payload().service(service_name) {
-        let service_json = if service.name() == "metadata" {
-            service.model_page(state.as_ref(), query, model_name).await
+        let metadata_json = service_page(
+            state.as_ref(),
+            query,
+            state.payload().metadata_service(),
+            model_name,
+            page_index,
+        )
+        .await;
+        let service_json = if service.is_metadata() {
+            metadata_json
         } else {
-            match service
-                .model_page(state.as_ref(), query.clone(), model_name)
-                .await
-            {
-                Ok(service_json) => {
-                    let metadata_json = ServiceProvider::Metadata
-                        .model_page("metadata", state.as_ref(), query, model_name)
-                        .await
-                        .unwrap_or(serde_json::Value::Null);
-
-                    Ok(json!({
-                        "metadata": metadata_json,
-                        "data": service_json
-                    }))
-                }
-                Err(error) => Err(error),
-            }
+            let service_json =
+                service_page(state.as_ref(), query, service, model_name, page_index).await;
+            let metadata_json = metadata_json.unwrap_or(serde_json::Value::Null);
+            service_json.map(|service_json| {
+                json!({
+                    "metadata": metadata_json,
+                    "data": service_json
+                })
+            })
         };
         match service_json {
             Ok(page) => HttpResponse::Ok()
@@ -60,6 +89,46 @@ pub async fn model(
     } else {
         HttpResponse::NotFound().body(format!("Service '{service_name}' not found.",))
     }
+}
+
+async fn all_response(
+    state: web::Data<State>,
+    query: web::Query<serde_json::Value>,
+    model_name: impl AsRef<str>,
+    page_index: PageIndex,
+) -> impl Responder {
+    let model_name = model_name.as_ref();
+    let query = query.deref();
+
+    let mut value = json!({});
+
+    for service in state.payload().services() {
+        if let Ok(page) = service_page(state.as_ref(), query, service, model_name, page_index).await
+        {
+            value[service.name()] = page;
+        }
+    }
+
+    HttpResponse::Ok()
+        .content_type(ContentType::json())
+        .body(value.to_string())
+}
+
+#[get("/api/{model_name}/{service}")]
+pub async fn model(
+    state: web::Data<State>,
+    indices: web::Path<(String, String)>,
+    query: web::Query<serde_json::Value>,
+) -> impl Responder {
+    let (model_name, service_name) = indices.into_inner();
+    response(
+        state,
+        query.deref(),
+        service_name,
+        model_name,
+        PageIndex::Model,
+    )
+    .await
 }
 
 #[get("/api/{model_name}/{service}/{layer_index}")]
@@ -69,42 +138,14 @@ pub async fn layer(
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
     let (model_name, service_name, layer_index) = indices.into_inner();
-    let model_name = model_name.as_str();
-    let service_name = service_name.as_str();
-
-    if let Some(service) = state.payload().service(service_name) {
-        let service_json = if service.name() == "metadata" {
-            service
-                .layer_page(state.as_ref(), query, model_name, layer_index)
-                .await
-        } else {
-            match service
-                .layer_page(state.as_ref(), query.clone(), model_name, layer_index)
-                .await
-            {
-                Ok(service_json) => {
-                    let metadata_json = ServiceProvider::Metadata
-                        .layer_page("metadata", state.as_ref(), query, model_name, layer_index)
-                        .await
-                        .unwrap_or(serde_json::Value::Null);
-
-                    Ok(json!({
-                        "metadata": metadata_json,
-                        "data": service_json
-                    }))
-                }
-                Err(error) => Err(error),
-            }
-        };
-        match service_json {
-            Ok(page) => HttpResponse::Ok()
-                .content_type(ContentType::json())
-                .body(page.to_string()),
-            Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
-        }
-    } else {
-        HttpResponse::NotFound().body(format!("Service '{service_name}' not found.",))
-    }
+    response(
+        state,
+        query.deref(),
+        service_name,
+        model_name,
+        PageIndex::Layer(layer_index),
+    )
+    .await
 }
 
 #[get("/api/{model_name}/{service}/{layer_index}/{neuron_index}")]
@@ -114,55 +155,14 @@ pub async fn neuron(
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
     let (model_name, service_name, layer_index, neuron_index) = indices.into_inner();
-    let model_name = model_name.as_str();
-    let service_name = service_name.as_str();
-
-    if let Some(service) = state.payload().service(service_name) {
-        let service_json = if service.name() == "metadata" {
-            service
-                .neuron_page(state.as_ref(), query, model_name, layer_index, neuron_index)
-                .await
-        } else {
-            match service
-                .neuron_page(
-                    state.as_ref(),
-                    query.clone(),
-                    model_name,
-                    layer_index,
-                    neuron_index,
-                )
-                .await
-            {
-                Ok(service_json) => {
-                    let metadata_json = ServiceProvider::Metadata
-                        .neuron_page(
-                            "metadata",
-                            state.as_ref(),
-                            query,
-                            model_name,
-                            layer_index,
-                            neuron_index,
-                        )
-                        .await
-                        .unwrap_or(serde_json::Value::Null);
-
-                    Ok(json!({
-                        "metadata": metadata_json,
-                        "data": service_json
-                    }))
-                }
-                Err(error) => Err(error),
-            }
-        };
-        match service_json {
-            Ok(page) => HttpResponse::Ok()
-                .content_type(ContentType::json())
-                .body(page.to_string()),
-            Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
-        }
-    } else {
-        HttpResponse::NotFound().body(format!("Service '{service_name}' not found.",))
-    }
+    response(
+        state,
+        query.deref(),
+        service_name,
+        model_name,
+        PageIndex::Neuron(layer_index, neuron_index),
+    )
+    .await
 }
 
 #[get("/api/{model_name}/all")]
@@ -172,22 +172,7 @@ async fn all_model(
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
     let model_name = indices.into_inner();
-    let model_name = model_name.as_str();
-
-    let mut value = json!({});
-
-    for service in state.payload().services() {
-        if let Ok(page) = service
-            .model_page(state.as_ref(), query.clone(), model_name)
-            .await
-        {
-            value[service.name()] = page;
-        }
-    }
-
-    HttpResponse::Ok()
-        .content_type(ContentType::json())
-        .body(value.to_string())
+    all_response(state, query, model_name, PageIndex::Model).await
 }
 
 #[get("/api/{model_name}/all/{layer_index}")]
@@ -197,22 +182,7 @@ async fn all_layer(
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
     let (model_name, layer_index) = indices.into_inner();
-    let model_name = model_name.as_str();
-
-    let mut value = json!({});
-
-    for service in state.payload().services() {
-        if let Ok(page) = service
-            .layer_page(state.as_ref(), query.clone(), model_name, layer_index)
-            .await
-        {
-            value[service.name()] = page;
-        }
-    }
-
-    HttpResponse::Ok()
-        .content_type(ContentType::json())
-        .body(value.to_string())
+    all_response(state, query, model_name, PageIndex::Layer(layer_index)).await
 }
 
 #[get("/api/{model_name}/all/{layer_index}/{neuron_index}")]
@@ -222,28 +192,13 @@ async fn all_neuron(
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
     let (model_name, layer_index, neuron_index) = indices.into_inner();
-    let model_name = model_name.as_str();
-
-    let mut value = json!({});
-
-    for service in state.payload().services() {
-        if let Ok(page) = service
-            .neuron_page(
-                state.as_ref(),
-                query.clone(),
-                model_name,
-                layer_index,
-                neuron_index,
-            )
-            .await
-        {
-            value[service.name()] = page;
-        }
-    }
-
-    HttpResponse::Ok()
-        .content_type(ContentType::json())
-        .body(value.to_string())
+    all_response(
+        state,
+        query,
+        model_name,
+        PageIndex::Neuron(layer_index, neuron_index),
+    )
+    .await
 }
 
 pub struct State {

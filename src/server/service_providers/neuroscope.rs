@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use actix_web::web;
 use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -20,9 +19,9 @@ pub struct Neuroscope;
 impl ServiceProviderTrait for Neuroscope {
     async fn model_page(
         &self,
-        _service: &str,
+        _service_name: &str,
         _state: &State,
-        _query: web::Query<serde_json::Value>,
+        _query: &serde_json::Value,
         model_name: &str,
     ) -> Result<serde_json::Value> {
         let path = Path::new("data")
@@ -34,9 +33,9 @@ impl ServiceProviderTrait for Neuroscope {
 
     async fn layer_page(
         &self,
-        _service: &str,
+        _service_name: &str,
         _state: &State,
-        _query: web::Query<serde_json::Value>,
+        _query: &serde_json::Value,
         model_name: &str,
         layer_index: u32,
     ) -> Result<serde_json::Value> {
@@ -49,9 +48,9 @@ impl ServiceProviderTrait for Neuroscope {
 
     async fn neuron_page(
         &self,
-        _service: &str,
+        _service_name: &str,
         _state: &State,
-        _query: web::Query<serde_json::Value>,
+        _query: &serde_json::Value,
         model_name: &str,
         layer_index: u32,
         neuron_index: u32,
