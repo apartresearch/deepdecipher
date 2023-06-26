@@ -17,6 +17,11 @@ pub mod neuron2graph;
 use neuron2graph::NeuronStore;
 mod metadata;
 
+mod service;
+use service::Service;
+mod service_provider;
+use service_provider::ServiceProvider;
+
 async fn neuroscope_page(
     model: &str,
     layer_index: u32,
