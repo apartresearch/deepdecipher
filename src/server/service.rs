@@ -1,10 +1,10 @@
 use anyhow::Result;
 
-use super::{service_provider::ServiceProvider, State};
+use super::{ServiceProvider, State};
 
 pub struct Service {
     name: String,
-    provider: Box<dyn ServiceProvider>,
+    provider: ServiceProvider,
 }
 
 impl Service {
