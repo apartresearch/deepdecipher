@@ -49,6 +49,7 @@ log = "0.4.19"
 ndarray = { version = "0.15.6", features = ["serde"] }
 scraper = "0.16.0"
 delegate = "0.9.0"
+async-trait = "0.1.68"
 
 [features]
 python = ["dep:pyo3", "dep:numpy", "dep:ctrlc"]
