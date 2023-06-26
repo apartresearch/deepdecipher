@@ -20,6 +20,11 @@ impl Service {
         &self.name
     }
 
+    pub fn is_metadata(&self) -> bool {
+        assert_eq!(self.provider.is_metadata(), self.name == "metadata");
+        self.provider.is_metadata()
+    }
+
     pub async fn model_page(
         &self,
         state: &State,

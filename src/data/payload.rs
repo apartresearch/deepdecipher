@@ -36,6 +36,11 @@ impl Payload {
     pub fn service<S: AsRef<str>>(&self, key: S) -> Option<&Service> {
         self.services.get(key.as_ref())
     }
+
+    pub fn metadata_service(&self) -> &Service {
+        self.service("metadata")
+            .expect("All payloads must contain a 'metadata' service.")
+    }
 }
 
 impl Default for Payload {
