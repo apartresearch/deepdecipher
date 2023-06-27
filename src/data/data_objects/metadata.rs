@@ -7,8 +7,10 @@ use serde::{Deserialize, Serialize};
 
 use anyhow::{Context, Result};
 
+use super::data_object::DataObjectTrait;
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ModelMetadata {
+pub struct Metadata {
     pub name: String,
     pub layers: Vec<LayerMetadata>,
     pub activation_function: String,
@@ -17,7 +19,7 @@ pub struct ModelMetadata {
     pub dataset: String,
 }
 
-impl ModelMetadata {
+impl Metadata {
     pub fn to_file<P: AsRef<Path>>(&self, data_path: P) -> Result<()> {
         let model_metadata_path = data_path.as_ref().join(&self.name).join("metadata.json");
         fs::create_dir_all(
@@ -32,6 +34,8 @@ impl ModelMetadata {
         Ok(())
     }
 }
+
+impl DataObjectTrait for Metadata {}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LayerMetadata {

@@ -6,9 +6,9 @@ mod neuroscope;
 pub use neuroscope::{NeuroscopeLayerPage, NeuroscopeModelPage, NeuroscopeNeuronPage};
 mod neuron_store;
 pub use neuron_store::{NeuronStore, TokenSearch, TokenSearchType};
-mod metadata;
 pub mod retrieve;
-pub use metadata::{LayerMetadata, ModelMetadata};
 
 mod payload;
 pub use payload::Payload;
+mod data_objects;
+pub use data_objects::{DataObject, LayerMetadata, Metadata};

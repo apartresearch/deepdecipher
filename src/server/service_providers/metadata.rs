@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::{data::ModelMetadata, server::State};
+use crate::{data::Metadata as MetadataData, server::State};
 
 use super::ServiceProviderTrait;
 
@@ -37,7 +37,7 @@ impl ServiceProviderTrait for Metadata {
     ) -> Result<serde_json::Value> {
         let path = state.payload().model_path(model_name).join("metadata.json");
         let text = fs::read_to_string(path)?;
-        let model_metadata: ModelMetadata = serde_json::from_str(&text)?;
+        let model_metadata: MetadataData = serde_json::from_str(&text)?;
         let layer_metadata = &model_metadata
             .layers
             .get(layer_index as usize)

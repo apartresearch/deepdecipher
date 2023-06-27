@@ -7,7 +7,7 @@ use std::{
 
 use crate::data::{
     neuroscope::{NeuroscopeLayerPage, NeuroscopeModelPage},
-    LayerMetadata, ModelMetadata, NeuronIndex, NeuroscopeNeuronPage,
+    LayerMetadata, Metadata, NeuronIndex, NeuroscopeNeuronPage,
 };
 
 use anyhow::{Context, Result};
@@ -196,7 +196,7 @@ pub async fn scrape_layer_to_files<P: AsRef<Path>, S: AsRef<str>>(
     Ok(layer_page)
 }
 
-pub async fn scrape_model_metadata<S: AsRef<str>>(model: S) -> Result<ModelMetadata> {
+pub async fn scrape_model_metadata<S: AsRef<str>>(model: S) -> Result<Metadata> {
     let model = model.as_ref();
     let url = NEUROSCOPE_BASE_URL;
     let client = Client::new();
@@ -238,7 +238,7 @@ pub async fn scrape_model_metadata<S: AsRef<str>>(model: S) -> Result<ModelMetad
     let num_total_neurons = row_elements[6].replace(',', "").parse::<u32>().unwrap();
     let num_total_parameters = row_elements[7].replace(',', "").parse::<u32>().unwrap();
 
-    Ok::<_, anyhow::Error>(ModelMetadata {
+    Ok::<_, anyhow::Error>(Metadata {
         name: model.to_owned(),
         layers,
         activation_function,
