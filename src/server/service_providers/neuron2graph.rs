@@ -1,4 +1,4 @@
-use std::{fs, path::Path};
+use std::fs;
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
@@ -20,19 +20,20 @@ impl ServiceProviderTrait for Neuron2Graph {
         _service_name: &str,
         state: &State,
         _query: &serde_json::Value,
-        model: &str,
+        model_name: &str,
         layer_index: u32,
         neuron_index: u32,
     ) -> Result<serde_json::Value> {
-        let path = Path::new("data")
-            .join(model)
+        let path = state
+            .payload()
+            .model_path(model_name)
             .join("neuron2graph")
             .join(format!("layer_{layer_index}",))
             .join(format!("{layer_index}_{neuron_index}"))
             .join("graph");
-        let graph = fs::read_to_string(path).map(|page| json!(page)).with_context(|| format!("Failed to read neuron2graph page for neuron {neuron_index} in layer {layer_index} of model '{model}'."))?;
+        let graph = fs::read_to_string(path).map(|page| json!(page)).with_context(|| format!("Failed to read neuron2graph page for neuron {neuron_index} in layer {layer_index} of model '{model_name}'."))?;
         let similar_neurons = state
-            .neuron_store(model)
+            .neuron_store(model_name)
             .await?
             .similar_neurons(
                 NeuronIndex {

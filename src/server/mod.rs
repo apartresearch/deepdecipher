@@ -222,7 +222,10 @@ impl State {
         let mut neuron_stores = self.neuron_stores.lock().await;
         if !neuron_stores.contains_key(model_name) {
             log::info!("Neuron store doesn't exist for model '{model_name}', loading from disk");
-            neuron_stores.insert(model_name.to_string(), NeuronStore::load(model_name)?);
+            neuron_stores.insert(
+                model_name.to_string(),
+                NeuronStore::load(self.payload.data_path(), model_name)?,
+            );
         }
         assert!(neuron_stores.contains_key(model_name));
         Ok(neuron_stores.get(model_name).unwrap().clone())

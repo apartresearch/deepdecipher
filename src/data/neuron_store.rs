@@ -71,8 +71,8 @@ pub struct NeuronStoreRaw {
 }
 
 impl NeuronStoreRaw {
-    pub fn load(model: &str) -> Result<Self> {
-        let neuron_store_path = Path::new("data")
+    pub fn load(data_path: &Path, model: &str) -> Result<Self> {
+        let neuron_store_path = data_path
             .join(model)
             .join("neuron2graph-search")
             .join("neuron_store.json");
@@ -95,11 +95,11 @@ pub struct NeuronStore {
 }
 
 impl NeuronStore {
-    pub fn load(model: &str) -> Result<Self> {
+    pub fn load(data_path: &Path, model: &str) -> Result<Self> {
         let NeuronStoreRaw {
             activating,
             important,
-        } = NeuronStoreRaw::load(model)?;
+        } = NeuronStoreRaw::load(data_path, model)?;
         let activating = activating
             .into_iter()
             .map(|(key, value)| {

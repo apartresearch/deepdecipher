@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
@@ -7,15 +10,28 @@ use crate::server::{Service, ServiceProvider};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Payload {
+    data_path: PathBuf,
     services: HashMap<String, Service>,
 }
 
 impl Payload {
-    pub fn initialize() -> Self {
+    pub fn initialize(path: impl AsRef<Path>) -> Self {
+        let data_path = path.as_ref().to_path_buf();
         let metadata_service_provider = ServiceProvider::Metadata;
         let metadata_service = Service::new("metadata".to_string(), metadata_service_provider);
         let services = HashMap::from([("metadata".to_string(), metadata_service)]);
-        Self { services }
+        Self {
+            data_path,
+            services,
+        }
+    }
+
+    pub fn data_path(&self) -> &Path {
+        self.data_path.as_path()
+    }
+
+    pub fn model_path(&self, model_name: &str) -> PathBuf {
+        self.data_path.join(model_name)
     }
 
     pub fn add_service(&mut self, service: Service) -> Result<()> {
@@ -45,7 +61,7 @@ impl Payload {
 
 impl Default for Payload {
     fn default() -> Self {
-        let mut result = Self::initialize();
+        let mut result = Self::initialize("data");
 
         let neuroscope_service_provider = ServiceProvider::Neuroscope;
         let neuroscope_service =

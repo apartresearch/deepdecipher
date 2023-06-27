@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -20,12 +18,13 @@ impl ServiceProviderTrait for Neuroscope {
     async fn model_page(
         &self,
         _service_name: &str,
-        _state: &State,
+        state: &State,
         _query: &serde_json::Value,
         model_name: &str,
     ) -> Result<serde_json::Value> {
-        let path = Path::new("data")
-            .join(model_name)
+        let path = state
+            .payload()
+            .model_path(model_name)
             .join("neuroscope")
             .join("model.postcard");
         NeuroscopeModelPage::from_file(path).map(|page| json!(page))
@@ -34,13 +33,14 @@ impl ServiceProviderTrait for Neuroscope {
     async fn layer_page(
         &self,
         _service_name: &str,
-        _state: &State,
+        state: &State,
         _query: &serde_json::Value,
         model_name: &str,
         layer_index: u32,
     ) -> Result<serde_json::Value> {
-        let path = Path::new("data")
-            .join(model_name)
+        let path = state
+            .payload()
+            .model_path(model_name)
             .join("neuroscope")
             .join(format!("l{layer_index}.postcard",));
         NeuroscopeLayerPage::from_file(path).map(|page| json!(page))
@@ -49,14 +49,15 @@ impl ServiceProviderTrait for Neuroscope {
     async fn neuron_page(
         &self,
         _service_name: &str,
-        _state: &State,
+        state: &State,
         _query: &serde_json::Value,
         model_name: &str,
         layer_index: u32,
         neuron_index: u32,
     ) -> Result<serde_json::Value> {
-        let path = Path::new("data")
-            .join(model_name)
+        let path = state
+            .payload()
+            .model_path(model_name)
             .join("neuroscope")
             .join(format!("l{layer_index}n{neuron_index}.postcard",));
         NeuroscopeNeuronPage::from_file(path).map(|page| json!(page))

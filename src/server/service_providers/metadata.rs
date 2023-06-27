@@ -1,4 +1,4 @@
-use std::{fs, path::Path};
+use std::fs;
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
@@ -17,11 +17,11 @@ impl ServiceProviderTrait for Metadata {
     async fn model_page(
         &self,
         _service_name: &str,
-        _state: &State,
+        state: &State,
         _query: &serde_json::Value,
         model_name: &str,
     ) -> Result<serde_json::Value> {
-        let path: std::path::PathBuf = Path::new("data").join(model_name).join("metadata.json");
+        let path: std::path::PathBuf = state.payload().model_path(model_name).join("metadata.json");
         let text = fs::read_to_string(path)?;
         let metadata = serde_json::from_str(&text)?;
         Ok(metadata)
@@ -30,12 +30,12 @@ impl ServiceProviderTrait for Metadata {
     async fn layer_page(
         &self,
         _service_name: &str,
-        _state: &State,
+        state: &State,
         _query: &serde_json::Value,
         model_name: &str,
         layer_index: u32,
     ) -> Result<serde_json::Value> {
-        let path = Path::new("data").join(model_name).join("metadata.json");
+        let path = state.payload().model_path(model_name).join("metadata.json");
         let text = fs::read_to_string(path)?;
         let model_metadata: ModelMetadata = serde_json::from_str(&text)?;
         let layer_metadata = &model_metadata
