@@ -8,6 +8,8 @@ mod neuron_store;
 pub use neuron_store::{NeuronStore, TokenSearch, TokenSearchType};
 pub mod retrieve;
 
+pub mod database;
+
 mod payload;
 pub use payload::Payload;
 mod data_objects;

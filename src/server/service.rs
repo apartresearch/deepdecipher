@@ -1,4 +1,3 @@
-
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
@@ -21,8 +20,7 @@ impl Service {
     }
 
     pub fn is_metadata(&self) -> bool {
-        assert_eq!(self.provider.is_metadata(), self.name == "metadata");
-        self.provider.is_metadata()
+        false
     }
 
     pub async fn model_page(

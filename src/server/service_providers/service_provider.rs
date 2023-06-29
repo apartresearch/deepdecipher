@@ -1,6 +1,5 @@
 use std::{future::Future, pin::Pin};
 
-
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use delegate::delegate;
