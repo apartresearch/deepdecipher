@@ -52,6 +52,8 @@ scraper = "0.16.0"
 delegate = "0.9.0"
 async-trait = "0.1.68"
 rusqlite = { version = "0.29.0", features = ["bundled"] }
+strum = { version = "0.25.0", features = ["derive"] }
+tokio-rusqlite = "0.4.0"
 
 [features]
 python = ["dep:pyo3", "dep:numpy", "dep:ctrlc"]

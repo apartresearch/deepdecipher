@@ -21,9 +21,9 @@ impl ServiceProviderTrait for Metadata {
         _query: &serde_json::Value,
         model_name: &str,
     ) -> Result<serde_json::Value> {
-        let path: std::path::PathBuf = state.payload().model_path(model_name).join("metadata.json");
-        let text = fs::read_to_string(path)?;
-        let metadata = serde_json::from_str(&text)?;
+        let database = state.database().await?;
+        let model = database.model(model_name.to_owned()).await?;
+        let metadata = serde_json::to_value(model.metadata())?;
         Ok(metadata)
     }
 
@@ -35,14 +35,20 @@ impl ServiceProviderTrait for Metadata {
         model_name: &str,
         layer_index: u32,
     ) -> Result<serde_json::Value> {
-        let path = state.payload().model_path(model_name).join("metadata.json");
-        let text = fs::read_to_string(path)?;
-        let model_metadata: MetadataData = serde_json::from_str(&text)?;
-        let layer_metadata = &model_metadata
-            .layers
-            .get(layer_index as usize)
-            .context("Layer index out of bounds.")?;
-        let metadata = serde_json::to_value(layer_metadata)?;
+        let database = state.database().await?;
+        let model = database.model(model_name.to_owned()).await?;
+        let metadata = serde_json::to_value(
+            model
+                .metadata()
+                .layers
+                .get(layer_index as usize)
+                .with_context(|| {
+                    format!(
+                        "Layer index {layer_index} out of bounds. Model only has {} layers.",
+                        model.metadata().layers.len()
+                    )
+                })?,
+        )?;
         Ok(metadata)
     }
 

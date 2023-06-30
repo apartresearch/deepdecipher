@@ -8,9 +8,12 @@ mod neuron_store;
 pub use neuron_store::{NeuronStore, TokenSearch, TokenSearchType};
 pub mod retrieve;
 
+mod data_object;
 pub mod database;
+pub use data_object::DataObject;
+pub mod data_types;
 
 mod payload;
 pub use payload::Payload;
 mod data_objects;
-pub use data_objects::{DataObject, LayerMetadata, Metadata};
+pub use data_objects::{LayerMetadata, Metadata};

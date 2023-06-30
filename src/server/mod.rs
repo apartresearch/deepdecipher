@@ -12,7 +12,7 @@ use anyhow::Result;
 use serde_json::json;
 use tokio::sync::Mutex;
 
-use crate::data::{NeuronStore, Payload};
+use crate::data::{database::Database, NeuronStore, Payload};
 
 mod service;
 pub use service::Service;
@@ -207,15 +207,19 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(payload: Payload) -> Self {
-        Self {
+    pub fn new(payload: Payload) -> Result<Self> {
+        Ok(Self {
             neuron_stores: Arc::new(Mutex::new(HashMap::new())),
             payload,
-        }
+        })
     }
 
     pub fn payload(&self) -> &Payload {
         &self.payload
+    }
+
+    pub async fn database(&self) -> Result<Database> {
+        Database::open("test.db").await
     }
 
     pub async fn neuron_store(&self, model_name: &str) -> Result<NeuronStore> {
@@ -235,7 +239,7 @@ impl State {
 impl Default for State {
     fn default() -> Self {
         let payload = Payload::default();
-        Self::new(payload)
+        Self::new(payload).unwrap()
     }
 }
 
