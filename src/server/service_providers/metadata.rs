@@ -22,7 +22,10 @@ impl ServiceProviderTrait for Metadata {
         model_name: &str,
     ) -> Result<serde_json::Value> {
         let database = state.database().await?;
-        let model = database.model(model_name.to_owned()).await?;
+        let model = database
+            .model(model_name.to_owned())
+            .await?
+            .with_context(|| format!("No model with name {model_name}."))?;
         let metadata = serde_json::to_value(model.metadata())?;
         Ok(metadata)
     }
@@ -36,7 +39,10 @@ impl ServiceProviderTrait for Metadata {
         layer_index: u32,
     ) -> Result<serde_json::Value> {
         let database = state.database().await?;
-        let model = database.model(model_name.to_owned()).await?;
+        let model = database
+            .model(model_name.to_owned())
+            .await?
+            .with_context(|| format!("No model with name {model_name}."))?;
         let metadata = serde_json::to_value(
             model
                 .metadata()

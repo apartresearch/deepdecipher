@@ -1,10 +1,10 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::{
-    data::{NeuroscopeLayerPage, NeuroscopeModelPage, NeuroscopeNeuronPage},
+    data::{self, NeuroscopeLayerPage, NeuroscopeModelPage, NeuroscopeNeuronPage},
     server::State,
 };
 
@@ -22,12 +22,23 @@ impl ServiceProviderTrait for Neuroscope {
         _query: &serde_json::Value,
         model_name: &str,
     ) -> Result<serde_json::Value> {
-        let path = state
-            .payload()
-            .model_path(model_name)
-            .join("neuroscope")
-            .join("model.postcard");
-        NeuroscopeModelPage::from_file(path).map(|page| json!(page))
+        let database = state.database().await?;
+        let model = database
+            .model(model_name.to_owned())
+            .await?
+            .with_context(|| format!("No model with name {model_name}."))?;
+        let data_object = model
+            .get_data_object(&database, "neuroscope")
+            .await
+            .with_context(|| {
+                format!("Failed to get neuroscope data object for model '{model_name}'.")
+            })?;
+        let page = data_object
+            .neuroscope()
+            .context("Type of 'neuroscope' data object must be 'neuroscope'.")?
+            .model_page(&database, &model)
+            .await?;
+        Ok(json!(page))
     }
 
     async fn layer_page(
@@ -38,12 +49,18 @@ impl ServiceProviderTrait for Neuroscope {
         model_name: &str,
         layer_index: u32,
     ) -> Result<serde_json::Value> {
-        let path = state
-            .payload()
-            .model_path(model_name)
-            .join("neuroscope")
-            .join(format!("l{layer_index}.postcard",));
-        NeuroscopeLayerPage::from_file(path).map(|page| json!(page))
+        let database = state.database().await?;
+        let model = database
+            .model(model_name.to_owned())
+            .await?
+            .with_context(|| format!("No model with name {model_name}."))?;
+        let data_object = model.get_data_object(&database, "neuroscope").await?;
+        let page = data_object
+            .neuroscope()
+            .context("Type of 'neuroscope' data object must be 'neuroscope'.")?
+            .layer_page(&database, &model, layer_index)
+            .await?;
+        Ok(json!(page))
     }
 
     async fn neuron_page(
@@ -55,11 +72,17 @@ impl ServiceProviderTrait for Neuroscope {
         layer_index: u32,
         neuron_index: u32,
     ) -> Result<serde_json::Value> {
-        let path = state
-            .payload()
-            .model_path(model_name)
-            .join("neuroscope")
-            .join(format!("l{layer_index}n{neuron_index}.postcard",));
-        NeuroscopeNeuronPage::from_file(path).map(|page| json!(page))
+        let database = state.database().await?;
+        let model = database
+            .model(model_name.to_owned())
+            .await?
+            .with_context(|| format!("No model with name {model_name}."))?;
+        let data_object = model.get_data_object(&database, "neuroscope").await?;
+        let page = data_object
+            .neuroscope()
+            .context("Type of 'neuroscope' data object must be 'neuroscope'.")?
+            .neuron_page(&database, &model, layer_index, neuron_index)
+            .await?;
+        Ok(json!(page))
     }
 }

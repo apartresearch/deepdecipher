@@ -1,4 +1,4 @@
-mod data_type;
-pub use data_type::DataType;
+mod data_object;
+pub use data_object::{DataObject, DataType};
 mod neuroscope;
 pub use neuroscope::Neuroscope;

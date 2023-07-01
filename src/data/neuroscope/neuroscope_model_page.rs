@@ -7,6 +7,7 @@ use std::{
 use anyhow::{Context, Result};
 use flate2::{bufread::DeflateDecoder, write::DeflateEncoder, Compression};
 use serde::{Deserialize, Serialize};
+use snap::raw::{Decoder, Encoder};
 
 use crate::data::NeuronIndex;
 
@@ -25,6 +26,22 @@ impl NeuroscopeModelPage {
 
     pub fn important_neurons(&self) -> &[(NeuronIndex, f32)] {
         self.important_neurons.as_slice()
+    }
+
+    pub fn to_binary(&self) -> Result<Vec<u8>> {
+        let data =
+            postcard::to_allocvec(self).context("Failed to serialize neuroscope model page.")?;
+        Encoder::new()
+            .compress_vec(data.as_slice())
+            .context("Failed to compress neuroscope model page.")
+    }
+
+    pub fn from_binary(data: impl AsRef<[u8]>) -> Result<Self> {
+        let data = Decoder::new()
+            .decompress_vec(data.as_ref())
+            .context("Failed to decompress neuroscope model page")?;
+        postcard::from_bytes(data.as_slice())
+            .context("Failed to deserialize neuroscope model page.")
     }
 
     pub fn to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {

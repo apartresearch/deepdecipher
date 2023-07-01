@@ -84,7 +84,7 @@ async fn response(
             Ok(page) => HttpResponse::Ok()
                 .content_type(ContentType::json())
                 .body(page.to_string()),
-            Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error}")),
+            Err(error) => HttpResponse::ServiceUnavailable().body(format!("{error:?}")),
         }
     } else {
         HttpResponse::NotFound().body(format!("Service '{service_name}' not found.",))
@@ -219,7 +219,7 @@ impl State {
     }
 
     pub async fn database(&self) -> Result<Database> {
-        Database::open("test.db").await
+        Database::open("data.db").await
     }
 
     pub async fn neuron_store(&self, model_name: &str) -> Result<NeuronStore> {

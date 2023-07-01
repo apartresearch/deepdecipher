@@ -1,4 +1,4 @@
-use anyhow::{ensure, Context, Result};
+use anyhow::{Context, Result};
 
 use crate::data::{
     database::{Database, ModelHandle},
@@ -13,9 +13,16 @@ impl Neuroscope {
         database: &Database,
         model: &ModelHandle,
     ) -> Result<NeuroscopeModelPage> {
-        let raw_data = database.get_model_data(model.name(), "neuroscope").await?;
-        serde_json::from_slice(raw_data.as_slice())
-            .context("Failed to parse neuroscope model page.")
+        let raw_data = model
+            .get_model_data(database, "neuroscope")
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to get neuroscope model data for model '{}'.",
+                    model.name()
+                )
+            })?;
+        NeuroscopeModelPage::from_binary(raw_data.as_slice())
     }
     pub async fn layer_page(
         &self,
@@ -23,11 +30,10 @@ impl Neuroscope {
         model: &ModelHandle,
         layer_index: u32,
     ) -> Result<NeuroscopeLayerPage> {
-        let raw_data = database
-            .get_layer_data(model.name(), "neuroscope", layer_index)
+        let raw_data = model
+            .get_layer_data(database, "neuroscope", layer_index)
             .await?;
-        serde_json::from_slice(raw_data.as_slice())
-            .context("Failed to parse neuroscope layer page.")
+        NeuroscopeLayerPage::from_binary(raw_data.as_slice())
     }
     pub async fn neuron_page(
         &self,
@@ -36,10 +42,9 @@ impl Neuroscope {
         layer_index: u32,
         neuron_index: u32,
     ) -> Result<NeuroscopeNeuronPage> {
-        let raw_data = database
-            .get_neuron_data(model.name(), "neuroscope", layer_index, neuron_index)
+        let raw_data = model
+            .get_neuron_data(database, "neuroscope", layer_index, neuron_index)
             .await?;
-        serde_json::from_slice(raw_data.as_slice())
-            .context("Failed to parse neuroscope neuron page.")
+        NeuroscopeNeuronPage::from_binary(raw_data.as_slice())
     }
 }

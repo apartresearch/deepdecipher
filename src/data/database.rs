@@ -4,9 +4,12 @@ use anyhow::{bail, Context, Result};
 use rusqlite::{Params, ToSql};
 use tokio_rusqlite::Connection;
 
-use crate::data::LayerMetadata;
+use crate::data::{self, LayerMetadata};
 
-use super::Metadata;
+use super::{
+    data_types::{DataObject, DataType},
+    Metadata,
+};
 
 const MODEL_TABLE: &str = r#"
 CREATE TABLE model (
@@ -43,6 +46,15 @@ CREATE TABLE data_object (
     type                    TEXT NOT NULL,
     type_args               BLOB NOT NULL
   ) STRICT;
+"#;
+
+const MODEL_DATA_OBJECT_TABLE: &str = r#"
+CREATE TABLE model_data_object (
+    model                   TEXT NOT NULL,
+    data_object             TEXT NOT NULL,
+    FOREIGN KEY(model) REFERENCES model(name),
+    FOREIGN KEY(data_object) REFERENCES data_object(name)
+)
 "#;
 
 const MODEL_DATA_TABLE: &str = r#"
@@ -83,11 +95,12 @@ CREATE TABLE neuron_data (
   ) STRICT;
 "#;
 
-const TABLES: [&str; 7] = [
+const TABLES: [&str; 8] = [
     MODEL_TABLE,
     SERVICE_TABLE,
     MODEL_SERVICE_TABLE,
     DATA_OBJECT_TABLE,
+    MODEL_DATA_OBJECT_TABLE,
     MODEL_DATA_TABLE,
     LAYER_DATA_TABLE,
     NEURON_DATA_TABLE,
@@ -133,11 +146,15 @@ impl Database {
         })
     }
 
+    pub fn connection(&self) -> &Connection {
+        &self.connection
+    }
+
     pub async fn add_model(&mut self, metadata: Metadata) -> Result<ModelHandle> {
         ModelHandle::create(self, metadata).await
     }
 
-    pub async fn model(&self, model_name: String) -> Result<ModelHandle> {
+    pub async fn model(&self, model_name: String) -> Result<Option<ModelHandle>> {
         const GET_MODEL: &str = r#"
         SELECT
             name,
@@ -156,7 +173,11 @@ impl Database {
                 let mut statement = connection.prepare(GET_MODEL)?;
                 let mut rows = statement.query((model_name,))?;
 
-                let row = rows.next()?.unwrap();
+                let row = if let Some(row) = rows.next()? {
+                    row
+                } else {
+                    return Ok(None);
+                };
 
                 let num_layers: u32 = row.get(1)?;
                 let neurons_per_layer = row.get(2)?;
@@ -167,18 +188,18 @@ impl Database {
                     num_layers as usize
                 ];
 
-                Ok(Metadata {
+                Ok(Some(Metadata {
                     name: row.get(0)?,
                     layers,
                     activation_function: row.get(3)?,
                     num_total_neurons: num_layers * neurons_per_layer,
                     num_total_parameters: row.get(4)?,
                     dataset: row.get(5)?,
-                })
+                }))
             })
             .await?;
 
-        Ok(ModelHandle { metadata })
+        Ok(metadata.map(|metadata| ModelHandle { metadata }))
     }
 
     pub async fn add_service(
@@ -212,87 +233,34 @@ impl Database {
         Ok(())
     }
 
-    pub async fn get_model_data(
+    pub async fn add_data_object(
         &self,
-        model_name: impl AsRef<str>,
-        data_object: impl AsRef<str>,
-    ) -> Result<Vec<u8>> {
-        const GET_MODEL_DATA: &str = r#"
-        SELECT
-            data
-        FROM model_data
-        WHERE model = ?1 AND data_object = ?2;
+        data_object_name: impl AsRef<str>,
+        data_type: DataType,
+    ) -> Result<()> {
+        const ADD_DATA_OBJECT: &str = r#"
+        INSERT INTO data_object (
+            name,
+            type,
+            type_args
+        ) VALUES (
+            ?1,
+            ?2,
+            ?3
+        );
         "#;
 
         let params = (
-            model_name.as_ref().to_owned(),
-            data_object.as_ref().to_owned(),
+            data_object_name.as_ref().to_owned(),
+            data_type.as_ref().to_owned(),
+            data_type.args(),
         );
 
         self.connection
-            .call(|connection| {
-                let mut statement = connection.prepare(GET_MODEL_DATA)?;
-                statement.query_row(params, |row| row.get(0))
-            })
-            .await
-            .context("Failed to get model data.")
-    }
+            .call(|connection| connection.execute(ADD_DATA_OBJECT, params))
+            .await?;
 
-    pub async fn get_layer_data(
-        &self,
-        model_name: impl AsRef<str>,
-        data_object: impl AsRef<str>,
-        layer_index: u32,
-    ) -> Result<Vec<u8>> {
-        const GET_LAYER_DATA: &str = r#"
-        SELECT
-            data
-        FROM layer_data
-        WHERE model = ?1 AND data_object = ?2 AND layer_index = ?3;
-        "#;
-
-        let params = (
-            model_name.as_ref().to_owned(),
-            data_object.as_ref().to_owned(),
-            layer_index,
-        );
-        self.connection
-            .call(|connection| {
-                let mut statement = connection.prepare(GET_LAYER_DATA)?;
-                statement.query_row(params, |row| row.get(0))
-            })
-            .await
-            .context("Failed to get layer data")
-    }
-
-    pub async fn get_neuron_data(
-        &self,
-        model_name: impl AsRef<str>,
-        data_object: impl AsRef<str>,
-        layer_index: u32,
-        neuron_index: u32,
-    ) -> Result<Vec<u8>> {
-        const GET_NEURON_DATA: &str = r#"
-        SELECT
-            data
-        FROM neuron_data
-        WHERE model = ?1 AND data_object = ?2 AND layer_index = ?3 AND neuron_index = ?4;
-        "#;
-
-        let params = (
-            model_name.as_ref().to_owned(),
-            data_object.as_ref().to_owned(),
-            layer_index,
-            neuron_index,
-        );
-
-        self.connection
-            .call(|connection| {
-                let mut statement = connection.prepare(GET_NEURON_DATA)?;
-                statement.query_row(params, |row| row.get(0))
-            })
-            .await
-            .context("Failed to get neuron data")
+        Ok(())
     }
 }
 
@@ -372,5 +340,263 @@ impl ModelHandle {
             .await?;
 
         Ok(())
+    }
+
+    pub async fn add_data_object(
+        &self,
+        database: &Database,
+        data_object_name: impl AsRef<str>,
+    ) -> Result<()> {
+        const ADD_DATA_OBJECT: &str = r#"
+        INSERT INTO model_data_object (
+            model,
+            data_object
+        ) VALUES (
+            ?1,
+            ?2
+        );
+        "#;
+
+        let params = (self.name().to_owned(), data_object_name.as_ref().to_owned());
+
+        database
+            .connection
+            .call(|connection| connection.execute(ADD_DATA_OBJECT, params).map(drop))
+            .await
+            .context("Failed to add data object to model.")
+    }
+
+    pub async fn has_data_object(
+        &self,
+        database: &Database,
+        data_object_name: impl AsRef<str>,
+    ) -> Result<bool> {
+        const CHECK_DATA_OBJECT: &str = r#"
+        SELECT model_data_object (
+            model,
+            data_object
+        ) VALUES (
+            ?1,
+            ?2
+        );
+        "#;
+
+        let data_object_name = data_object_name.as_ref();
+
+        let params = (self.name().to_owned(), data_object_name.to_owned());
+        database
+            .connection
+            .call(|connection| connection.prepare(CHECK_DATA_OBJECT)?.exists(params))
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to check whether model '{}' has data object '{data_object_name}'",
+                    self.name()
+                )
+            })
+    }
+
+    pub async fn get_data_object(
+        &self,
+        database: &Database,
+        data_object_name: impl AsRef<str>,
+    ) -> Result<DataObject> {
+        DataObject::new(database, data_object_name.as_ref())
+            .await
+            .with_context(|| format!("Failed to get data object for model '{}'.", self.name()))
+    }
+
+    pub async fn add_model_data(
+        &self,
+        database: &Database,
+        data_object: impl AsRef<str>,
+        data: Vec<u8>,
+    ) -> Result<()> {
+        const ADD_MODEL_DATA: &str = r#"
+        INSERT INTO model_data (
+            model,
+            data_object,
+            data
+        ) VALUES (
+            ?1,
+            ?2,
+            ?3
+        );
+        "#;
+
+        let params = (
+            self.name().to_owned(),
+            data_object.as_ref().to_owned(),
+            data,
+        );
+
+        database
+            .connection
+            .call(|connection| connection.execute(ADD_MODEL_DATA, params).map(drop))
+            .await
+            .context("Failed to add model data.")
+    }
+
+    pub async fn add_layer_data(
+        &self,
+        database: &Database,
+        data_object: impl AsRef<str>,
+        layer_index: u32,
+        data: Vec<u8>,
+    ) -> Result<()> {
+        const ADD_LAYER_DATA: &str = r#"
+        INSERT INTO layer_data (
+            model,
+            data_object,
+            layer_index,
+            data
+        ) VALUES (
+            ?1,
+            ?2,
+            ?3,
+            ?4
+        );
+        "#;
+
+        let params = (
+            self.name().to_owned(),
+            data_object.as_ref().to_owned(),
+            layer_index,
+            data,
+        );
+
+        database
+            .connection
+            .call(|connection| connection.execute(ADD_LAYER_DATA, params).map(drop))
+            .await
+            .context("Failed to add layer data.")
+    }
+
+    pub async fn add_neuron_data(
+        &self,
+        database: &Database,
+        data_object: impl AsRef<str>,
+        layer_index: u32,
+        neuron_index: u32,
+        data: Vec<u8>,
+    ) -> Result<()> {
+        const ADD_NEURON_DATA: &str = r#"
+        INSERT INTO neuron_data (
+            model,
+            data_object,
+            layer_index,
+            neuron_index,
+            data
+        ) VALUES (
+            ?1,
+            ?2,
+            ?3,
+            ?4,
+            ?5
+        );
+        "#;
+
+        let params = (
+            self.name().to_owned(),
+            data_object.as_ref().to_owned(),
+            layer_index,
+            neuron_index,
+            data,
+        );
+
+        database
+            .connection
+            .call(|connection| connection.execute(ADD_NEURON_DATA, params).map(drop))
+            .await
+            .context("Failed to add neuron data.")
+    }
+
+    pub async fn get_model_data(
+        &self,
+        database: &Database,
+        data_object: impl AsRef<str>,
+    ) -> Result<Vec<u8>> {
+        const GET_MODEL_DATA: &str = r#"
+        SELECT
+            data
+        FROM model_data
+        WHERE model = ?1 AND data_object = ?2;
+        "#;
+
+        let params = (self.name().to_owned(), data_object.as_ref().to_owned());
+
+        database
+            .connection
+            .call(|connection| {
+                let mut statement = connection.prepare(GET_MODEL_DATA)?;
+                statement.query_row(params, |row| row.get(0))
+            })
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to get model data for model '{}' for data object '{}'.",
+                    self.name(),
+                    data_object.as_ref()
+                )
+            })
+    }
+
+    pub async fn get_layer_data(
+        &self,
+        database: &Database,
+        data_object: impl AsRef<str>,
+        layer_index: u32,
+    ) -> Result<Vec<u8>> {
+        const GET_LAYER_DATA: &str = r#"
+        SELECT
+            data
+        FROM layer_data
+        WHERE model = ?1 AND data_object = ?2 AND layer_index = ?3;
+        "#;
+
+        let params = (
+            self.name().to_owned(),
+            data_object.as_ref().to_owned(),
+            layer_index,
+        );
+        database
+            .connection
+            .call(|connection| {
+                let mut statement = connection.prepare(GET_LAYER_DATA)?;
+                statement.query_row(params, |row| row.get(0))
+            })
+            .await
+            .context("Failed to get layer data")
+    }
+
+    pub async fn get_neuron_data(
+        &self,
+        database: &Database,
+        data_object: impl AsRef<str>,
+        layer_index: u32,
+        neuron_index: u32,
+    ) -> Result<Vec<u8>> {
+        const GET_NEURON_DATA: &str = r#"
+        SELECT
+            data
+        FROM neuron_data
+        WHERE model = ?1 AND data_object = ?2 AND layer_index = ?3 AND neuron_index = ?4;
+        "#;
+
+        let params = (
+            self.name().to_owned(),
+            data_object.as_ref().to_owned(),
+            layer_index,
+            neuron_index,
+        );
+
+        database
+            .connection
+            .call(|connection| {
+                let mut statement = connection.prepare(GET_NEURON_DATA)?;
+                statement.query_row(params, |row| row.get(0))
+            })
+            .await
+            .context("Failed to get neuron data")
     }
 }

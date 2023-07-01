@@ -10,6 +10,7 @@ use flate2::{bufread::DeflateDecoder, write::DeflateEncoder, Compression};
 use itertools::Itertools;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use snap::raw::{Decoder, Encoder};
 
 use crate::data::NeuronIndex;
 
@@ -90,6 +91,22 @@ impl NeuroscopeNeuronPage {
             .collect::<Result<Vec<Text>>>()?;
 
         Self::from_html_header_and_texts(header, texts, neuron_index)
+    }
+
+    pub fn to_binary(&self) -> Result<Vec<u8>> {
+        let data =
+            postcard::to_allocvec(self).context("Failed to serialize neuroscope neuron page.")?;
+        Encoder::new()
+            .compress_vec(data.as_slice())
+            .context("Failed to compress neuroscope neuron page.")
+    }
+
+    pub fn from_binary(data: impl AsRef<[u8]>) -> Result<Self> {
+        let data = Decoder::new()
+            .decompress_vec(data.as_ref())
+            .context("Failed to decompress neuroscope neuron page")?;
+        postcard::from_bytes(data.as_slice())
+            .context("Failed to deserialize neuroscope neuron page.")
     }
 
     pub fn to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
