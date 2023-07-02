@@ -1,5 +1,5 @@
 use crate::{
-    data::{retrieve, NeuronIndex, NeuronViewerObject, NeuroscopeNeuronPage},
+    data::{database::Database, retrieve, NeuronIndex, NeuronViewerObject, NeuroscopeNeuronPage},
     server,
 };
 use anyhow::{Context, Result};
@@ -118,6 +118,40 @@ impl PyNeuroscopePage {
     }
 }
 
+#[pyclass(name = "Database")]
+struct PyDatabase {
+    database: Database,
+}
+
+#[pymethods]
+impl PyDatabase {
+    #[staticmethod]
+    fn initialize(path: &str) -> PyResult<Self> {
+        let database = Runtime::new()
+            .context("Failed to start async runtime to initialize database.")?
+            .block_on(async { Database::initialize(path).await })?;
+        Ok(PyDatabase { database })
+    }
+
+    #[staticmethod]
+    fn open(path: &str) -> PyResult<Self> {
+        let database = Runtime::new()
+            .context("Failed to start async runtime to open database.")?
+            .block_on(async { Database::open(path).await })?;
+        Ok(PyDatabase { database })
+    }
+
+    fn scrape_neuroscope_model(&self, model_name: &str) -> PyResult<()> {
+        Runtime::new()
+            .context("Failed to start async runtime to scrape neuroscope.")?
+            .block_on(async {
+                println!("Scraping model '{model_name}' to database.");
+                retrieve::neuroscope::scrape_model_to_database(&self.database, model_name).await
+            })?;
+        Ok(())
+    }
+}
+
 /// A Python module implemented in Rust.
 #[pymodule]
 fn neuronav(_py: Python, m: &PyModule) -> PyResult<()> {
@@ -127,5 +161,6 @@ fn neuronav(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(scrape_model_metadata_to_file, m)?)?;
     m.add_class::<PyNeuronViewerObject>()?;
     m.add_class::<PyNeuroscopePage>()?;
+    m.add_class::<PyDatabase>()?;
     Ok(())
 }

@@ -13,14 +13,15 @@ impl Neuroscope {
         database: &Database,
         model: &ModelHandle,
     ) -> Result<NeuroscopeModelPage> {
+        let model_name = model.name();
         let raw_data = model
             .get_model_data(database, "neuroscope")
             .await
             .with_context(|| {
-                format!(
-                    "Failed to get neuroscope model data for model '{}'.",
-                    model.name()
-                )
+                format!("Failed to get neuroscope model data for model '{model_name}'.",)
+            })?
+            .with_context(|| {
+                format!("Database has no neuroscope model data for model '{model_name}'")
             })?;
         NeuroscopeModelPage::from_binary(raw_data.as_slice())
     }
@@ -30,9 +31,13 @@ impl Neuroscope {
         model: &ModelHandle,
         layer_index: u32,
     ) -> Result<NeuroscopeLayerPage> {
+        let model_name = model.name();
         let raw_data = model
             .get_layer_data(database, "neuroscope", layer_index)
-            .await?;
+            .await?
+            .with_context(|| {
+                format!("Database has no neuroscope layer data for layer {layer_index} in model '{model_name}'")
+            })?;
         NeuroscopeLayerPage::from_binary(raw_data.as_slice())
     }
     pub async fn neuron_page(
@@ -42,9 +47,13 @@ impl Neuroscope {
         layer_index: u32,
         neuron_index: u32,
     ) -> Result<NeuroscopeNeuronPage> {
+        let model_name = model.name();
         let raw_data = model
             .get_neuron_data(database, "neuroscope", layer_index, neuron_index)
-            .await?;
+            .await?
+            .with_context(|| {
+                format!("Database has no neuroscope neuron data for neuron n{neuron_index}l{layer_index} in model '{model_name}'")
+            })?;
         NeuroscopeNeuronPage::from_binary(raw_data.as_slice())
     }
 }

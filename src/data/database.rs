@@ -1,10 +1,10 @@
 use std::path::Path;
 
 use anyhow::{bail, Context, Result};
-use rusqlite::{Params, ToSql};
+use rusqlite::OptionalExtension;
 use tokio_rusqlite::Connection;
 
-use crate::data::{self, LayerMetadata};
+use crate::data::LayerMetadata;
 
 use super::{
     data_types::{DataObject, DataType},
@@ -106,6 +106,7 @@ const TABLES: [&str; 8] = [
     NEURON_DATA_TABLE,
 ];
 
+#[derive(Clone)]
 pub struct Database {
     connection: Connection,
 }
@@ -118,7 +119,7 @@ impl Database {
 
         let database = Connection::open(path).await?;
 
-        let mut database = Database {
+        let database = Database {
             connection: database,
         };
 
@@ -150,7 +151,7 @@ impl Database {
         &self.connection
     }
 
-    pub async fn add_model(&mut self, metadata: Metadata) -> Result<ModelHandle> {
+    pub async fn add_model(&self, metadata: Metadata) -> Result<ModelHandle> {
         ModelHandle::create(self, metadata).await
     }
 
@@ -202,8 +203,47 @@ impl Database {
         Ok(metadata.map(|metadata| ModelHandle { metadata }))
     }
 
+    pub async fn delete_model(&self, model_name: String) -> Result<()> {
+        const DELETE_MODEL_REFERENCES: &str = r#"
+        DELETE FROM $DATABASE
+        WHERE model = ?1;
+        "#;
+        const DELETE_MODEL: &str = r#"
+        DELETE FROM model
+        WHERE name = ?1;
+        "#;
+        const REFERENCE_TABLES: [&str; 5] = [
+            "model_service",
+            "model_data_object",
+            "model_data",
+            "layer_data",
+            "neuron_data",
+        ];
+
+        for table in REFERENCE_TABLES.iter() {
+            let params = (model_name.clone(),);
+            self.connection
+                .call(|connection| {
+                    let mut statement = connection
+                        .prepare(DELETE_MODEL_REFERENCES.replace("$DATABASE", table).as_str())?;
+                    statement.execute(params)?;
+                    Ok(())
+                })
+                .await?;
+        }
+        let params = (model_name.clone(),);
+        self.connection
+            .call(|connection| {
+                let mut statement = connection.prepare(DELETE_MODEL)?;
+                statement.execute(params)?;
+                Ok(())
+            })
+            .await
+            .context("Problem deleting model '{model_name}'.")
+    }
+
     pub async fn add_service(
-        &mut self,
+        &self,
         service_name: impl AsRef<str>,
         provider: impl AsRef<str>,
         provider_args: impl AsRef<[u8]>,
@@ -262,6 +302,43 @@ impl Database {
 
         Ok(())
     }
+
+    pub async fn data_object_type(
+        &self,
+        data_object_name: impl AsRef<str>,
+    ) -> Result<Option<DataType>> {
+        const GET_DATA_OBJECT_TYPE: &str = r#"
+        SELECT
+            type,
+            type_args
+        FROM data_object
+        WHERE name = ?1;
+        "#;
+
+        let data_object_name = data_object_name.as_ref();
+
+        let params = (data_object_name.to_owned(),);
+        let type_data: Option<(String, Vec<u8>)> = self
+            .connection
+            .call(|connection| {
+                let mut statement = connection.prepare(GET_DATA_OBJECT_TYPE)?;
+                statement
+                    .query_row(params, |row| Ok((row.get(0)?, row.get(1)?)))
+                    .optional()
+            })
+            .await
+            .with_context(|| {
+                format!("Failed to get data object type for data object '{data_object_name}'.")
+            })?;
+        if let Some((type_name, type_args)) = type_data {
+            Ok(Some(DataType::from_raw(
+                type_name.as_str(),
+                type_args.as_slice(),
+            )?))
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 pub struct ModelHandle {
@@ -269,7 +346,7 @@ pub struct ModelHandle {
 }
 
 impl ModelHandle {
-    async fn create(database: &mut Database, metadata: Metadata) -> Result<Self> {
+    async fn create(database: &Database, metadata: Metadata) -> Result<Self> {
         const ADD_MODEL: &str = r#"
         INSERT INTO model (
             name,
@@ -321,7 +398,7 @@ impl ModelHandle {
         &self.metadata.name
     }
 
-    pub async fn add_service(&self, database: &mut Database, service_name: &str) -> Result<()> {
+    pub async fn add_service(&self, database: &Database, service_name: &str) -> Result<()> {
         const ADD_MODEL_SERVICE: &str = r#"
         INSERT INTO model_service (
             model,
@@ -372,13 +449,10 @@ impl ModelHandle {
         data_object_name: impl AsRef<str>,
     ) -> Result<bool> {
         const CHECK_DATA_OBJECT: &str = r#"
-        SELECT model_data_object (
-            model,
-            data_object
-        ) VALUES (
-            ?1,
-            ?2
-        );
+        SELECT 
+            model
+        FROM model_data_object
+        WHERE model = ?1 AND data_object = ?2;
         "#;
 
         let data_object_name = data_object_name.as_ref();
@@ -515,7 +589,7 @@ impl ModelHandle {
         &self,
         database: &Database,
         data_object: impl AsRef<str>,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Option<Vec<u8>>> {
         const GET_MODEL_DATA: &str = r#"
         SELECT
             data
@@ -529,7 +603,7 @@ impl ModelHandle {
             .connection
             .call(|connection| {
                 let mut statement = connection.prepare(GET_MODEL_DATA)?;
-                statement.query_row(params, |row| row.get(0))
+                statement.query_row(params, |row| row.get(0)).optional()
             })
             .await
             .with_context(|| {
@@ -546,7 +620,7 @@ impl ModelHandle {
         database: &Database,
         data_object: impl AsRef<str>,
         layer_index: u32,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Option<Vec<u8>>> {
         const GET_LAYER_DATA: &str = r#"
         SELECT
             data
@@ -563,7 +637,7 @@ impl ModelHandle {
             .connection
             .call(|connection| {
                 let mut statement = connection.prepare(GET_LAYER_DATA)?;
-                statement.query_row(params, |row| row.get(0))
+                statement.query_row(params, |row| row.get(0)).optional()
             })
             .await
             .context("Failed to get layer data")
@@ -575,7 +649,7 @@ impl ModelHandle {
         data_object: impl AsRef<str>,
         layer_index: u32,
         neuron_index: u32,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Option<Vec<u8>>> {
         const GET_NEURON_DATA: &str = r#"
         SELECT
             data
@@ -594,7 +668,7 @@ impl ModelHandle {
             .connection
             .call(|connection| {
                 let mut statement = connection.prepare(GET_NEURON_DATA)?;
-                statement.query_row(params, |row| row.get(0))
+                statement.query_row(params, |row| row.get(0)).optional()
             })
             .await
             .context("Failed to get neuron data")

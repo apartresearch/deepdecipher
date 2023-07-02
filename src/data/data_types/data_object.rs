@@ -16,6 +16,20 @@ pub enum DataType {
 }
 
 impl DataType {
+    pub fn from_raw(data_type: &str, type_args: &[u8]) -> Result<Self> {
+        match DataTypeDiscriminants::from_str(data_type)
+            .with_context(|| format!("Unexpected data type '{data_type}'."))?
+        {
+            DataTypeDiscriminants::Neuroscope => {
+                ensure!(
+                    type_args.is_empty(),
+                    "Neuroscope data objects do not take type arguments."
+                );
+                Ok(DataType::Neuroscope)
+            }
+        }
+    }
+
     pub fn args(&self) -> Vec<u8> {
         match self {
             Self::Neuroscope => Vec::new(),

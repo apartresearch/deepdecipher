@@ -5,4 +5,5 @@ from .neuronav import (
     scrape_model_metadata_to_file,
     NeuronViewerObject,
     NeuroscopePage,
+    Database,
 )

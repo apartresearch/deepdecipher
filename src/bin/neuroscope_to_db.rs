@@ -25,7 +25,7 @@ fn main() -> Result<()> {
             fs::remove_file(database_path)?;
             Database::initialize(DATA_PATH).await?
         } else {
-            Database::open(DATA_PATH).await?
+            Database::initialize(DATA_PATH).await?
         };
 
         let model_name = "solu-1l";

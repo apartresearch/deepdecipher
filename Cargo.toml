@@ -57,6 +57,8 @@ tokio-rusqlite = "0.4.0"
 rand = "0.8.5"
 deflate = "1.0.0"
 snap = "1.1.0"
+miniz_oxide = { version = "0.7.1", features = ["simd-adler32"] }
+zstd = "0.12.3"
 
 [features]
 python = ["dep:pyo3", "dep:numpy", "dep:ctrlc"]
