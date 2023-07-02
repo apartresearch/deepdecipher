@@ -150,6 +150,21 @@ impl PyDatabase {
             })?;
         Ok(())
     }
+
+    fn add_model_service(&self, model_name: &str, service: &str) -> PyResult<()> {
+        Runtime::new()
+            .context("Failed to start async runtime to add model service.")?
+            .block_on(async {
+                println!("Adding service '{service}' to model '{model_name}'.");
+                let model = self
+                    .database
+                    .model(model_name.to_owned())
+                    .await?
+                    .with_context(|| format!("Model '{model_name}' does not exist in database."))?;
+                model.add_service(&self.database, service).await
+            })?;
+        Ok(())
+    }
 }
 
 /// A Python module implemented in Rust.

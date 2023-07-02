@@ -7,8 +7,6 @@ use serde::{Deserialize, Serialize};
 
 use anyhow::{Context, Result};
 
-use super::data_object::DataObjectTrait;
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Metadata {
     pub name: String,
@@ -34,8 +32,6 @@ impl Metadata {
         Ok(())
     }
 }
-
-impl DataObjectTrait for Metadata {}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LayerMetadata {

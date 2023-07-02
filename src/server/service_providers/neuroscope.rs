@@ -3,10 +3,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::{
-    data::{self, NeuroscopeLayerPage, NeuroscopeModelPage, NeuroscopeNeuronPage},
-    server::State,
-};
+use crate::server::State;
 
 use super::service_provider::ServiceProviderTrait;
 

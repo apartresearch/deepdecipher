@@ -1,11 +1,9 @@
-use std::fs;
-
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::{data::Metadata as MetadataData, server::State};
+use crate::server::State;
 
 use super::ServiceProviderTrait;
 

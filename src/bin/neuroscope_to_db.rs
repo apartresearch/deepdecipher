@@ -21,7 +21,7 @@ fn main() -> Result<()> {
 
     runtime.block_on(async {
         let database_path = PathBuf::from(DATA_PATH);
-        let mut database = if database_path.exists() {
+        let database = if database_path.exists() {
             fs::remove_file(database_path)?;
             Database::initialize(DATA_PATH).await?
         } else {
