@@ -5,7 +5,6 @@ use super::{data_types::DataType, Database};
 
 #[derive(Clone)]
 pub struct DataObjectHandle {
-    database: Database,
     name: String,
     data_type: DataType,
 }
@@ -35,7 +34,6 @@ impl DataObjectHandle {
         if let Some((type_name, type_args)) = type_data {
             let data_type = DataType::from_raw(type_name.as_str(), type_args.as_slice())?;
             let data_object = Self {
-                database: database.clone(),
                 name: data_object_name.to_owned(),
                 data_type,
             };
