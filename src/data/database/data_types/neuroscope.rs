@@ -4,12 +4,35 @@ use crate::data::{
     database::ModelHandle, NeuroscopeLayerPage, NeuroscopeModelPage, NeuroscopeNeuronPage,
 };
 
-pub struct Neuroscope;
+use super::{data_object::ModelDataObject, DataType, DataTypeDiscriminants};
+
+pub struct Neuroscope {
+    model: ModelHandle,
+}
+
+impl ModelDataObject for Neuroscope {
+    fn new(model: &ModelHandle, datatype: DataType) -> Result<Option<Self>> {
+        match datatype {
+            DataType::Neuroscope => Ok(Some(Self {
+                model: model.clone(),
+            })),
+        }
+    }
+
+    fn data_type() -> DataTypeDiscriminants {
+        DataTypeDiscriminants::Neuroscope
+    }
+
+    fn model_handle(&self) -> &ModelHandle {
+        &self.model
+    }
+}
 
 impl Neuroscope {
-    pub async fn model_page(&self, model: &ModelHandle) -> Result<NeuroscopeModelPage> {
-        let model_name = model.name();
-        let raw_data = model
+    pub async fn model_page(&self) -> Result<NeuroscopeModelPage> {
+        let model_name = self.model.name();
+        let raw_data = self
+            .model
             .get_model_data("neuroscope")
             .await
             .with_context(|| {
@@ -20,13 +43,9 @@ impl Neuroscope {
             })?;
         NeuroscopeModelPage::from_binary(raw_data.as_slice())
     }
-    pub async fn layer_page(
-        &self,
-        model: &ModelHandle,
-        layer_index: u32,
-    ) -> Result<NeuroscopeLayerPage> {
-        let model_name = model.name();
-        let raw_data = model
+    pub async fn layer_page(&self, layer_index: u32) -> Result<NeuroscopeLayerPage> {
+        let model_name = self.model.name();
+        let raw_data = self.model
             .get_layer_data( "neuroscope", layer_index)
             .await?
             .with_context(|| {
@@ -36,12 +55,11 @@ impl Neuroscope {
     }
     pub async fn neuron_page(
         &self,
-        model: &ModelHandle,
         layer_index: u32,
         neuron_index: u32,
     ) -> Result<NeuroscopeNeuronPage> {
-        let model_name = model.name();
-        let raw_data = model
+        let model_name = self.model.name();
+        let raw_data = self.model
             .get_neuron_data( "neuroscope", layer_index, neuron_index)
             .await?
             .with_context(|| {

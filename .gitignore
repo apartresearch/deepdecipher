@@ -310,3 +310,6 @@ Cargo.lock
 *.pdb
 
 .vscode/
+
+# Databases
+*.db

@@ -403,7 +403,7 @@ pub async fn scrape_model_to_database(
         database.add_model(model_metadata).await?
     };
 
-    if database.data_object_type("neuroscope").await?.is_none() {
+    if database.data_object("neuroscope").await?.is_none() {
         database
             .add_data_object("neuroscope", DataType::Neuroscope)
             .await?;
