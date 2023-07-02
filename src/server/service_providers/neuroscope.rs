@@ -24,16 +24,13 @@ impl ServiceProviderTrait for Neuroscope {
             .model(model_name.to_owned())
             .await?
             .with_context(|| format!("No model with name {model_name}."))?;
-        let data_object = model
-            .get_data_object(&database, "neuroscope")
-            .await
-            .with_context(|| {
-                format!("Failed to get neuroscope data object for model '{model_name}'.")
-            })?;
+        let data_object = model.get_data_object("neuroscope").await.with_context(|| {
+            format!("Failed to get neuroscope data object for model '{model_name}'.")
+        })?;
         let page = data_object
             .neuroscope()
             .context("Type of 'neuroscope' data object must be 'neuroscope'.")?
-            .model_page(&database, &model)
+            .model_page(&model)
             .await?;
         Ok(json!(page))
     }
@@ -51,11 +48,11 @@ impl ServiceProviderTrait for Neuroscope {
             .model(model_name.to_owned())
             .await?
             .with_context(|| format!("No model with name {model_name}."))?;
-        let data_object = model.get_data_object(&database, "neuroscope").await?;
+        let data_object = model.get_data_object("neuroscope").await?;
         let page = data_object
             .neuroscope()
             .context("Type of 'neuroscope' data object must be 'neuroscope'.")?
-            .layer_page(&database, &model, layer_index)
+            .layer_page(&model, layer_index)
             .await?;
         Ok(json!(page))
     }
@@ -74,11 +71,11 @@ impl ServiceProviderTrait for Neuroscope {
             .model(model_name.to_owned())
             .await?
             .with_context(|| format!("No model with name {model_name}."))?;
-        let data_object = model.get_data_object(&database, "neuroscope").await?;
+        let data_object = model.get_data_object("neuroscope").await?;
         let page = data_object
             .neuroscope()
             .context("Type of 'neuroscope' data object must be 'neuroscope'.")?
-            .neuron_page(&database, &model, layer_index, neuron_index)
+            .neuron_page(&model, layer_index, neuron_index)
             .await?;
         Ok(json!(page))
     }

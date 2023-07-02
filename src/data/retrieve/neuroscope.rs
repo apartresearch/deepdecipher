@@ -91,18 +91,13 @@ pub async fn scrape_neuron_page_to_database(
         .await?
         .with_context(|| format!("No model '{model_name}' in database."))?;
     let page = if let Some(page_data) = model
-        .get_neuron_data(
-            database,
-            "neuroscope",
-            neuron_index.layer,
-            neuron_index.neuron,
-        )
+        .get_neuron_data("neuroscope", neuron_index.layer, neuron_index.neuron)
         .await?
     {
         NeuroscopeNeuronPage::from_binary(page_data)?
     } else {
         let page = scrape_neuron_page(model.name(), neuron_index).await?;
-        model.add_neuron_data(database, "neuroscope", neuron_index.layer, neuron_index.neuron, page.to_binary()?).await.with_context(|| format!("Failed to write neuroscope page for neuron {neuron_index} in layer {layer_index} of model '{model_name}' to database.", neuron_index = neuron_index.neuron, layer_index = neuron_index.layer))?;
+        model.add_neuron_data( "neuroscope", neuron_index.layer, neuron_index.neuron, page.to_binary()?).await.with_context(|| format!("Failed to write neuroscope page for neuron {neuron_index} in layer {layer_index} of model '{model_name}' to database.", neuron_index = neuron_index.neuron, layer_index = neuron_index.layer))?;
         page
     };
     let first_text = page
@@ -289,7 +284,7 @@ pub async fn scrape_layer_to_database(
         .await?
         .with_context(|| format!("No model '{model_name}' in database."))?;
     model
-        .add_layer_data(database, "neuroscope", layer_index, layer_page.to_binary()?)
+        .add_layer_data("neuroscope", layer_index, layer_page.to_binary()?)
         .await?;
 
     assert_eq!(
@@ -414,10 +409,10 @@ pub async fn scrape_model_to_database(
             .await?;
     }
 
-    if model.has_data_object(database, "neuroscope").await? {
+    if model.has_data_object("neuroscope").await? {
         bail!("Model '{model_name}' already has neuroscope data in database.")
     } else {
-        model.add_data_object(database, "neuroscope").await?
+        model.add_data_object("neuroscope").await?
     }
 
     let mut layer_pages = Vec::with_capacity(model.metadata().layers.len());
@@ -434,6 +429,6 @@ pub async fn scrape_model_to_database(
         .collect();
     let model_page = NeuroscopeModelPage::new(neuron_importance);
     model
-        .add_model_data(database, "neuroscope", model_page.to_binary()?)
+        .add_model_data("neuroscope", model_page.to_binary()?)
         .await
 }

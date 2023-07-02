@@ -200,7 +200,10 @@ impl Database {
             })
             .await?;
 
-        Ok(metadata.map(|metadata| ModelHandle { metadata }))
+        Ok(metadata.map(|metadata| ModelHandle {
+            metadata,
+            database: self.clone(),
+        }))
     }
 
     pub async fn delete_model(&self, model_name: String) -> Result<()> {
@@ -343,6 +346,7 @@ impl Database {
 
 pub struct ModelHandle {
     metadata: Metadata,
+    database: Database,
 }
 
 impl ModelHandle {
@@ -383,9 +387,12 @@ impl ModelHandle {
                 )
             })
             .await?;
-        let model = ModelHandle { metadata };
+        let model = ModelHandle {
+            metadata,
+            database: database.clone(),
+        };
 
-        model.add_service(database, "metadata").await?;
+        model.add_service("metadata").await?;
 
         Ok(model)
     }
@@ -398,7 +405,7 @@ impl ModelHandle {
         &self.metadata.name
     }
 
-    pub async fn add_service(&self, database: &Database, service_name: &str) -> Result<()> {
+    pub async fn add_service(&self, service_name: &str) -> Result<()> {
         const ADD_MODEL_SERVICE: &str = r#"
         INSERT INTO model_service (
             model,
@@ -411,7 +418,7 @@ impl ModelHandle {
 
         let params = (self.name().to_owned(), service_name.to_owned());
 
-        database
+        self.database
             .connection
             .call(|connection| connection.execute(ADD_MODEL_SERVICE, params))
             .await?;
@@ -419,11 +426,7 @@ impl ModelHandle {
         Ok(())
     }
 
-    pub async fn add_data_object(
-        &self,
-        database: &Database,
-        data_object_name: impl AsRef<str>,
-    ) -> Result<()> {
+    pub async fn add_data_object(&self, data_object_name: impl AsRef<str>) -> Result<()> {
         const ADD_DATA_OBJECT: &str = r#"
         INSERT INTO model_data_object (
             model,
@@ -436,18 +439,14 @@ impl ModelHandle {
 
         let params = (self.name().to_owned(), data_object_name.as_ref().to_owned());
 
-        database
+        self.database
             .connection
             .call(|connection| connection.execute(ADD_DATA_OBJECT, params).map(drop))
             .await
             .context("Failed to add data object to model.")
     }
 
-    pub async fn has_data_object(
-        &self,
-        database: &Database,
-        data_object_name: impl AsRef<str>,
-    ) -> Result<bool> {
+    pub async fn has_data_object(&self, data_object_name: impl AsRef<str>) -> Result<bool> {
         const CHECK_DATA_OBJECT: &str = r#"
         SELECT 
             model
@@ -458,7 +457,7 @@ impl ModelHandle {
         let data_object_name = data_object_name.as_ref();
 
         let params = (self.name().to_owned(), data_object_name.to_owned());
-        database
+        self.database
             .connection
             .call(|connection| connection.prepare(CHECK_DATA_OBJECT)?.exists(params))
             .await
@@ -470,22 +469,13 @@ impl ModelHandle {
             })
     }
 
-    pub async fn get_data_object(
-        &self,
-        database: &Database,
-        data_object_name: impl AsRef<str>,
-    ) -> Result<DataObject> {
-        DataObject::new(database, data_object_name.as_ref())
+    pub async fn get_data_object(&self, data_object_name: impl AsRef<str>) -> Result<DataObject> {
+        DataObject::new(&self.database, data_object_name.as_ref())
             .await
             .with_context(|| format!("Failed to get data object for model '{}'.", self.name()))
     }
 
-    pub async fn add_model_data(
-        &self,
-        database: &Database,
-        data_object: impl AsRef<str>,
-        data: Vec<u8>,
-    ) -> Result<()> {
+    pub async fn add_model_data(&self, data_object: impl AsRef<str>, data: Vec<u8>) -> Result<()> {
         const ADD_MODEL_DATA: &str = r#"
         INSERT INTO model_data (
             model,
@@ -504,7 +494,7 @@ impl ModelHandle {
             data,
         );
 
-        database
+        self.database
             .connection
             .call(|connection| connection.execute(ADD_MODEL_DATA, params).map(drop))
             .await
@@ -513,7 +503,6 @@ impl ModelHandle {
 
     pub async fn add_layer_data(
         &self,
-        database: &Database,
         data_object: impl AsRef<str>,
         layer_index: u32,
         data: Vec<u8>,
@@ -539,7 +528,7 @@ impl ModelHandle {
             data,
         );
 
-        database
+        self.database
             .connection
             .call(|connection| connection.execute(ADD_LAYER_DATA, params).map(drop))
             .await
@@ -548,7 +537,6 @@ impl ModelHandle {
 
     pub async fn add_neuron_data(
         &self,
-        database: &Database,
         data_object: impl AsRef<str>,
         layer_index: u32,
         neuron_index: u32,
@@ -578,18 +566,14 @@ impl ModelHandle {
             data,
         );
 
-        database
+        self.database
             .connection
             .call(|connection| connection.execute(ADD_NEURON_DATA, params).map(drop))
             .await
             .context("Failed to add neuron data.")
     }
 
-    pub async fn get_model_data(
-        &self,
-        database: &Database,
-        data_object: impl AsRef<str>,
-    ) -> Result<Option<Vec<u8>>> {
+    pub async fn get_model_data(&self, data_object: impl AsRef<str>) -> Result<Option<Vec<u8>>> {
         const GET_MODEL_DATA: &str = r#"
         SELECT
             data
@@ -599,7 +583,7 @@ impl ModelHandle {
 
         let params = (self.name().to_owned(), data_object.as_ref().to_owned());
 
-        database
+        self.database
             .connection
             .call(|connection| {
                 let mut statement = connection.prepare(GET_MODEL_DATA)?;
@@ -617,7 +601,6 @@ impl ModelHandle {
 
     pub async fn get_layer_data(
         &self,
-        database: &Database,
         data_object: impl AsRef<str>,
         layer_index: u32,
     ) -> Result<Option<Vec<u8>>> {
@@ -633,7 +616,7 @@ impl ModelHandle {
             data_object.as_ref().to_owned(),
             layer_index,
         );
-        database
+        self.database
             .connection
             .call(|connection| {
                 let mut statement = connection.prepare(GET_LAYER_DATA)?;
@@ -645,7 +628,6 @@ impl ModelHandle {
 
     pub async fn get_neuron_data(
         &self,
-        database: &Database,
         data_object: impl AsRef<str>,
         layer_index: u32,
         neuron_index: u32,
@@ -664,7 +646,7 @@ impl ModelHandle {
             neuron_index,
         );
 
-        database
+        self.database
             .connection
             .call(|connection| {
                 let mut statement = connection.prepare(GET_NEURON_DATA)?;

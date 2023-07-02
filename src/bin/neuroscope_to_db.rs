@@ -43,14 +43,14 @@ fn main() -> Result<()> {
         database
             .add_data_object("neuroscope", DataType::Neuroscope)
             .await?;
-        model.add_data_object(&database, "neuroscope").await?;
+        model.add_data_object("neuroscope").await?;
 
         let neuroscope_path = model_path.join("neuroscope");
         print!("Loading model page...\r");
         let model_page = NeuroscopeModelPage::from_file(neuroscope_path.join("model.postcard"))?;
         print!("Model page loaded. Writing to database...\r");
         model
-            .add_model_data(&database, "neuroscope", model_page.to_binary()?)
+            .add_model_data("neuroscope", model_page.to_binary()?)
             .await?;
         println!("Model page written to database.                 ");
 
@@ -63,7 +63,6 @@ fn main() -> Result<()> {
             )?;
             model
                 .add_layer_data(
-                    &database,
                     "neuroscope",
                     layer_index,
                     layer_page.to_binary()?,
@@ -81,7 +80,6 @@ fn main() -> Result<()> {
                 let start_time = Instant::now();
                 model
                     .add_neuron_data(
-                        &database,
                         "neuroscope",
                         layer_index,
                         neuron_index,

@@ -161,7 +161,7 @@ impl PyDatabase {
                     .model(model_name.to_owned())
                     .await?
                     .with_context(|| format!("Model '{model_name}' does not exist in database."))?;
-                model.add_service(&self.database, service).await
+                model.add_service(service).await
             })?;
         Ok(())
     }
