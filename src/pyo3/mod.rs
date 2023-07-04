@@ -38,23 +38,36 @@ impl PyDatabase {
         Runtime::new()
             .context("Failed to start async runtime to scrape neuroscope.")?
             .block_on(async {
+                let model = if let Some(model) = self.database.model(model_name.to_owned()).await? {
+                    model
+                } else {
+                    let metadata = retrieve::neuroscope::scrape_model_metadata(model_name).await?;
+                    self.database.add_model(metadata).await?
+                };
                 println!("Scraping model '{model_name}' to database.");
-                retrieve::neuroscope::scrape_model_to_database(&self.database, model_name).await
+                retrieve::neuroscope::scrape_model_to_database(&self.database, &model).await
             })?;
         Ok(())
     }
 
-    fn add_model_service(&self, model_name: &str, service: &str) -> PyResult<()> {
+    fn add_model_service(&self, model_name: &str, service_name: &str) -> PyResult<()> {
         Runtime::new()
             .context("Failed to start async runtime to add model service.")?
             .block_on(async {
-                println!("Adding service '{service}' to model '{model_name}'.");
                 let model = self
                     .database
                     .model(model_name.to_owned())
                     .await?
                     .with_context(|| format!("Model '{model_name}' does not exist in database."))?;
-                model.add_service(service).await
+                let service = self
+                    .database
+                    .service(service_name.to_owned())
+                    .await?
+                    .with_context(|| {
+                        format!("Service '{service_name}' does not exist in database.")
+                    })?;
+                println!("Adding service '{service_name}' to model '{model_name}'...");
+                model.add_service(&service).await
             })?;
         Ok(())
     }

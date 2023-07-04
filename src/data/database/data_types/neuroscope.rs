@@ -1,20 +1,30 @@
 use anyhow::{Context, Result};
+use async_trait::async_trait;
 
 use crate::data::{
-    database::ModelHandle, NeuroscopeLayerPage, NeuroscopeModelPage, NeuroscopeNeuronPage,
+    database::ModelHandle, DataObjectHandle, NeuroscopeLayerPage, NeuroscopeModelPage,
+    NeuroscopeNeuronPage,
 };
 
 use super::{data_object::ModelDataObject, DataType, DataTypeDiscriminants};
 
 pub struct Neuroscope {
     model: ModelHandle,
+    data_object: DataObjectHandle,
 }
 
+#[async_trait]
 impl ModelDataObject for Neuroscope {
-    fn new(model: &ModelHandle, datatype: DataType) -> Result<Option<Self>> {
+    async fn new(model: &ModelHandle, datatype: DataType) -> Result<Option<Self>> {
+        let data_object = model
+            .database()
+            .data_object("neuroscope")
+            .await?
+            .context("No neuroscope data object in database.")?;
         match datatype {
             DataType::Neuroscope => Ok(Some(Self {
                 model: model.clone(),
+                data_object,
             })),
         }
     }
@@ -33,7 +43,7 @@ impl Neuroscope {
         let model_name = self.model.name();
         let raw_data = self
             .model
-            .get_model_data("neuroscope")
+            .model_data(&self.data_object)
             .await
             .with_context(|| {
                 format!("Failed to get neuroscope model data for model '{model_name}'.",)
@@ -46,7 +56,7 @@ impl Neuroscope {
     pub async fn layer_page(&self, layer_index: u32) -> Result<NeuroscopeLayerPage> {
         let model_name = self.model.name();
         let raw_data = self.model
-            .get_layer_data( "neuroscope", layer_index)
+            .layer_data( &self.data_object, layer_index)
             .await?
             .with_context(|| {
                 format!("Database has no neuroscope layer data for layer {layer_index} in model '{model_name}'")
@@ -60,7 +70,7 @@ impl Neuroscope {
     ) -> Result<NeuroscopeNeuronPage> {
         let model_name = self.model.name();
         let raw_data = self.model
-            .get_neuron_data( "neuroscope", layer_index, neuron_index)
+            .neuron_data( &self.data_object, layer_index, neuron_index)
             .await?
             .with_context(|| {
                 format!("Database has no neuroscope neuron data for neuron n{neuron_index}l{layer_index} in model '{model_name}'")

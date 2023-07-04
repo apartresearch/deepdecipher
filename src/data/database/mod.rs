@@ -13,10 +13,13 @@ pub use model_handle::ModelHandle;
 mod data_object_handle;
 pub use data_object_handle::DataObjectHandle;
 pub mod data_types;
+mod service_handle;
+use service_handle::ServiceHandle;
 
 const MODEL_TABLE: &str = r#"
 CREATE TABLE model (
-    name                    TEXT PRIMARY KEY,
+    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+    name                    TEXT NOT NULL UNIQUE,
     num_layers              INTEGER NOT NULL,
     neurons_per_layer       INTEGER NOT NULL,
     activation_function     TEXT NOT NULL,
@@ -28,7 +31,8 @@ CREATE TABLE model (
 
 const SERVICE_TABLE: &str = r#"
 CREATE TABLE service (
-    name                    TEXT PRIMARY KEY,
+    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+    name                    TEXT NOT NULL UNIQUE,
     provider                TEXT NOT NULL,
     provider_args           BLOB NOT NULL
   ) STRICT;
@@ -36,8 +40,8 @@ CREATE TABLE service (
 
 const MODEL_SERVICE_TABLE: &str = r#"
 CREATE TABLE model_service (
-    model                   TEXT NOT NULL,
-    service                 TEXT NOT NULL,
+    model_id                   INTEGER NOT NULL,
+    service_id                 INTEGER NOT NULL,
     FOREIGN KEY(model) REFERENCES model(name),
     FOREIGN KEY(service) REFERENCES service(name)
   ) STRICT;
@@ -45,7 +49,8 @@ CREATE TABLE model_service (
 
 const DATA_OBJECT_TABLE: &str = r#"
 CREATE TABLE data_object (
-    name                    TEXT PRIMARY KEY,
+    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+    name                    TEXT NOT NULL UNIQUE,
     type                    TEXT NOT NULL,
     type_args               BLOB NOT NULL
   ) STRICT;
@@ -53,8 +58,8 @@ CREATE TABLE data_object (
 
 const MODEL_DATA_OBJECT_TABLE: &str = r#"
 CREATE TABLE model_data_object (
-    model                   TEXT NOT NULL,
-    data_object             TEXT NOT NULL,
+    model_id                INTEGER NOT NULL,
+    data_object_id          INTEGER NOT NULL,
     FOREIGN KEY(model) REFERENCES model(name),
     FOREIGN KEY(data_object) REFERENCES data_object(name)
 )
@@ -62,8 +67,8 @@ CREATE TABLE model_data_object (
 
 const MODEL_DATA_TABLE: &str = r#"
 CREATE TABLE model_data (
-    model                   TEXT NOT NULL,
-    data_object             TEXT NOT NULL,
+    model_id                INTEGER NOT NULL,
+    data_object_id          INTEGER NOT NULL,
     data                    BLOB NOT NULL,
     PRIMARY KEY(model, data_object),
     FOREIGN KEY(model) REFERENCES model(name)
@@ -73,8 +78,8 @@ CREATE TABLE model_data (
 
 const LAYER_DATA_TABLE: &str = r#"
 CREATE TABLE layer_data (
-    model                   TEXT NOT NULL,
-    data_object             TEXT NOT NULL,
+    model_id                INTEGER NOT NULL,
+    data_object_id          INTEGER NOT NULL,
     layer_index             INTEGER NOT NULL,
     data                    BLOB NOT NULL,
     PRIMARY KEY(model, data_object, layer_index),
@@ -86,8 +91,8 @@ CREATE TABLE layer_data (
 
 const NEURON_DATA_TABLE: &str = r#"
 CREATE TABLE neuron_data (
-    model                   TEXT NOT NULL,
-    data_object             TEXT NOT NULL,
+    model_id                INTEGER NOT NULL,
+    data_object_id          INTEGER NOT NULL,
     layer_index             INTEGER NOT NULL,
     neuron_index            INTEGER NOT NULL,
     data                    BLOB NOT NULL,
@@ -154,51 +159,30 @@ impl Database {
         &self.connection
     }
 
+    async fn latest_id(&self, table: &str) -> Result<i64> {
+        const LATEST_ID: &str = r#"
+        SELECT seq
+        FROM sqlite_sequence
+        WHERE name = ?1;
+        "#;
+
+        let params = (table.to_owned(),);
+        self.connection
+            .call(|connection| {
+                connection
+                    .prepare(LATEST_ID)?
+                    .query_row(params, |row| row.get(0))
+            })
+            .await
+            .with_context(|| format!("Failed to get latest id for table '{table}'."))
+    }
+
     pub async fn add_model(&self, metadata: Metadata) -> Result<ModelHandle> {
         ModelHandle::create(self, metadata).await
     }
 
-    pub async fn model(&self, model_name: String) -> Result<Option<ModelHandle>> {
-        ModelHandle::new(self.clone(), model_name).await
-    }
-
-    pub async fn delete_model(&self, model_name: String) -> Result<()> {
-        const DELETE_MODEL_REFERENCES: &str = r#"
-        DELETE FROM $DATABASE
-        WHERE model = ?1;
-        "#;
-        const DELETE_MODEL: &str = r#"
-        DELETE FROM model
-        WHERE name = ?1;
-        "#;
-        const REFERENCE_TABLES: [&str; 5] = [
-            "model_service",
-            "model_data_object",
-            "model_data",
-            "layer_data",
-            "neuron_data",
-        ];
-
-        for table in REFERENCE_TABLES.iter() {
-            let params = (model_name.clone(),);
-            self.connection
-                .call(|connection| {
-                    let mut statement = connection
-                        .prepare(DELETE_MODEL_REFERENCES.replace("$DATABASE", table).as_str())?;
-                    statement.execute(params)?;
-                    Ok(())
-                })
-                .await?;
-        }
-        let params = (model_name.clone(),);
-        self.connection
-            .call(|connection| {
-                let mut statement = connection.prepare(DELETE_MODEL)?;
-                statement.execute(params)?;
-                Ok(())
-            })
-            .await
-            .context("Problem deleting model '{model_name}'.")
+    pub async fn model(&self, model_name: impl AsRef<str>) -> Result<Option<ModelHandle>> {
+        ModelHandle::new(self.clone(), model_name.as_ref().to_owned()).await
     }
 
     pub async fn add_service(
@@ -206,67 +190,32 @@ impl Database {
         service_name: impl AsRef<str>,
         provider: impl AsRef<str>,
         provider_args: impl AsRef<[u8]>,
-    ) -> Result<()> {
-        const ADD_SERVICE: &str = r#"
-        INSERT INTO service (
-            name,
-            provider,
-            provider_args
-        ) VALUES (
-            ?1,
-            ?2,
-            ?3
-        );
-        "#;
+    ) -> Result<ServiceHandle> {
+        ServiceHandle::create(self.clone(), service_name, provider, provider_args).await
+    }
 
-        let params = (
-            service_name.as_ref().to_owned(),
-            provider.as_ref().to_owned(),
-            provider_args.as_ref().to_vec(),
-        );
-
-        self.connection
-            .call(|connection| connection.execute(ADD_SERVICE, params))
-            .await?;
-
-        Ok(())
+    pub async fn service(&self, service_name: impl AsRef<str>) -> Result<Option<ServiceHandle>> {
+        ServiceHandle::new(self.clone(), service_name.as_ref().to_owned()).await
     }
 
     pub async fn add_data_object(
         &self,
         data_object_name: impl AsRef<str>,
         data_type: DataType,
-    ) -> Result<()> {
-        const ADD_DATA_OBJECT: &str = r#"
-        INSERT INTO data_object (
-            name,
-            type,
-            type_args
-        ) VALUES (
-            ?1,
-            ?2,
-            ?3
-        );
-        "#;
-
-        let params = (
+    ) -> Result<DataObjectHandle> {
+        DataObjectHandle::create(
+            self.clone(),
             data_object_name.as_ref().to_owned(),
-            data_type.as_ref().to_owned(),
-            data_type.args(),
-        );
-
-        self.connection
-            .call(|connection| connection.execute(ADD_DATA_OBJECT, params))
-            .await?;
-
-        Ok(())
+            data_type,
+        )
+        .await
     }
 
     pub async fn data_object(
         &self,
         data_object_name: impl AsRef<str>,
     ) -> Result<Option<DataObjectHandle>> {
-        DataObjectHandle::new(self, data_object_name.as_ref()).await
+        DataObjectHandle::new(self.clone(), data_object_name.as_ref()).await
     }
 
     pub async fn model_data_object<D>(
@@ -295,7 +244,7 @@ impl Database {
             .data_object(data_object_name)
             .await?
             .context("No data object of type '{data_object_name}' found.")?;
-        let result = D::new(model, data_object.data_type().clone())?;
+        let result = D::new(model, data_object.data_type().clone()).await?;
         if let Some(result) = result {
             Ok(result)
         } else {

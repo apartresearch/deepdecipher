@@ -14,14 +14,18 @@ pub struct Neuroscope;
 async fn data_object(state: &State, model_name: &str) -> Result<NeuroscopeData> {
     let database = state.database().await?;
     let model = database
-        .model(model_name.to_owned())
+        .model(model_name)
         .await?
         .with_context(|| format!("No model with name {model_name}."))?;
+    let data_object_name = "neuroscope";
+    let data_object = database
+        .data_object(data_object_name)
+        .await?
+        .with_context(|| format!("No data object with name '{data_object_name}'."))?;
     model
-        .data_object("neuroscope".to_owned())
+        .data_object(&data_object)
         .await
-        .with_context(|| format!("Failed to get neuroscope data object for model '{model_name}'."))?
-        .with_context(|| format!("No neuroscope data object for model '{model_name}'."))
+        .with_context(|| format!("Failed to get neuroscope data object for model '{model_name}'."))
 }
 
 #[async_trait]

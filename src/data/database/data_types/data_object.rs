@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use anyhow::{ensure, Context, Result};
+use async_trait::async_trait;
 use strum::{AsRefStr, EnumDiscriminants, EnumString};
 
 use crate::data::ModelHandle;
@@ -33,8 +34,9 @@ impl DataType {
     }
 }
 
+#[async_trait]
 pub trait ModelDataObject: Sized {
-    fn new(model: &ModelHandle, datatype: DataType) -> Result<Option<Self>>;
+    async fn new(model: &ModelHandle, datatype: DataType) -> Result<Option<Self>>;
     fn data_type() -> DataTypeDiscriminants;
     fn model_handle(&self) -> &ModelHandle;
 }
