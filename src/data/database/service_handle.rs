@@ -55,7 +55,7 @@ impl ServiceHandle {
         const GET_SERVICE: &str = r#"
     SELECT
         id,
-        name,
+        name
     FROM service
     WHERE name = ?1;
     "#;
