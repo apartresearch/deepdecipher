@@ -12,7 +12,7 @@ use super::service_provider::ServiceProviderTrait;
 pub struct Neuroscope;
 
 async fn data_object(state: &State, model_name: &str) -> Result<NeuroscopeData> {
-    let database = state.database().await?;
+    let database = state.database();
     let model = database
         .model(model_name)
         .await?

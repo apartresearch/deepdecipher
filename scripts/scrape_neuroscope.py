@@ -1,8 +1,17 @@
-import neuronav as nrnv
+from os import path
 import sys
 
-path = sys.argv[1]
+from neuronav import Database
 
-database = nrnv.Database.open(path)
+if len(sys.argv) < 2:
+    raise RuntimeError("Please specify a database file as the first argument.")
+
+database_path = sys.argv[1]
+
+if path.isfile(database_path):
+    database = Database.open(sys.argv[1])
+else:
+    database = Database.initialize(sys.argv[1])
+
+database.scrape_neuroscope_model("gelu-1l")
 # database.scrape_neuroscope_model("solu-6l")
-# database.scrape_neuroscope_model("gelu-1l")

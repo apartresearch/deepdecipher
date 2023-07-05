@@ -19,7 +19,7 @@ impl ServiceProviderTrait for Metadata {
         _query: &serde_json::Value,
         model_name: &str,
     ) -> Result<serde_json::Value> {
-        let database = state.database().await?;
+        let database = state.database();
         let model = database
             .model(model_name.to_owned())
             .await?
@@ -36,7 +36,7 @@ impl ServiceProviderTrait for Metadata {
         model_name: &str,
         layer_index: u32,
     ) -> Result<serde_json::Value> {
-        let database = state.database().await?;
+        let database = state.database();
         let model = database
             .model(model_name.to_owned())
             .await?

@@ -1,4 +1,7 @@
 from .neuronav import (
-    start_server,
     Database,
+    ModelHandle,
+    ModelMetadata,
 )
+
+neuronav.setup_keyboard_interrupt()

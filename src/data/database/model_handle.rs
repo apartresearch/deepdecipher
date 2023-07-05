@@ -423,8 +423,8 @@ impl ModelHandle {
             .with_context(|| {
                 format!(
                     "Failed to get neuron data for neuron l{layer_index}n{neuron_index} for data object '{}' for model '{}'.",
+                    data_object.name(),
                     self.name(),
-                    data_object.name()
                 )
             })
     }

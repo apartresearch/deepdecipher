@@ -42,8 +42,8 @@ const MODEL_SERVICE_TABLE: &str = r#"
 CREATE TABLE model_service (
     model_id                   INTEGER NOT NULL,
     service_id                 INTEGER NOT NULL,
-    FOREIGN KEY(model) REFERENCES model(name),
-    FOREIGN KEY(service) REFERENCES service(name)
+    FOREIGN KEY(model_id) REFERENCES model(id),
+    FOREIGN KEY(service_id) REFERENCES service(id)
   ) STRICT;
 "#;
 
@@ -60,8 +60,8 @@ const MODEL_DATA_OBJECT_TABLE: &str = r#"
 CREATE TABLE model_data_object (
     model_id                INTEGER NOT NULL,
     data_object_id          INTEGER NOT NULL,
-    FOREIGN KEY(model) REFERENCES model(name),
-    FOREIGN KEY(data_object) REFERENCES data_object(name)
+    FOREIGN KEY(model_id) REFERENCES model(id),
+    FOREIGN KEY(data_object_id) REFERENCES data_object(id)
 )
 "#;
 
@@ -70,9 +70,9 @@ CREATE TABLE model_data (
     model_id                INTEGER NOT NULL,
     data_object_id          INTEGER NOT NULL,
     data                    BLOB NOT NULL,
-    PRIMARY KEY(model, data_object),
-    FOREIGN KEY(model) REFERENCES model(name)
-    FOREIGN KEY(data_object) REFERENCES data_object(name)
+    PRIMARY KEY(model_id, data_object_id),
+    FOREIGN KEY(model_id) REFERENCES model(id),
+    FOREIGN KEY(data_object_id) REFERENCES data_object(id)
   ) STRICT;
 "#;
 
@@ -82,9 +82,9 @@ CREATE TABLE layer_data (
     data_object_id          INTEGER NOT NULL,
     layer_index             INTEGER NOT NULL,
     data                    BLOB NOT NULL,
-    PRIMARY KEY(model, data_object, layer_index),
-    FOREIGN KEY(model) REFERENCES model(name),
-    FOREIGN KEY(data_object) REFERENCES data_object(name)
+    PRIMARY KEY(model_id, data_object_id, layer_index),
+    FOREIGN KEY(model_id) REFERENCES model(id),
+    FOREIGN KEY(data_object_id) REFERENCES data_object(id)
     CHECK (layer_index >= 0)
   ) STRICT;
 "#;
@@ -96,9 +96,9 @@ CREATE TABLE neuron_data (
     layer_index             INTEGER NOT NULL,
     neuron_index            INTEGER NOT NULL,
     data                    BLOB NOT NULL,
-    PRIMARY KEY(model, data_object, layer_index, neuron_index),
-    FOREIGN KEY(model) REFERENCES model(name),
-    FOREIGN KEY(data_object) REFERENCES data_object(name)
+    PRIMARY KEY(model_id, data_object_id, layer_index, neuron_index),
+    FOREIGN KEY(model_id) REFERENCES model(id),
+    FOREIGN KEY(data_object_id) REFERENCES data_object(id)
     CHECK (layer_index >= 0 AND neuron_index >= 0)
   ) STRICT;
 "#;

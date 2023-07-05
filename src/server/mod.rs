@@ -204,22 +204,24 @@ async fn all_neuron(
 pub struct State {
     neuron_stores: Arc<Mutex<HashMap<String, NeuronStore>>>,
     payload: Payload,
+    database: Database,
 }
 
 impl State {
-    pub fn new(payload: Payload) -> Result<Self> {
-        Ok(Self {
+    pub fn new(database: Database, payload: Payload) -> Self {
+        Self {
             neuron_stores: Arc::new(Mutex::new(HashMap::new())),
             payload,
-        })
+            database,
+        }
     }
 
     pub fn payload(&self) -> &Payload {
         &self.payload
     }
 
-    pub async fn database(&self) -> Result<Database> {
-        Database::open("data.db").await
+    pub fn database(&self) -> Database {
+        self.database.clone()
     }
 
     pub async fn neuron_store(&self, model_name: &str) -> Result<NeuronStore> {
@@ -236,18 +238,11 @@ impl State {
     }
 }
 
-impl Default for State {
-    fn default() -> Self {
-        let payload = Payload::default();
-        Self::new(payload).unwrap()
-    }
-}
-
-pub fn start_server() -> std::io::Result<()> {
+pub fn start_server(database: Database) -> std::io::Result<()> {
     let url = "127.0.0.1";
     let port = 8080;
     println!("Serving neuronav on http://{url}:{port}/");
-    let state = web::Data::new(State::default());
+    let state = web::Data::new(State::new(database, Payload::default()));
     rt::System::new().block_on(
         HttpServer::new(move || {
             App::new()
