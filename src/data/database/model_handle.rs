@@ -2,6 +2,7 @@ use crate::data::{LayerMetadata, Metadata};
 
 use super::{
     data_types::ModelDataObject, service_handle::ServiceHandle, DataObjectHandle, Database,
+    Operation,
 };
 
 use anyhow::{Context, Result};
@@ -15,7 +16,7 @@ pub struct ModelHandle {
 }
 
 impl ModelHandle {
-    pub(super) async fn create(database: &Database, metadata: Metadata) -> Result<Self> {
+    fn create_inner(database: Database, metadata: Metadata) -> impl Operation<Self> {
         const ADD_MODEL: &str = r#"
         INSERT INTO model (
             name,
@@ -34,36 +35,35 @@ impl ModelHandle {
         );
         "#;
 
-        let metadata2 = metadata.clone();
+        let params = (
+            metadata.name.clone(),
+            metadata.layers.len(),
+            metadata.layers[0].num_neurons,
+            metadata.activation_function.clone(),
+            metadata.num_total_parameters,
+            metadata.dataset.clone(),
+        );
 
+        |transaction| {
+            let id = transaction.prepare(ADD_MODEL)?.insert(params)?;
+            let model = ModelHandle {
+                id,
+                metadata,
+                database: database.clone(),
+            };
+            let metadata_service =
+                ServiceHandle::new_inner(database, "metadata".to_owned())(transaction)?
+                    .context("A 'metadata' service should always exist.")?;
+
+            model.add_service_inner(&metadata_service)(transaction)?;
+            Ok(model)
+        }
+    }
+
+    pub(super) async fn create(mut database: Database, metadata: Metadata) -> Result<Self> {
         database
-            .connection
-            .call(move |connection| {
-                connection.execute(
-                    ADD_MODEL,
-                    (
-                        &metadata2.name,
-                        &metadata2.layers.len(),
-                        &metadata2.layers[0].num_neurons,
-                        &metadata2.activation_function,
-                        &metadata2.num_total_parameters,
-                        &metadata2.dataset,
-                    ),
-                )
-            })
-            .await?;
-        let id = database.latest_id("model").await?;
-        let model = ModelHandle {
-            id,
-            metadata,
-            database: database.clone(),
-        };
-
-        model
-            .add_service(&database.service("metadata").await?.unwrap())
-            .await?;
-
-        Ok(model)
+            .execute(Self::create_inner(database.clone(), metadata))
+            .await
     }
 
     pub(super) async fn new(database: Database, model_name: String) -> Result<Option<Self>> {
@@ -139,9 +139,9 @@ impl ModelHandle {
         &self.database
     }
 
-    pub async fn delete(self) -> Result<()> {
+    fn delete_inner(&self) -> impl Operation<()> {
         const DELETE_MODEL_REFERENCES: &str = r#"
-        DELETE FROM $DATABASE
+        DELETE FROM $TABLE
         WHERE model_id = ?1;
         "#;
         const DELETE_MODEL: &str = r#"
@@ -156,33 +156,28 @@ impl ModelHandle {
             "neuron_data",
         ];
 
-        let name = self.name();
-
-        for table in REFERENCE_TABLES.iter() {
-            let params = (self.id,);
-            self.database
-                .connection
-                .call(move |connection| {
-                    let mut statement = connection
-                        .prepare(DELETE_MODEL_REFERENCES.replace("$DATABASE", table).as_str())?;
-                    statement.execute(params)?;
-                    Ok(())
-                })
-                .await?;
-        }
         let params = (self.id,);
-        self.database
-            .connection
-            .call(move |connection| {
-                let mut statement = connection.prepare(DELETE_MODEL)?;
+        move |transaction| {
+            for table in REFERENCE_TABLES.iter() {
+                let mut statement = transaction
+                    .prepare(DELETE_MODEL_REFERENCES.replace("$TABLE", table).as_str())?;
                 statement.execute(params)?;
-                Ok(())
-            })
+            }
+            transaction.prepare(DELETE_MODEL)?.execute(params)?;
+            Ok(())
+        }
+    }
+
+    pub async fn delete(mut self) -> Result<()> {
+        let name = self.name().to_owned();
+
+        self.database
+            .execute(self.delete_inner())
             .await
             .with_context(|| format!("Problem deleting model '{name}'."))
     }
 
-    pub async fn add_service(&self, service: &ServiceHandle) -> Result<()> {
+    fn add_service_inner(&self, service: &ServiceHandle) -> impl Operation<()> {
         const ADD_MODEL_SERVICE: &str = r#"
         INSERT INTO model_service (
             model_id,
@@ -195,15 +190,21 @@ impl ModelHandle {
 
         let params = (self.id, service.id());
 
+        move |transaction| {
+            transaction.prepare(ADD_MODEL_SERVICE)?.insert(params)?;
+            Ok(())
+        }
+    }
+
+    pub async fn add_service(&mut self, service: &ServiceHandle) -> Result<()> {
         self.database
-            .connection
-            .call(move |connection| connection.execute(ADD_MODEL_SERVICE, params))
+            .execute(self.add_service_inner(service))
             .await?;
 
         Ok(())
     }
 
-    pub async fn add_data_object(&self, data_object: &DataObjectHandle) -> Result<()> {
+    fn add_data_object_inner(&self, data_object: &DataObjectHandle) -> impl Operation<()> {
         const ADD_DATA_OBJECT: &str = r#"
         INSERT INTO model_data_object (
             model_id,
@@ -213,16 +214,24 @@ impl ModelHandle {
             ?2
         );
         "#;
-
-        let data_object_name = data_object.name();
-
         let params = (self.id(), data_object.id());
 
+        move |transaction| {
+            transaction.prepare(ADD_DATA_OBJECT)?.insert(params)?;
+            Ok(())
+        }
+    }
+
+    pub async fn add_data_object(&mut self, data_object: &DataObjectHandle) -> Result<()> {
+        let data_object_name = data_object.name().to_owned();
+        let model_name = self.name().to_owned();
+
         self.database
-            .connection
-            .call(move |connection| connection.execute(ADD_DATA_OBJECT, params).map(drop))
+            .execute(self.add_data_object_inner(data_object))
             .await
-            .with_context(|| format!("Failed to add data object '{data_object_name}' to model."))
+            .with_context(|| {
+                format!("Failed to add data object '{data_object_name}' to model '{model_name}'.")
+            })
     }
 
     pub async fn has_data_object(&self, data_object: &DataObjectHandle) -> Result<bool> {
@@ -256,11 +265,11 @@ impl ModelHandle {
         self.database.model_data_object(self, data_object).await
     }
 
-    pub async fn add_model_data(
+    fn add_model_data_inner(
         &self,
         data_object: &DataObjectHandle,
         data: Vec<u8>,
-    ) -> Result<()> {
+    ) -> impl Operation<()> {
         const ADD_MODEL_DATA: &str = r#"
         INSERT INTO model_data (
             model_id,
@@ -274,20 +283,31 @@ impl ModelHandle {
         "#;
 
         let params = (self.id(), data_object.id(), data);
-
-        self.database
-            .connection
-            .call(move |connection| connection.execute(ADD_MODEL_DATA, params).map(drop))
-            .await
-            .context("Failed to add model data.")
+        move |transaction| {
+            transaction.prepare(ADD_MODEL_DATA)?.insert(params)?;
+            Ok(())
+        }
     }
 
-    pub async fn add_layer_data(
+    pub async fn add_model_data(
+        &mut self,
+        data_object: &DataObjectHandle,
+        data: Vec<u8>,
+    ) -> Result<()> {
+        let model_name = self.name().to_owned();
+
+        self.database
+            .execute(self.add_model_data_inner(data_object, data))
+            .await
+            .with_context(|| format!("Failed to add model data to model '{model_name}'."))
+    }
+
+    fn add_layer_data_inner(
         &self,
         data_object: &DataObjectHandle,
         layer_index: u32,
         data: Vec<u8>,
-    ) -> Result<()> {
+    ) -> impl Operation<()> {
         const ADD_LAYER_DATA: &str = r#"
         INSERT INTO layer_data (
             model_id,
@@ -304,20 +324,31 @@ impl ModelHandle {
 
         let params = (self.id(), data_object.id(), layer_index, data);
 
+        move |transaction| {
+            transaction.prepare(ADD_LAYER_DATA)?.insert(params)?;
+            Ok(())
+        }
+    }
+
+    pub async fn add_layer_data(
+        &mut self,
+        data_object: &DataObjectHandle,
+        layer_index: u32,
+        data: Vec<u8>,
+    ) -> Result<()> {
         self.database
-            .connection
-            .call(|connection| connection.execute(ADD_LAYER_DATA, params).map(drop))
+            .execute(self.add_layer_data_inner(data_object, layer_index, data))
             .await
             .context("Failed to add layer data.")
     }
 
-    pub async fn add_neuron_data(
+    fn add_neuron_data_inner(
         &self,
         data_object: &DataObjectHandle,
         layer_index: u32,
         neuron_index: u32,
         data: Vec<u8>,
-    ) -> Result<()> {
+    ) -> impl Operation<()> {
         const ADD_NEURON_DATA: &str = r#"
         INSERT INTO neuron_data (
             model_id,
@@ -336,9 +367,21 @@ impl ModelHandle {
 
         let params = (self.id(), data_object.id(), layer_index, neuron_index, data);
 
+        move |transaction| {
+            transaction.prepare(ADD_NEURON_DATA)?.insert(params)?;
+            Ok(())
+        }
+    }
+
+    pub async fn add_neuron_data(
+        &mut self,
+        data_object: &DataObjectHandle,
+        layer_index: u32,
+        neuron_index: u32,
+        data: Vec<u8>,
+    ) -> Result<()> {
         self.database
-            .connection
-            .call(|connection| connection.execute(ADD_NEURON_DATA, params).map(drop))
+            .execute(self.add_neuron_data_inner(data_object, layer_index, neuron_index, data))
             .await
             .context("Failed to add neuron data.")
     }

@@ -81,11 +81,10 @@ pub async fn scrape_neuron_page_to_file<S: AsRef<str>, P: AsRef<Path>>(
 }
 
 pub async fn scrape_neuron_page_to_database(
-    model: ModelHandle,
+    mut model: ModelHandle,
     data_object: DataObjectHandle,
     neuron_index: NeuronIndex,
 ) -> Result<f32> {
-    let model_name = model.name();
     let page = if let Some(page_data) = model
         .neuron_data(&data_object, neuron_index.layer, neuron_index.neuron)
         .await?
@@ -93,9 +92,10 @@ pub async fn scrape_neuron_page_to_database(
         NeuroscopeNeuronPage::from_binary(page_data)?
     } else {
         let page = scrape_neuron_page(model.name(), neuron_index).await?;
-        model.add_neuron_data( &data_object, neuron_index.layer, neuron_index.neuron, page.to_binary()?).await.with_context(|| format!("Failed to write neuroscope page for neuron {neuron_index} in layer {layer_index} of model '{model_name}' to database.", neuron_index = neuron_index.neuron, layer_index = neuron_index.layer))?;
+        model.add_neuron_data( &data_object, neuron_index.layer, neuron_index.neuron, page.to_binary()?).await.with_context(|| format!("Failed to write neuroscope page for neuron {neuron_index} in layer {layer_index} of model '{model_name}' to database.", neuron_index = neuron_index.neuron, layer_index = neuron_index.layer, model_name = model.name()))?;
         page
     };
+    let model_name = model.name();
     let first_text = page
         .texts()
         .get(0)
@@ -224,7 +224,7 @@ pub async fn scrape_layer_to_files<P: AsRef<Path>, S: AsRef<str>>(
 }
 
 pub async fn scrape_layer_to_database(
-    model: &ModelHandle,
+    model: &mut ModelHandle,
     data_object: &DataObjectHandle,
     layer_index: u32,
     num_neurons: u32,
@@ -382,7 +382,7 @@ pub async fn scrape_model_to_files<P: AsRef<Path>, S: AsRef<str>>(
     Ok(())
 }
 
-pub async fn scrape_model_to_database(database: &Database, model: &ModelHandle) -> Result<()> {
+pub async fn scrape_model_to_database(database: &Database, model: &mut ModelHandle) -> Result<()> {
     let data_object = if let Some(data_object) = database.data_object("neuroscope").await? {
         data_object
     } else {
@@ -393,8 +393,13 @@ pub async fn scrape_model_to_database(database: &Database, model: &ModelHandle) 
 
     let mut layer_pages = Vec::with_capacity(model.metadata().layers.len());
     for (layer_index, LayerMetadata { num_neurons }) in model.metadata().layers.iter().enumerate() {
-        let layer_page =
-            scrape_layer_to_database(model, &data_object, layer_index as u32, *num_neurons).await?;
+        let layer_page = scrape_layer_to_database(
+            &mut model.clone(),
+            &data_object,
+            layer_index as u32,
+            *num_neurons,
+        )
+        .await?;
         layer_pages.push(layer_page)
     }
 

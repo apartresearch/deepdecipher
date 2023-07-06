@@ -13,5 +13,5 @@ if path.isfile(database_path):
 else:
     database = Database.initialize(sys.argv[1])
 
-database.scrape_neuroscope_model("gelu-1l")
+database.scrape_neuroscope_model("solu-1l")
 # database.scrape_neuroscope_model("solu-6l")

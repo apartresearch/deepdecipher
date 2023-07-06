@@ -1,4 +1,4 @@
-use super::Database;
+use super::{Database, Operation};
 
 use anyhow::{Context, Result};
 use rusqlite::OptionalExtension;
@@ -10,12 +10,12 @@ pub struct ServiceHandle {
 }
 
 impl ServiceHandle {
-    pub(super) async fn create(
+    fn create_inner(
         database: Database,
-        service_name: impl AsRef<str>,
-        provider: impl AsRef<str>,
-        provider_args: impl AsRef<[u8]>,
-    ) -> Result<ServiceHandle> {
+        service_name: String,
+        provider_name: String,
+        provider_args: Vec<u8>,
+    ) -> impl Operation<Self> {
         const ADD_SERVICE: &str = r#"
         INSERT INTO service (
             name,
@@ -28,50 +28,65 @@ impl ServiceHandle {
         );
         "#;
 
-        let service_name = service_name.as_ref();
-        let provider = provider.as_ref();
-        let provider_args = provider_args.as_ref();
+        let params = (service_name.clone(), provider_name, provider_args);
 
-        let params = (
-            service_name.to_owned(),
-            provider.to_owned(),
-            provider_args.to_vec(),
-        );
-
-        database
-            .connection
-            .call(|connection| connection.execute(ADD_SERVICE, params))
-            .await?;
-
-        let id = database.latest_id("service").await?;
-        Ok(Self {
-            id,
-            name: service_name.to_owned(),
-            database,
-        })
+        |transaction| {
+            let id = transaction
+                .prepare(ADD_SERVICE)
+                .with_context(|| format!("Failed to add service '{}'.", service_name.as_str()))?
+                .insert(params)?;
+            Ok(Self {
+                id,
+                name: service_name,
+                database,
+            })
+        }
     }
 
-    pub(super) async fn new(database: Database, service_name: String) -> Result<Option<Self>> {
+    pub(super) async fn create(
+        mut database: Database,
+        service_name: impl AsRef<str>,
+        provider: impl AsRef<str>,
+        provider_args: impl AsRef<[u8]>,
+    ) -> Result<Self> {
+        database
+            .execute(Self::create_inner(
+                database.clone(),
+                service_name.as_ref().to_owned(),
+                provider.as_ref().to_owned(),
+                provider_args.as_ref().to_vec(),
+            ))
+            .await
+    }
+
+    pub(super) fn new_inner(
+        database: Database,
+        service_name: String,
+    ) -> impl Operation<Option<Self>> {
         const GET_SERVICE: &str = r#"
-    SELECT
-        id,
-        name
-    FROM service
-    WHERE name = ?1;
-    "#;
+        SELECT
+            id,
+            name
+        FROM service
+        WHERE name = ?1;
+        "#;
 
-        let params = (service_name.clone(),);
-        let service_data = database
-            .connection
-            .call(|connection| {
-                let mut statement = connection.prepare(GET_SERVICE)?;
-                statement
-                    .query_row(params, |row| Ok((row.get(0)?, row.get(1)?)))
-                    .optional()
-            })
-            .await?;
+        let params = (service_name,);
 
-        Ok(service_data.map(|(id, name)| ServiceHandle { id, name, database }))
+        |transaction| {
+            let service_data = transaction
+                .prepare(GET_SERVICE)?
+                .query_row(params, |row| Ok((row.get(0)?, row.get(1)?)))
+                .optional()?;
+            let service = service_data.map(|(id, name)| ServiceHandle { id, name, database });
+            Ok(service)
+        }
+    }
+
+    pub(super) async fn new(mut database: Database, service_name: String) -> Result<Option<Self>> {
+        database
+            .execute(Self::new_inner(database.clone(), service_name))
+            .await
     }
 
     pub(super) fn id(&self) -> i64 {
@@ -82,9 +97,9 @@ impl ServiceHandle {
         &self.name
     }
 
-    pub async fn delete(self) -> Result<()> {
+    fn delete_inner(&self) -> impl Operation<()> {
         const DELETE_SERVICE_REFERENCES: &str = r#"
-        DELETE FROM $DATABASE
+        DELETE FROM $TABLE
         WHERE service_id = ?1;
         "#;
         const DELETE_SERVICE: &str = r#"
@@ -93,31 +108,22 @@ impl ServiceHandle {
         "#;
         const REFERENCE_TABLES: [&str; 1] = ["model_service"];
 
-        let name = self.name();
-
-        for table in REFERENCE_TABLES.iter() {
-            let params = (self.id,);
-            self.database
-                .connection
-                .call(move |connection| {
-                    let mut statement = connection.prepare(
-                        DELETE_SERVICE_REFERENCES
-                            .replace("$DATABASE", table)
-                            .as_str(),
-                    )?;
-                    statement.execute(params)?;
-                    Ok(())
-                })
-                .await?;
-        }
         let params = (self.id,);
-        self.database
-            .connection
-            .call(move |connection| {
-                let mut statement = connection.prepare(DELETE_SERVICE)?;
+        move |transaction| {
+            for table in REFERENCE_TABLES.iter() {
+                let mut statement = transaction
+                    .prepare(DELETE_SERVICE_REFERENCES.replace("$TABLE", table).as_str())?;
                 statement.execute(params)?;
-                Ok(())
-            })
+            }
+            transaction.prepare(DELETE_SERVICE)?.execute(params)?;
+            Ok(())
+        }
+    }
+
+    pub async fn delete(mut self) -> Result<()> {
+        let name = self.name().to_owned();
+        self.database
+            .execute(self.delete_inner())
             .await
             .with_context(|| format!("Problem deleting service '{name}'."))
     }

@@ -2,6 +2,7 @@ use std::path::Path;
 
 use anyhow::{bail, Context, Result};
 
+use rusqlite::Transaction;
 use tokio_rusqlite::Connection;
 
 use self::data_types::ModelDataObject;
@@ -16,103 +17,25 @@ pub mod data_types;
 mod service_handle;
 use service_handle::ServiceHandle;
 
-const MODEL_TABLE: &str = r#"
-CREATE TABLE model (
-    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
-    name                    TEXT NOT NULL UNIQUE,
-    num_layers              INTEGER NOT NULL,
-    neurons_per_layer       INTEGER NOT NULL,
-    activation_function     TEXT NOT NULL,
-    num_total_parameters    INTEGER NOT NULL,
-    dataset                 TEXT NOT NULL
-    CHECK (num_layers >= 0 AND neurons_per_layer >= 0 AND num_total_parameters >= 0)
-  ) STRICT;
-"#;
+mod table_definitions;
+use table_definitions::TABLES;
 
-const SERVICE_TABLE: &str = r#"
-CREATE TABLE service (
-    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
-    name                    TEXT NOT NULL UNIQUE,
-    provider                TEXT NOT NULL,
-    provider_args           BLOB NOT NULL
-  ) STRICT;
-"#;
+pub trait Operation<R>: FnOnce(&mut Transaction) -> Result<R> + 'static + Send
+where
+    R: 'static + Send,
+{
+    fn call(self, transaction: &mut Transaction) -> Result<R>;
+}
 
-const MODEL_SERVICE_TABLE: &str = r#"
-CREATE TABLE model_service (
-    model_id                   INTEGER NOT NULL,
-    service_id                 INTEGER NOT NULL,
-    FOREIGN KEY(model_id) REFERENCES model(id),
-    FOREIGN KEY(service_id) REFERENCES service(id)
-  ) STRICT;
-"#;
-
-const DATA_OBJECT_TABLE: &str = r#"
-CREATE TABLE data_object (
-    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
-    name                    TEXT NOT NULL UNIQUE,
-    type                    TEXT NOT NULL,
-    type_args               BLOB NOT NULL
-  ) STRICT;
-"#;
-
-const MODEL_DATA_OBJECT_TABLE: &str = r#"
-CREATE TABLE model_data_object (
-    model_id                INTEGER NOT NULL,
-    data_object_id          INTEGER NOT NULL,
-    FOREIGN KEY(model_id) REFERENCES model(id),
-    FOREIGN KEY(data_object_id) REFERENCES data_object(id)
-)
-"#;
-
-const MODEL_DATA_TABLE: &str = r#"
-CREATE TABLE model_data (
-    model_id                INTEGER NOT NULL,
-    data_object_id          INTEGER NOT NULL,
-    data                    BLOB NOT NULL,
-    PRIMARY KEY(model_id, data_object_id),
-    FOREIGN KEY(model_id) REFERENCES model(id),
-    FOREIGN KEY(data_object_id) REFERENCES data_object(id)
-  ) STRICT;
-"#;
-
-const LAYER_DATA_TABLE: &str = r#"
-CREATE TABLE layer_data (
-    model_id                INTEGER NOT NULL,
-    data_object_id          INTEGER NOT NULL,
-    layer_index             INTEGER NOT NULL,
-    data                    BLOB NOT NULL,
-    PRIMARY KEY(model_id, data_object_id, layer_index),
-    FOREIGN KEY(model_id) REFERENCES model(id),
-    FOREIGN KEY(data_object_id) REFERENCES data_object(id)
-    CHECK (layer_index >= 0)
-  ) STRICT;
-"#;
-
-const NEURON_DATA_TABLE: &str = r#"
-CREATE TABLE neuron_data (
-    model_id                INTEGER NOT NULL,
-    data_object_id          INTEGER NOT NULL,
-    layer_index             INTEGER NOT NULL,
-    neuron_index            INTEGER NOT NULL,
-    data                    BLOB NOT NULL,
-    PRIMARY KEY(model_id, data_object_id, layer_index, neuron_index),
-    FOREIGN KEY(model_id) REFERENCES model(id),
-    FOREIGN KEY(data_object_id) REFERENCES data_object(id)
-    CHECK (layer_index >= 0 AND neuron_index >= 0)
-  ) STRICT;
-"#;
-
-const TABLES: [&str; 8] = [
-    MODEL_TABLE,
-    SERVICE_TABLE,
-    MODEL_SERVICE_TABLE,
-    DATA_OBJECT_TABLE,
-    MODEL_DATA_OBJECT_TABLE,
-    MODEL_DATA_TABLE,
-    LAYER_DATA_TABLE,
-    NEURON_DATA_TABLE,
-];
+impl<T, R> Operation<R> for T
+where
+    T: FnOnce(&mut Transaction) -> Result<R> + 'static + Send,
+    R: 'static + Send,
+{
+    fn call(self, transaction: &mut Transaction) -> Result<R> {
+        self(transaction)
+    }
+}
 
 #[derive(Clone)]
 pub struct Database {
@@ -159,26 +82,27 @@ impl Database {
         &self.connection
     }
 
-    async fn latest_id(&self, table: &str) -> Result<i64> {
-        const LATEST_ID: &str = r#"
-        SELECT seq
-        FROM sqlite_sequence
-        WHERE name = ?1;
-        "#;
-
-        let params = (table.to_owned(),);
+    async fn execute<R, F>(&mut self, f: F) -> Result<R>
+    where
+        F: Operation<R>,
+        R: Send + 'static,
+    {
         self.connection
             .call(|connection| {
-                connection
-                    .prepare(LATEST_ID)?
-                    .query_row(params, |row| row.get(0))
+                let mut transaction = connection.transaction()?;
+                match f(&mut transaction) {
+                    Ok(result) => {
+                        transaction.commit()?;
+                        Ok(Ok(result))
+                    }
+                    Err(error) => Ok(Err(error)),
+                }
             })
-            .await
-            .with_context(|| format!("Failed to get latest id for table '{table}'."))
+            .await?
     }
 
     pub async fn add_model(&self, metadata: Metadata) -> Result<ModelHandle> {
-        ModelHandle::create(self, metadata).await
+        ModelHandle::create(self.clone(), metadata).await
     }
 
     pub async fn model(&self, model_name: impl AsRef<str>) -> Result<Option<ModelHandle>> {
