@@ -61,7 +61,7 @@ impl DataType {
 
 #[async_trait]
 pub trait ModelDataObject: Sized {
-    async fn new(model: &ModelHandle, datatype: DataType) -> Result<Option<Self>>;
+    async fn new(model: &ModelHandle, datatype: DataTypeDiscriminants) -> Result<Option<Self>>;
     fn data_type() -> DataTypeDiscriminants;
     fn model_handle(&self) -> &ModelHandle;
 }

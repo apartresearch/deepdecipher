@@ -3,7 +3,7 @@ use async_trait::async_trait;
 
 use crate::data::{DataObjectHandle, ModelHandle};
 
-use super::{DataType, DataTypeDiscriminants, ModelDataObject};
+use super::{DataTypeDiscriminants, ModelDataObject};
 
 pub struct Neuron2Graph {
     model: ModelHandle,
@@ -12,14 +12,14 @@ pub struct Neuron2Graph {
 
 #[async_trait]
 impl ModelDataObject for Neuron2Graph {
-    async fn new(model: &ModelHandle, datatype: DataType) -> Result<Option<Self>> {
+    async fn new(model: &ModelHandle, datatype: DataTypeDiscriminants) -> Result<Option<Self>> {
         let data_object = model
             .database()
             .data_object("neuron2graph")
             .await?
             .context("No neuron2graph data object in database.")?;
         match datatype {
-            DataType::Neuron2Graph => Ok(Some(Self {
+            DataTypeDiscriminants::Neuron2Graph => Ok(Some(Self {
                 model: model.clone(),
                 data_object,
             })),

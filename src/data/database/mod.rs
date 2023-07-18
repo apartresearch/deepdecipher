@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Result};
 
 use rusqlite::Transaction;
 use tokio_rusqlite::Connection;
@@ -150,25 +150,13 @@ impl Database {
     where
         D: ModelDataObject,
     {
-        const HAS_MODEL_DATA_OBJECT: &str = r#"
-        SELECT model FROM model_data_object WHERE model = ?1 AND data_object = ?2;
-        "#;
-
         let model_name = model.name();
         let data_object_name = data_object.name();
 
-        let params = (model_name.to_owned(), data_object_name.to_owned());
-
-        if !self.connection
-            .call(|connection| connection.prepare(HAS_MODEL_DATA_OBJECT)?.exists(params))
-            .await.with_context(|| format!("Failed to check whether model '{model_name}' has data object '{data_object_name}'"))? {
+        if !model.has_data_object(data_object).await? {
             bail!("Model '{model_name}' does not have data object '{data_object_name}'.");
-            }
-        let data_object = self
-            .data_object(data_object_name)
-            .await?
-            .context("No data object of type '{data_object_name}' found.")?;
-        let result = D::new(model, data_object.data_type().clone()).await?;
+        }
+        let result = D::new(model, data_object.data_type().into()).await?;
         if let Some(result) = result {
             Ok(result)
         } else {

@@ -5,7 +5,7 @@ pub use neuron_viewer_object::NeuronViewerObject;
 mod neuroscope;
 pub use neuroscope::{NeuroscopeLayerPage, NeuroscopeModelPage, NeuroscopeNeuronPage};
 mod neuron_store;
-pub use neuron_store::{NeuronStore, TokenSearch, TokenSearchType};
+pub use neuron_store::{NeuronStore, SimilarNeurons, TokenSearch, TokenSearchType};
 pub mod retrieve;
 
 pub mod database;

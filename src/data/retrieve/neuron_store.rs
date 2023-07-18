@@ -25,7 +25,7 @@ pub async fn store_similar_neurons(
     for neuron_index in model_handle.metadata().neuron_indices() {
         let similar_neurons =
             neuron_relatedness.similar_neurons(neuron_index, similarity_threshold);
-        let data = postcard::to_allocvec(similar_neurons.as_slice()).with_context(|| format!("Failed to serialize similar neuron vector for neuron {neuron_index} in model {model_name}."))?;
+        let data = similar_neurons.to_binary().with_context(|| format!("Failed to serialize similar neuron vector for neuron {neuron_index} in model {model_name}."))?;
         model_handle.add_neuron_data(data_object_handle, neuron_index.layer, neuron_index.neuron, data).await.with_context(||format!("Failed to add similar neuron vector for neuron {neuron_index} in model {model_name} to database."))?;
 
         num_completed += 1;
@@ -67,12 +67,7 @@ pub async fn store_neuron_store(
     }
 
     model_handle
-        .add_model_data(
-            &data_object,
-            postcard::to_allocvec(&neuron_store).with_context(|| {
-                format!("Failed to serialize neuron store for model '{model_name}'.",)
-            })?,
-        )
+        .add_model_data(&data_object, neuron_store.to_binary()?)
         .await
         .with_context(|| {
             format!("Failed to add neuron store data for model '{model_name}' to database.",)

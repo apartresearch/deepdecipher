@@ -13,5 +13,8 @@ if path.isfile(database_path):
 else:
     database = Database.initialize(sys.argv[1])
 
+model = database.model("solu-1l")
+if model is not None:
+    model.delete()
 database.scrape_neuroscope_model("solu-1l")
 # database.scrape_neuroscope_model("solu-6l")

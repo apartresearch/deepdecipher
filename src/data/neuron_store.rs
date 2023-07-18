@@ -65,6 +65,27 @@ impl FromStr for TokenSearch {
     }
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SimilarNeurons {
+    similar_neurons: Vec<(NeuronIndex, f32)>,
+}
+
+impl SimilarNeurons {
+    pub fn as_slice(&self) -> &[(NeuronIndex, f32)] {
+        self.similar_neurons.as_slice()
+    }
+
+    pub fn to_binary(&self) -> Result<Vec<u8>> {
+        let result = postcard::to_allocvec(self.as_slice())?;
+        Ok(result)
+    }
+
+    pub fn from_binary(bytes: &[u8]) -> Result<Self> {
+        let result = postcard::from_bytes(bytes)?;
+        Ok(result)
+    }
+}
+
 pub struct NeuronSimilarity {
     layer_size: u32,
     neuron_relatedness: Array2<u32>,
@@ -75,11 +96,7 @@ impl NeuronSimilarity {
         (common_token_count as f32) / (self_count1.max(self_count2) as f32)
     }
 
-    pub fn similar_neurons(
-        &self,
-        neuron_index: NeuronIndex,
-        threshold: f32,
-    ) -> Vec<(NeuronIndex, f32)> {
+    pub fn similar_neurons(&self, neuron_index: NeuronIndex, threshold: f32) -> SimilarNeurons {
         let index = neuron_index.flat_index(self.layer_size);
         let related_neurons = self.neuron_relatedness.slice(s![index, ..]);
         let self_count1 = *self.neuron_relatedness.get([index, index]).unwrap();
@@ -107,7 +124,7 @@ impl NeuronSimilarity {
                 .partial_cmp(similarity1)
                 .unwrap_or(Ordering::Equal)
         });
-        similar_neurons
+        SimilarNeurons { similar_neurons }
     }
 }
 

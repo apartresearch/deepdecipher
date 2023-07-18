@@ -6,7 +6,7 @@ use crate::data::{
     NeuroscopeNeuronPage,
 };
 
-use super::{data_object::ModelDataObject, DataType, DataTypeDiscriminants};
+use super::{data_object::ModelDataObject, DataTypeDiscriminants};
 
 pub struct Neuroscope {
     model: ModelHandle,
@@ -15,14 +15,14 @@ pub struct Neuroscope {
 
 #[async_trait]
 impl ModelDataObject for Neuroscope {
-    async fn new(model: &ModelHandle, datatype: DataType) -> Result<Option<Self>> {
+    async fn new(model: &ModelHandle, datatype: DataTypeDiscriminants) -> Result<Option<Self>> {
         let data_object = model
             .database()
             .data_object("neuroscope")
             .await?
             .context("No neuroscope data object in database.")?;
         match datatype {
-            DataType::Neuroscope => Ok(Some(Self {
+            DataTypeDiscriminants::Neuroscope => Ok(Some(Self {
                 model: model.clone(),
                 data_object,
             })),
