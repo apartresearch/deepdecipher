@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use crate::data::{
     data_types::DataType, neuron_store::NeuronStoreRaw, DataObjectHandle, Database, ModelHandle,
     NeuronStore,
@@ -78,4 +80,16 @@ pub async fn store_raw_neuron_store(
     let neuron_store =
         NeuronStore::from_raw(neuron_store, metadata.num_layers, metadata.layer_size)?;
     store_neuron_store(database, model_handle, neuron_store, similarity_threshold).await
+}
+
+pub async fn retrieve_neuron_store(
+    model_handle: &mut ModelHandle,
+    neuron_store_path: impl AsRef<Path>,
+    similarity_threshold: f32,
+) -> Result<()> {
+    let neuron_store_path = neuron_store_path.as_ref();
+    let neuron_store = NeuronStoreRaw::load(neuron_store_path, model_handle.name())
+        .with_context(|| format!("Failed to load neuron store from '{neuron_store_path:?}'."))?;
+    let database = model_handle.database().clone();
+    store_raw_neuron_store(&database, model_handle, neuron_store, similarity_threshold).await
 }

@@ -7,14 +7,6 @@ pub struct PyModelMetadata {
     pub metadata: Metadata,
 }
 
-impl PyModelMetadata {
-    pub fn new(model_metadata: Metadata) -> Self {
-        Self {
-            metadata: model_metadata,
-        }
-    }
-}
-
 #[pymethods]
 impl PyModelMetadata {
     #[getter]
