@@ -11,7 +11,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use snap::raw::{Decoder, Encoder};
 
-use super::{ModelHandle, NeuronIndex};
+use super::NeuronIndex;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum TokenSearchType {
@@ -118,17 +118,14 @@ pub struct NeuronStoreRaw {
 }
 
 impl NeuronStoreRaw {
-    pub fn load(data_path: &Path, model: &str) -> Result<Self> {
-        let neuron_store_path = data_path
-            .join(model)
-            .join("neuron2graph-search")
-            .join("neuron_store.json");
-        let neuron_store_path = neuron_store_path.as_path();
-        let neuron_store_string = fs::read_to_string(neuron_store_path)
-            .with_context(|| format!("Could not find neuron store file for model '{model}'."))?;
+    pub fn load(path: impl AsRef<Path>) -> Result<Self> {
+        let neuron_store_path = path.as_ref();
+        let neuron_store_string = fs::read_to_string(neuron_store_path).with_context(|| {
+            format!("Could not read neuron store from '{neuron_store_path:?}'.")
+        })?;
 
         serde_json::from_str(&neuron_store_string)
-            .with_context(|| format!("Failed to parse neuron store for model '{model}'."))
+            .with_context(|| format!("Failed to parse neuron store from '{neuron_store_path:?}'."))
     }
 }
 
@@ -212,13 +209,6 @@ impl NeuronStore {
             .decompress_vec(data.as_ref())
             .context("Failed to decompress neuron store")?;
         postcard::from_bytes(data.as_slice()).context("Failed to deserialize neuron store.")
-    }
-
-    pub fn from_file(model_handle: &ModelHandle, data_path: &Path) -> Result<Self> {
-        let raw = NeuronStoreRaw::load(data_path, model_handle.name())?;
-        let num_layers = model_handle.metadata().num_layers;
-        let layer_size = model_handle.metadata().layer_size;
-        Self::from_raw(raw, num_layers, layer_size)
     }
 
     pub fn get(&self, search_type: TokenSearchType, token: &str) -> Option<&HashSet<NeuronIndex>> {

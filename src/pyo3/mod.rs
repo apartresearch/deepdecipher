@@ -4,6 +4,8 @@ mod database;
 use database::PyDatabase;
 mod model_handle;
 use model_handle::PyModelHandle;
+mod data_object_handle;
+use data_object_handle::PyDataObjectHandle;
 mod model_metadata;
 use model_metadata::PyModelMetadata;
 
@@ -19,5 +21,6 @@ fn neuronav(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyDatabase>()?;
     m.add_class::<PyModelHandle>()?;
     m.add_class::<PyModelMetadata>()?;
+    m.add_class::<PyDataObjectHandle>()?;
     Ok(())
 }

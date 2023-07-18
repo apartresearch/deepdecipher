@@ -4,6 +4,8 @@ use tokio::runtime::Runtime;
 
 use crate::data::{retrieve, ModelHandle};
 
+use super::data_object_handle::PyDataObjectHandle;
+
 #[pyclass(name = "ModelHandle")]
 pub struct PyModelHandle {
     pub model: ModelHandle,
@@ -38,6 +40,17 @@ impl PyModelHandle {
                     similarity_threshold,
                 )
                 .await
+            })?;
+        Ok(())
+    }
+
+    pub fn delete_data_object(&mut self, data_object: &PyDataObjectHandle) -> PyResult<()> {
+        Runtime::new()
+            .context("Failed to start async runtime to delete model.")?
+            .block_on(async {
+                self.model
+                    .delete_data_object(&data_object.data_object)
+                    .await
             })?;
         Ok(())
     }

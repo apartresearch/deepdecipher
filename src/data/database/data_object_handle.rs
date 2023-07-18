@@ -107,8 +107,7 @@ impl DataObjectHandle {
     fn delete_inner(&self) -> impl Operation<()> {
         const DELETE_DATA_OBJECT_REFERENCES: &str = r#"
         DELETE FROM $DATABASE
-        WHERE DELETE_DATA_OBJECT: &str = r#"
-        DELETE FROM data_object_id = ?1;
+        WHERE data_object_id = ?1;
         "#;
         const DELETE_DATA_OBJECT: &str = r#"
         DELETE FROM data_object

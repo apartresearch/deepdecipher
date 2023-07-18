@@ -7,7 +7,10 @@ use crate::{
     server,
 };
 
-use super::{model_handle::PyModelHandle, model_metadata::PyModelMetadata};
+use super::{
+    data_object_handle::PyDataObjectHandle, model_handle::PyModelHandle,
+    model_metadata::PyModelMetadata,
+};
 
 #[pyclass(name = "Database")]
 pub struct PyDatabase {
@@ -49,12 +52,19 @@ impl PyDatabase {
         Ok(result)
     }
 
-    fn model(&self, model_name: &str) -> PyResult<PyModelHandle> {
+    fn model(&self, model_name: &str) -> PyResult<Option<PyModelHandle>> {
         let result = Runtime::new()
-            .context("Failed to start async runtime to add model.")?
+            .context("Failed to start async runtime to get model.")?
             .block_on(async { self.database.model(model_name).await })?
-            .map(PyModelHandle::new)
-            .with_context(|| format!("Database has no model named '{model_name}'."))?;
+            .map(PyModelHandle::new);
+        Ok(result)
+    }
+
+    fn data_object(&self, data_object_name: &str) -> PyResult<Option<PyDataObjectHandle>> {
+        let result = Runtime::new()
+            .context("Failed to start async runtime to get data object.")?
+            .block_on(async { self.database.data_object(data_object_name).await })?
+            .map(PyDataObjectHandle::new);
         Ok(result)
     }
 

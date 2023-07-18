@@ -229,6 +229,41 @@ impl ModelHandle {
             })
     }
 
+    fn delete_data_object_inner(&self, data_object: &DataObjectHandle) -> impl Operation<()> {
+        const DELETE_DATA: &str = r#"
+        DELETE FROM $DATABASE
+        WHERE model_id = ?1 AND data_object_id = ?2"#;
+        const REFERENCE_TABLES: [&str; 4] = [
+            "model_data",
+            "layer_data",
+            "neuron_data",
+            "model_data_object",
+        ];
+
+        let params = (self.id, data_object.id());
+        move |transaction| {
+            for table in REFERENCE_TABLES.iter() {
+                let mut statement =
+                    transaction.prepare(DELETE_DATA.replace("$DATABASE", table).as_str())?;
+                statement.execute(params)?;
+            }
+            Ok(())
+        }
+    }
+
+    pub async fn delete_data_object(&mut self, data_object: &DataObjectHandle) -> Result<()> {
+        self.database
+            .execute(self.delete_data_object_inner(data_object))
+            .await
+            .with_context(|| {
+                format!(
+                    "Problem deleting data object '{data_object_name}' from model '{name}.",
+                    data_object_name = data_object.name(),
+                    name = self.name()
+                )
+            })
+    }
+
     pub async fn has_data_object(&self, data_object: &DataObjectHandle) -> Result<bool> {
         const CHECK_DATA_OBJECT: &str = r#"
         SELECT 

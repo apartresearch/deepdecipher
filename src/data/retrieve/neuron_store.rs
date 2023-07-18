@@ -11,16 +11,27 @@ pub async fn store_similar_neurons(
     model_handle: &mut ModelHandle,
     data_object_handle: &DataObjectHandle,
     neuron_store: NeuronStore,
-    threshold: f32,
+    similarity_threshold: f32,
 ) -> Result<()> {
     let model_name = model_handle.name().to_owned();
     let model_name = model_name.as_str();
+    print!("Calculating neuron similarities...");
     let neuron_relatedness = neuron_store.neuron_similarity();
+    println!("\rNeuron similarities calculated.    ");
+
+    let num_neurons = model_handle.metadata().num_total_neurons;
+    let mut num_completed = 0;
+    print!("Adding neuron similarities to database: {num_completed}/{num_neurons}",);
     for neuron_index in model_handle.metadata().neuron_indices() {
-        let similar_neurons = neuron_relatedness.similar_neurons(neuron_index, threshold);
+        let similar_neurons =
+            neuron_relatedness.similar_neurons(neuron_index, similarity_threshold);
         let data = postcard::to_allocvec(similar_neurons.as_slice()).with_context(|| format!("Failed to serialize similar neuron vector for neuron {neuron_index} in model {model_name}."))?;
         model_handle.add_neuron_data(data_object_handle, neuron_index.layer, neuron_index.neuron, data).await.with_context(||format!("Failed to add similar neuron vector for neuron {neuron_index} in model {model_name} to database."))?;
+
+        num_completed += 1;
+        print!("\rAdding neuron similarities to database: {num_completed}/{num_neurons}",);
     }
+    println!("\rAdding neuron similarities to database: {num_completed}/{num_neurons}                     ",);
     Ok(())
 }
 
@@ -67,7 +78,13 @@ pub async fn store_neuron_store(
             format!("Failed to add neuron store data for model '{model_name}' to database.",)
         })?;
 
-    Ok(())
+    store_similar_neurons(
+        model_handle,
+        &data_object,
+        neuron_store,
+        similarity_threshold,
+    )
+    .await
 }
 
 pub async fn store_raw_neuron_store(
@@ -88,7 +105,7 @@ pub async fn retrieve_neuron_store(
     similarity_threshold: f32,
 ) -> Result<()> {
     let neuron_store_path = neuron_store_path.as_ref();
-    let neuron_store = NeuronStoreRaw::load(neuron_store_path, model_handle.name())
+    let neuron_store = NeuronStoreRaw::load(neuron_store_path)
         .with_context(|| format!("Failed to load neuron store from '{neuron_store_path:?}'."))?;
     let database = model_handle.database().clone();
     store_raw_neuron_store(&database, model_handle, neuron_store, similarity_threshold).await
