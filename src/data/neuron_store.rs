@@ -9,6 +9,7 @@ use itertools::Itertools;
 use ndarray::{s, Array2};
 use serde::Deserialize;
 use serde::Serialize;
+use snap::raw::{Decoder, Encoder};
 
 use super::NeuronIndex;
 
@@ -95,11 +96,11 @@ pub struct NeuronStore {
 }
 
 impl NeuronStore {
-    pub fn load(data_path: &Path, model: &str) -> Result<Self> {
+    pub fn from_raw(raw: NeuronStoreRaw) -> Result<Self> {
         let NeuronStoreRaw {
             activating,
             important,
-        } = NeuronStoreRaw::load(data_path, model)?;
+        } = raw;
         let activating = activating
             .into_iter()
             .map(|(key, value)| {
@@ -149,34 +150,30 @@ impl NeuronStore {
         })
     }
 
-    pub fn similarity(&self, neuron_index1: NeuronIndex, neuron_index2: NeuronIndex) -> f32 {
-        let index1 = neuron_index1.flat_index(self.layer_size);
-        let self_count1 = self.related_neurons[[index1, index1]];
-        let index2 = neuron_index2.flat_index(self.layer_size);
-        let self_count2 = self.related_neurons[[index2, index2]];
-        (self.related_neurons[[index1, index2]] as f32)
-            / (self_count1.max(self_count2).max(1) as f32)
+    pub fn to_binary(&self) -> Result<Vec<u8>> {
+        let data = postcard::to_allocvec(self).context("Failed to serialize neuron store.")?;
+        Encoder::new()
+            .compress_vec(data.as_slice())
+            .context("Failed to compress neuron store.")
     }
 
-    pub fn similarity_matrix(&self) -> Array2<f32> {
-        let num_neurons = (self.layer_size * self.num_layers) as usize;
-        let mut matrix = Array2::zeros((num_neurons, num_neurons));
-        for i in 0..(self.layer_size * 6) as usize {
-            let self_count1 = self.related_neurons[[i, i]];
-            for j in 0..(self.layer_size * 6) as usize {
-                let self_count2 = self.related_neurons[[j, j]];
-                matrix[[i, j]] = (self.related_neurons[[i, j]] as f32)
-                    / (self_count1.max(self_count2).max(1) as f32);
-            }
-        }
-        matrix
+    pub fn from_binary(data: impl AsRef<[u8]>) -> Result<Self> {
+        let data = Decoder::new()
+            .decompress_vec(data.as_ref())
+            .context("Failed to decompress neuron store")?;
+        postcard::from_bytes(data.as_slice()).context("Failed to deserialize neuron store.")
+    }
+
+    pub fn load(data_path: &Path, model: &str) -> Result<Self> {
+        let raw = NeuronStoreRaw::load(data_path, model)?;
+        Self::from_raw(raw)
     }
 
     pub fn similar_neurons(
         &self,
         neuron_index: NeuronIndex,
         threshold: f32,
-    ) -> Result<Vec<(NeuronIndex, f32)>> {
+    ) -> Vec<(NeuronIndex, f32)> {
         let index = neuron_index.flat_index(self.layer_size);
         let related_neurons = self.related_neurons.slice(s![index, ..]);
         let self_count1 = *self.related_neurons.get([index, index]).unwrap();
@@ -204,7 +201,7 @@ impl NeuronStore {
                 .partial_cmp(similarity1)
                 .unwrap_or(Ordering::Equal)
         });
-        Ok(similar_neurons)
+        similar_neurons
     }
 
     pub fn get(&self, search_type: TokenSearchType, token: &str) -> Option<&HashSet<NeuronIndex>> {

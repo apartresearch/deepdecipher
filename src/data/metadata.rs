@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use anyhow::{Context, Result};
 
+use super::NeuronIndex;
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Metadata {
     pub name: String,
@@ -30,6 +32,25 @@ impl Metadata {
 
         serde_json::to_writer(model_metadata_file, self)?;
         Ok(())
+    }
+
+    pub fn num_layers(&self) -> u32 {
+        self.layers.len() as u32
+    }
+
+    pub fn neuron_indices(&self) -> impl Iterator<Item = NeuronIndex> {
+        self.layers
+            .iter()
+            .map(|layer_metadata| layer_metadata.num_neurons)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .enumerate()
+            .flat_map(|(layer_index, num_neurons)| {
+                (0..num_neurons).map(move |neuron_index| NeuronIndex {
+                    layer: layer_index as u32,
+                    neuron: neuron_index,
+                })
+            })
     }
 }
 

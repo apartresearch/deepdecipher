@@ -6,10 +6,12 @@ use strum::{AsRefStr, EnumDiscriminants, EnumString};
 
 use crate::data::ModelHandle;
 
-#[derive(Clone, Debug, AsRefStr, EnumString, EnumDiscriminants, PartialEq, Eq)]
+#[derive(Clone, Debug, AsRefStr, EnumString, EnumDiscriminants, PartialEq)]
 #[strum_discriminants(derive(EnumString, AsRefStr))]
 pub enum DataType {
     Neuroscope,
+    Neuron2Graph,
+    NeuronStore { similarity_threshold: f32 },
 }
 
 impl DataType {
@@ -22,7 +24,26 @@ impl DataType {
                     type_args.is_empty(),
                     "Neuroscope data objects do not take type arguments."
                 );
-                Ok(DataType::Neuroscope)
+                Ok(Self::Neuroscope)
+            }
+            DataTypeDiscriminants::Neuron2Graph => {
+                ensure!(
+                    type_args.is_empty(),
+                    "Neuron2Graph data objects do not take type arguments."
+                );
+                Ok(Self::Neuron2Graph)
+            }
+            DataTypeDiscriminants::NeuronStore => {
+                ensure!(
+                    type_args.len() == 4,
+                    "NeuronStore data objects take a single f32 type argument."
+                );
+                let similarity_threshold: f32 = postcard::from_bytes(type_args).context(
+                    "Failed to deserialize f32 similarity threshold for NeuronStore data type.",
+                )?;
+                Ok(Self::NeuronStore {
+                    similarity_threshold,
+                })
             }
         }
     }
@@ -30,6 +51,10 @@ impl DataType {
     pub fn args(&self) -> Vec<u8> {
         match self {
             Self::Neuroscope => Vec::new(),
+            Self::Neuron2Graph => Vec::new(),
+            Self::NeuronStore {
+                similarity_threshold,
+            } => postcard::to_allocvec(similarity_threshold).expect("Failed to serialize f32."),
         }
     }
 }

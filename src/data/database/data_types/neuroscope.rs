@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 
 use crate::data::{
@@ -26,6 +26,7 @@ impl ModelDataObject for Neuroscope {
                 model: model.clone(),
                 data_object,
             })),
+            _ => bail!("Invalid type for Neuroscope data object.",),
         }
     }
 
@@ -73,7 +74,7 @@ impl Neuroscope {
             .neuron_data( &self.data_object, layer_index, neuron_index)
             .await?
             .with_context(|| {
-                format!("Database has no neuroscope neuron data for neuron n{neuron_index}l{layer_index} in model '{model_name}'")
+                format!("Database has no neuroscope neuron data for neuron l{layer_index}n{neuron_index} in model '{model_name}'")
             })?;
         NeuroscopeNeuronPage::from_binary(raw_data.as_slice())
     }
