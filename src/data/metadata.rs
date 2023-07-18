@@ -12,7 +12,8 @@ use super::NeuronIndex;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Metadata {
     pub name: String,
-    pub layers: Vec<LayerMetadata>,
+    pub num_layers: u32,
+    pub layer_size: u32,
     pub activation_function: String,
     pub num_total_neurons: u32,
     pub num_total_parameters: u32,
@@ -34,27 +35,13 @@ impl Metadata {
         Ok(())
     }
 
-    pub fn num_layers(&self) -> u32 {
-        self.layers.len() as u32
-    }
-
     pub fn neuron_indices(&self) -> impl Iterator<Item = NeuronIndex> {
-        self.layers
-            .iter()
-            .map(|layer_metadata| layer_metadata.num_neurons)
-            .collect::<Vec<_>>()
-            .into_iter()
-            .enumerate()
-            .flat_map(|(layer_index, num_neurons)| {
-                (0..num_neurons).map(move |neuron_index| NeuronIndex {
-                    layer: layer_index as u32,
-                    neuron: neuron_index,
-                })
+        let layer_size = self.layer_size;
+        (0..self.num_layers).flat_map(move |layer_index| {
+            (0..layer_size).map(move |neuron_index| NeuronIndex {
+                layer: layer_index,
+                neuron: neuron_index,
             })
+        })
     }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct LayerMetadata {
-    pub num_neurons: u32,
 }

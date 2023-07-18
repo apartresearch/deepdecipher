@@ -34,25 +34,14 @@ impl ServiceProviderTrait for Metadata {
         state: &State,
         _query: &serde_json::Value,
         model_name: &str,
-        layer_index: u32,
+        _layer_index: u32,
     ) -> Result<serde_json::Value> {
         let database = state.database();
         let model = database
             .model(model_name.to_owned())
             .await?
             .with_context(|| format!("No model with name {model_name}."))?;
-        let metadata = serde_json::to_value(
-            model
-                .metadata()
-                .layers
-                .get(layer_index as usize)
-                .with_context(|| {
-                    format!(
-                        "Layer index {layer_index} out of bounds. Model only has {} layers.",
-                        model.metadata().layers.len()
-                    )
-                })?,
-        )?;
+        let metadata = json!({"layer_size": model.metadata().layer_size});
         Ok(metadata)
     }
 

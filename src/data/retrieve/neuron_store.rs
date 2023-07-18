@@ -13,8 +13,9 @@ pub async fn store_similar_neurons(
 ) -> Result<()> {
     let model_name = model_handle.name().to_owned();
     let model_name = model_name.as_str();
+    let neuron_relatedness = neuron_store.neuron_similarity();
     for neuron_index in model_handle.metadata().neuron_indices() {
-        let similar_neurons = neuron_store.similar_neurons(neuron_index, threshold);
+        let similar_neurons = neuron_relatedness.similar_neurons(neuron_index, threshold);
         let data = postcard::to_allocvec(similar_neurons.as_slice()).with_context(|| format!("Failed to serialize similar neuron vector for neuron {neuron_index} in model {model_name}."))?;
         model_handle.add_neuron_data(data_object_handle, neuron_index.layer, neuron_index.neuron, data).await.with_context(||format!("Failed to add similar neuron vector for neuron {neuron_index} in model {model_name} to database."))?;
     }
@@ -73,11 +74,8 @@ pub async fn store_raw_neuron_store(
     neuron_store: NeuronStoreRaw,
     similarity_threshold: f32,
 ) -> Result<()> {
-    store_neuron_store(
-        database,
-        model_handle,
-        NeuronStore::from_raw(neuron_store)?,
-        similarity_threshold,
-    )
-    .await
+    let metadata = model_handle.metadata();
+    let neuron_store =
+        NeuronStore::from_raw(neuron_store, metadata.num_layers, metadata.layer_size)?;
+    store_neuron_store(database, model_handle, neuron_store, similarity_threshold).await
 }

@@ -1,4 +1,4 @@
-use crate::data::{LayerMetadata, Metadata};
+use crate::data::Metadata;
 
 use super::{
     data_types::ModelDataObject, service_handle::ServiceHandle, DataObjectHandle, Database,
@@ -37,8 +37,8 @@ impl ModelHandle {
 
         let params = (
             metadata.name.clone(),
-            metadata.layers.len(),
-            metadata.layers[0].num_neurons,
+            metadata.num_layers,
+            metadata.layer_size,
             metadata.activation_function.clone(),
             metadata.num_total_parameters,
             metadata.dataset.clone(),
@@ -94,21 +94,16 @@ impl ModelHandle {
                 };
 
                 let num_layers: u32 = row.get(2)?;
-                let neurons_per_layer = row.get(3)?;
-                let layers = vec![
-                    LayerMetadata {
-                        num_neurons: neurons_per_layer
-                    };
-                    num_layers as usize
-                ];
+                let layer_size = row.get(3)?;
 
                 Ok(Some((
                     row.get(0)?,
                     Metadata {
                         name: row.get(1)?,
-                        layers,
+                        num_layers,
+                        layer_size,
                         activation_function: row.get(4)?,
-                        num_total_neurons: num_layers * neurons_per_layer,
+                        num_total_neurons: num_layers * layer_size,
                         num_total_parameters: row.get(5)?,
                         dataset: row.get(6)?,
                     },

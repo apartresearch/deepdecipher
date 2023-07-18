@@ -24,7 +24,8 @@ impl ServiceProviderTrait for Neuron2GraphSearch {
         let query = query["query"]
             .as_str()
             .context("Query should contain an entry 'query' with a string value.")?;
-        let neuron_store = state.neuron_store(model_name).await?;
+        let model = state.database().model(model_name).await?.context("")?;
+        let neuron_store = state.neuron_store(&model).await?;
         let token_searches = query
             .split(',')
             .map(TokenSearch::from_str)

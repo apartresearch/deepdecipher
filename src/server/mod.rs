@@ -12,7 +12,7 @@ use anyhow::Result;
 use serde_json::json;
 use tokio::sync::Mutex;
 
-use crate::data::{database::Database, NeuronStore, Payload};
+use crate::data::{database::Database, ModelHandle, NeuronStore, Payload};
 
 mod service;
 pub use service::Service;
@@ -224,13 +224,14 @@ impl State {
         self.database.clone()
     }
 
-    pub async fn neuron_store(&self, model_name: &str) -> Result<NeuronStore> {
+    pub async fn neuron_store(&self, model_handle: &ModelHandle) -> Result<NeuronStore> {
         let mut neuron_stores = self.neuron_stores.lock().await;
+        let model_name = model_handle.name();
         if !neuron_stores.contains_key(model_name) {
             log::info!("Neuron store doesn't exist for model '{model_name}', loading from disk");
             neuron_stores.insert(
                 model_name.to_string(),
-                NeuronStore::load(self.payload.data_path(), model_name)?,
+                NeuronStore::from_file(model_handle, self.payload.data_path())?,
             );
         }
         assert!(neuron_stores.contains_key(model_name));

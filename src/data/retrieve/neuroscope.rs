@@ -9,7 +9,7 @@ use crate::data::{
     data_types::DataType,
     database::Database,
     neuroscope::{NeuroscopeLayerPage, NeuroscopeModelPage},
-    DataObjectHandle, LayerMetadata, Metadata, ModelHandle, NeuronIndex, NeuroscopeNeuronPage,
+    DataObjectHandle, Metadata, ModelHandle, NeuronIndex, NeuroscopeNeuronPage,
 };
 
 use anyhow::{Context, Result};
@@ -322,18 +322,14 @@ pub async fn scrape_model_metadata<S: AsRef<str>>(model: S) -> Result<Metadata> 
     let activation_function = row_elements[2].to_owned();
     let dataset = row_elements[3].to_owned();
     let num_layers = row_elements[4].replace(',', "").parse::<u32>().unwrap();
-    let num_neurons_per_layer = row_elements[5].replace(',', "").parse::<u32>().unwrap();
-    let layers: Vec<_> = (0..num_layers)
-        .map(|_| LayerMetadata {
-            num_neurons: num_neurons_per_layer,
-        })
-        .collect();
+    let layer_size = row_elements[5].replace(',', "").parse::<u32>().unwrap();
     let num_total_neurons = row_elements[6].replace(',', "").parse::<u32>().unwrap();
     let num_total_parameters = row_elements[7].replace(',', "").parse::<u32>().unwrap();
 
     Ok::<_, anyhow::Error>(Metadata {
         name: model.to_owned(),
-        layers,
+        num_layers,
+        layer_size,
         activation_function,
         num_total_neurons,
         num_total_parameters,
@@ -360,10 +356,10 @@ pub async fn scrape_model_to_files<P: AsRef<Path>, S: AsRef<str>>(
     let model_metadata = scrape_model_metadata(model).await?;
     model_metadata.to_file(data_path)?;
 
-    let mut layer_pages = Vec::with_capacity(model_metadata.layers.len());
-    for (layer_index, LayerMetadata { num_neurons }) in model_metadata.layers.iter().enumerate() {
-        let layer_page =
-            scrape_layer_to_files(data_path, model, layer_index as u32, *num_neurons).await?;
+    let mut layer_pages = Vec::with_capacity(model_metadata.num_layers as usize);
+    let layer_size = model_metadata.layer_size;
+    for layer_index in 0..model_metadata.num_layers {
+        let layer_page = scrape_layer_to_files(data_path, model, layer_index, layer_size).await?;
         layer_pages.push(layer_page)
     }
     let neuron_importance: Vec<(NeuronIndex, f32)> = layer_pages
@@ -391,15 +387,12 @@ pub async fn scrape_model_to_database(database: &Database, model: &mut ModelHand
             .await?
     };
 
-    let mut layer_pages = Vec::with_capacity(model.metadata().layers.len());
-    for (layer_index, LayerMetadata { num_neurons }) in model.metadata().layers.iter().enumerate() {
-        let layer_page = scrape_layer_to_database(
-            &mut model.clone(),
-            &data_object,
-            layer_index as u32,
-            *num_neurons,
-        )
-        .await?;
+    let mut layer_pages = Vec::with_capacity(model.metadata().num_layers as usize);
+    let layer_size = model.metadata().layer_size;
+    for layer_index in 0..model.metadata().num_layers {
+        let layer_page =
+            scrape_layer_to_database(&mut model.clone(), &data_object, layer_index, layer_size)
+                .await?;
         layer_pages.push(layer_page)
     }
 

@@ -11,7 +11,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use snap::raw::{Decoder, Encoder};
 
-use super::NeuronIndex;
+use super::{ModelHandle, NeuronIndex};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum TokenSearchType {
@@ -65,6 +65,52 @@ impl FromStr for TokenSearch {
     }
 }
 
+pub struct NeuronSimilarity {
+    layer_size: u32,
+    neuron_relatedness: Array2<u32>,
+}
+
+impl NeuronSimilarity {
+    fn similarity(common_token_count: u32, self_count1: u32, self_count2: u32) -> f32 {
+        (common_token_count as f32) / (self_count1.max(self_count2) as f32)
+    }
+
+    pub fn similar_neurons(
+        &self,
+        neuron_index: NeuronIndex,
+        threshold: f32,
+    ) -> Vec<(NeuronIndex, f32)> {
+        let index = neuron_index.flat_index(self.layer_size);
+        let related_neurons = self.neuron_relatedness.slice(s![index, ..]);
+        let self_count1 = *self.neuron_relatedness.get([index, index]).unwrap();
+        let mut similar_neurons: Vec<_> = related_neurons
+            .iter()
+            .copied()
+            .enumerate()
+            .map(|(index2, common_token_count)| {
+                let self_count2 = self.neuron_relatedness[[index2, index2]];
+                (
+                    index2,
+                    Self::similarity(common_token_count, self_count1, self_count2),
+                )
+            })
+            .filter(|&(index2, similarity)| index2 != index && similarity >= threshold)
+            .map(|(index2, similarity)| {
+                (
+                    NeuronIndex::from_flat_index(self.layer_size, index2),
+                    similarity,
+                )
+            })
+            .collect();
+        similar_neurons.sort_by(|(_, similarity1), (_, similarity2)| {
+            similarity2
+                .partial_cmp(similarity1)
+                .unwrap_or(Ordering::Equal)
+        });
+        similar_neurons
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NeuronStoreRaw {
     activating: HashMap<String, HashSet<String>>,
@@ -92,11 +138,29 @@ pub struct NeuronStore {
     num_layers: u32,
     activating: HashMap<String, HashSet<NeuronIndex>>,
     important: HashMap<String, HashSet<NeuronIndex>>,
-    related_neurons: Array2<u32>,
 }
 
 impl NeuronStore {
-    pub fn from_raw(raw: NeuronStoreRaw) -> Result<Self> {
+    pub fn neuron_similarity(&self) -> NeuronSimilarity {
+        let num_neurons = self.num_layers as usize * self.layer_size as usize;
+
+        let mut related_neurons: Array2<u32> = Array2::zeros((num_neurons, num_neurons));
+        for (_token, neuron_indices) in self.activating.iter().chain(self.important.iter()) {
+            for &neuron_index in neuron_indices {
+                let index1 = neuron_index.flat_index(self.layer_size);
+                for &other_neuron_index in neuron_indices {
+                    let index2 = other_neuron_index.flat_index(self.layer_size);
+                    related_neurons[[index1, index2]] += 1;
+                }
+            }
+        }
+        NeuronSimilarity {
+            layer_size: self.layer_size,
+            neuron_relatedness: related_neurons,
+        }
+    }
+
+    pub fn from_raw(raw: NeuronStoreRaw, num_layers: u32, layer_size: u32) -> Result<Self> {
         let NeuronStoreRaw {
             activating,
             important,
@@ -127,26 +191,12 @@ impl NeuronStore {
                 ))
             })
             .collect::<Result<HashMap<_, _>>>()?;
-        let layer_size = 3072;
-        let num_layers = 6;
-        let num_neurons = (layer_size * num_layers) as usize;
-        let mut related_neurons: Array2<u32> = Array2::zeros((num_neurons, num_neurons));
-        for (_token, neuron_indices) in activating.iter().chain(important.iter()) {
-            for &neuron_index in neuron_indices {
-                let index1 = neuron_index.flat_index(layer_size);
-                for &other_neuron_index in neuron_indices {
-                    let index2 = other_neuron_index.flat_index(layer_size);
-                    related_neurons[[index1, index2]] += 1;
-                }
-            }
-        }
 
         Ok(Self {
             layer_size,
             num_layers,
             activating,
             important,
-            related_neurons,
         })
     }
 
@@ -164,44 +214,11 @@ impl NeuronStore {
         postcard::from_bytes(data.as_slice()).context("Failed to deserialize neuron store.")
     }
 
-    pub fn load(data_path: &Path, model: &str) -> Result<Self> {
-        let raw = NeuronStoreRaw::load(data_path, model)?;
-        Self::from_raw(raw)
-    }
-
-    pub fn similar_neurons(
-        &self,
-        neuron_index: NeuronIndex,
-        threshold: f32,
-    ) -> Vec<(NeuronIndex, f32)> {
-        let index = neuron_index.flat_index(self.layer_size);
-        let related_neurons = self.related_neurons.slice(s![index, ..]);
-        let self_count1 = *self.related_neurons.get([index, index]).unwrap();
-        let mut similar_neurons: Vec<_> = related_neurons
-            .iter()
-            .copied()
-            .enumerate()
-            .map(|(index2, common_token_count)| {
-                let self_count2 = self.related_neurons[[index2, index2]];
-                (
-                    index2,
-                    (common_token_count as f32) / (self_count1.max(self_count2) as f32),
-                )
-            })
-            .filter(|&(index2, similarity)| index2 != index && similarity >= threshold)
-            .map(|(index2, similarity)| {
-                (
-                    NeuronIndex::from_flat_index(self.layer_size, index2),
-                    similarity,
-                )
-            })
-            .collect();
-        similar_neurons.sort_by(|(_, similarity1), (_, similarity2)| {
-            similarity2
-                .partial_cmp(similarity1)
-                .unwrap_or(Ordering::Equal)
-        });
-        similar_neurons
+    pub fn from_file(model_handle: &ModelHandle, data_path: &Path) -> Result<Self> {
+        let raw = NeuronStoreRaw::load(data_path, model_handle.name())?;
+        let num_layers = model_handle.metadata().num_layers;
+        let layer_size = model_handle.metadata().layer_size;
+        Self::from_raw(raw, num_layers, layer_size)
     }
 
     pub fn get(&self, search_type: TokenSearchType, token: &str) -> Option<&HashSet<NeuronIndex>> {

@@ -14,4 +14,4 @@ pub use database::{data_types, DataObjectHandle, Database, ModelHandle};
 mod payload;
 pub use payload::Payload;
 mod metadata;
-pub use metadata::{LayerMetadata, Metadata};
+pub use metadata::Metadata;
