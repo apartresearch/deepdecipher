@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ops::Deref, sync::Arc};
+use std::ops::Deref;
 
 use actix_web::{
     get,
@@ -10,9 +10,8 @@ use actix_web::{
 use anyhow::Result;
 
 use serde_json::json;
-use tokio::sync::Mutex;
 
-use crate::data::{database::Database, ModelHandle, NeuronStore, Payload};
+use crate::data::{database::Database, Payload};
 
 mod service;
 pub use service::Service;
@@ -202,18 +201,13 @@ async fn all_neuron(
 }
 
 pub struct State {
-    neuron_stores: Arc<Mutex<HashMap<String, NeuronStore>>>,
     payload: Payload,
     database: Database,
 }
 
 impl State {
     pub fn new(database: Database, payload: Payload) -> Self {
-        Self {
-            neuron_stores: Arc::new(Mutex::new(HashMap::new())),
-            payload,
-            database,
-        }
+        Self { payload, database }
     }
 
     pub fn payload(&self) -> &Payload {
@@ -222,20 +216,6 @@ impl State {
 
     pub fn database(&self) -> Database {
         self.database.clone()
-    }
-
-    pub async fn neuron_store(&self, model_handle: &ModelHandle) -> Result<NeuronStore> {
-        let mut neuron_stores = self.neuron_stores.lock().await;
-        let model_name = model_handle.name();
-        if !neuron_stores.contains_key(model_name) {
-            log::info!("Neuron store doesn't exist for model '{model_name}', loading from disk");
-            neuron_stores.insert(
-                model_name.to_string(),
-                NeuronStore::from_file(model_handle, self.payload.data_path())?,
-            );
-        }
-        assert!(neuron_stores.contains_key(model_name));
-        Ok(neuron_stores.get(model_name).unwrap().clone())
     }
 }
 
