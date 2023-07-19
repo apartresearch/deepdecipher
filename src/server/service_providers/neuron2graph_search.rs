@@ -41,7 +41,6 @@ impl ServiceProviderTrait for Neuron2GraphSearch {
             })?;
         let neuron_store = neuron_store_object.get_store().await?;
 
-        println!("Query: {query:?}");
         let query = query["query"]
             .as_str()
             .context("Query should contain an entry 'query' with a string value.")?;

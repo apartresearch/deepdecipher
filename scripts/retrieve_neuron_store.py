@@ -1,7 +1,7 @@
 from os import path
 import sys
 
-from neuronav import Database, ModelMetadata
+from neuronav import Database, ModelMetadata, ServiceProvider
 
 if len(sys.argv) < 2:
     raise RuntimeError("Please specify a database file as the first argument.")
@@ -26,3 +26,14 @@ if data_object is not None:
 
 print("Adding neuron store data for model.")
 model.add_neuron_store("data\\solu-6l\\neuron2graph-search\\neuron_store.json", 0.4)
+
+service = database.service("neuron2graph-search")
+if service is None:
+    print("Adding neuron2graph-search service.")
+    service = database.add_service(
+        "neuron2graph-search", ServiceProvider.neuron2graph_search()
+    )
+
+if not model.has_service(service):
+    print("Adding neuron2graph-search service to model.")
+    model.add_service(service)

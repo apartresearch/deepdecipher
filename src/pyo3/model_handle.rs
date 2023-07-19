@@ -55,6 +55,13 @@ impl PyModelHandle {
         Ok(())
     }
 
+    pub fn has_service(&self, service: &PyServiceHandle) -> PyResult<bool> {
+        let result = Runtime::new()
+            .context("Failed to start async runtime to check whether model has service.")?
+            .block_on(async { self.model.has_service(&service.service_handle).await })?;
+        Ok(result)
+    }
+
     pub fn add_service(&mut self, service: &PyServiceHandle) -> PyResult<()> {
         Runtime::new()
             .context("Failed to start async runtime to add service.")?
