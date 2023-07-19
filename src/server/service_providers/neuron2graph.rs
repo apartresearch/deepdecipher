@@ -5,7 +5,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::{
-    data::data_types::{Neuron2Graph as Neuron2GraphData, NeuronStore as NeuronStoreData},
+    data::{
+        data_types::{Neuron2Graph as Neuron2GraphData, NeuronStore as NeuronStoreData},
+        ModelHandle,
+    },
     server::State,
 };
 
@@ -16,13 +19,10 @@ pub struct Neuron2Graph;
 
 async fn data_object(
     state: &State,
-    model_name: &str,
+    model: &ModelHandle,
 ) -> Result<(Neuron2GraphData, NeuronStoreData)> {
+    let model_name = model.name();
     let database = state.database();
-    let model = database
-        .model(model_name)
-        .await?
-        .with_context(|| format!("No model with name {model_name}."))?;
     let n2g_object_name = "neuron2graph";
     let n2g_data_object = database
         .data_object(n2g_object_name)
@@ -54,11 +54,11 @@ impl ServiceProviderTrait for Neuron2Graph {
         _service_name: &str,
         state: &State,
         _query: &serde_json::Value,
-        model_name: &str,
+        model: &ModelHandle,
         layer_index: u32,
         neuron_index: u32,
     ) -> Result<serde_json::Value> {
-        let (n2g_data_object, neuron_store_data_object) = data_object(state, model_name).await?;
+        let (n2g_data_object, neuron_store_data_object) = data_object(state, model).await?;
         let neuron_graph = n2g_data_object
             .neuron_graph(layer_index, neuron_index)
             .await?;

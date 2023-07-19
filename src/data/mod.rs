@@ -11,7 +11,5 @@ pub mod retrieve;
 pub mod database;
 pub use database::{data_types, DataObjectHandle, Database, ModelHandle, ServiceHandle};
 
-mod payload;
-pub use payload::Payload;
 mod metadata;
 pub use metadata::Metadata;

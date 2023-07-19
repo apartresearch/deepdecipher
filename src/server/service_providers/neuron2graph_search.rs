@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::{
-    data::{data_types::NeuronStore as NeuronStoreObject, TokenSearch},
+    data::{data_types::NeuronStore as NeuronStoreObject, ModelHandle, TokenSearch},
     server::State,
 };
 
@@ -22,23 +22,23 @@ impl ServiceProviderTrait for Neuron2GraphSearch {
         _service_name: &str,
         state: &State,
         query: &serde_json::Value,
-        model_name: &str,
+        model: &ModelHandle,
     ) -> Result<serde_json::Value> {
         let database = state.database();
-        let model = state
-            .database()
-            .model(model_name)
-            .await?
-            .with_context(|| format!("No model with name {model_name}."))?;
         let neuron_store_object = database
             .data_object("neuron_store")
             .await
             .context("Could not get neuron store data object from database.")?
             .context("No data object named 'neuron_store' in database.")?;
         let neuron_store_object: NeuronStoreObject = database
-            .model_data_object(&model, &neuron_store_object)
+            .model_data_object(model, &neuron_store_object)
             .await
-            .with_context(|| format!("Model '{model_name}' has no 'neuron_store' data object."))?;
+            .with_context(|| {
+                format!(
+                    "Model '{}' has no 'neuron_store' data object.",
+                    model.name()
+                )
+            })?;
         let neuron_store = neuron_store_object.get_store().await?;
 
         println!("Query: {query:?}");

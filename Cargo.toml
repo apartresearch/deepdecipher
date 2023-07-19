@@ -59,6 +59,7 @@ deflate = "1.0.0"
 snap = "1.1.0"
 miniz_oxide = { version = "0.7.1", features = ["simd-adler32"] }
 zstd = "0.12.3"
+fallible-iterator = "0.2.0"
 
 [features]
 python = ["dep:pyo3", "dep:numpy", "dep:ctrlc"]

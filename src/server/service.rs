@@ -1,6 +1,8 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
+use crate::data::ModelHandle;
+
 use super::{ServiceProvider, State};
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -15,6 +17,13 @@ impl Service {
         Self { name, provider }
     }
 
+    pub fn metadata() -> Self {
+        Self {
+            name: "metadata".to_string(),
+            provider: ServiceProvider::Metadata,
+        }
+    }
+
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -27,10 +36,10 @@ impl Service {
         &self,
         state: &State,
         query: &serde_json::Value,
-        model_name: &str,
+        model_handle: &ModelHandle,
     ) -> Result<serde_json::Value> {
         self.provider
-            .model_page(self.name(), state, query, model_name)
+            .model_page(self.name(), state, query, model_handle)
             .await
     }
 
@@ -38,11 +47,11 @@ impl Service {
         &self,
         state: &State,
         query: &serde_json::Value,
-        model_name: &str,
+        model_handle: &ModelHandle,
         layer_index: u32,
     ) -> Result<serde_json::Value> {
         self.provider
-            .layer_page(self.name(), state, query, model_name, layer_index)
+            .layer_page(self.name(), state, query, model_handle, layer_index)
             .await
     }
 
@@ -50,7 +59,7 @@ impl Service {
         &self,
         state: &State,
         query: &serde_json::Value,
-        model_name: &str,
+        model_handle: &ModelHandle,
         layer_index: u32,
         neuron_index: u32,
     ) -> Result<serde_json::Value> {
@@ -59,7 +68,7 @@ impl Service {
                 self.name(),
                 state,
                 query,
-                model_name,
+                model_handle,
                 layer_index,
                 neuron_index,
             )

@@ -1,9 +1,9 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::server::State;
+use crate::{data::ModelHandle, server::State};
 
 use super::ServiceProviderTrait;
 
@@ -15,15 +15,10 @@ impl ServiceProviderTrait for Metadata {
     async fn model_page(
         &self,
         _service_name: &str,
-        state: &State,
+        _state: &State,
         _query: &serde_json::Value,
-        model_name: &str,
+        model: &ModelHandle,
     ) -> Result<serde_json::Value> {
-        let database = state.database();
-        let model = database
-            .model(model_name.to_owned())
-            .await?
-            .with_context(|| format!("No model with name {model_name}."))?;
         let metadata = serde_json::to_value(model.metadata())?;
         Ok(metadata)
     }
@@ -31,16 +26,11 @@ impl ServiceProviderTrait for Metadata {
     async fn layer_page(
         &self,
         _service_name: &str,
-        state: &State,
+        _state: &State,
         _query: &serde_json::Value,
-        model_name: &str,
+        model: &ModelHandle,
         _layer_index: u32,
     ) -> Result<serde_json::Value> {
-        let database = state.database();
-        let model = database
-            .model(model_name.to_owned())
-            .await?
-            .with_context(|| format!("No model with name {model_name}."))?;
         let metadata = json!({"layer_size": model.metadata().layer_size});
         Ok(metadata)
     }
@@ -50,7 +40,7 @@ impl ServiceProviderTrait for Metadata {
         _service_name: &str,
         _state: &State,
         _query: &serde_json::Value,
-        _model_name: &str,
+        _model: &ModelHandle,
         _layer_index: u32,
         _neuron_index: u32,
     ) -> Result<serde_json::Value> {
