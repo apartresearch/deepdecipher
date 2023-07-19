@@ -19,7 +19,7 @@ impl PyDataObjectHandle {
 impl PyDataObjectHandle {
     pub fn delete(&self) -> PyResult<()> {
         Runtime::new()
-            .context("Failed to start async runtime to delete model.")?
+            .context("Failed to start async runtime to delete data object.")?
             .block_on(async { self.data_object.clone().delete().await })?;
         Ok(())
     }

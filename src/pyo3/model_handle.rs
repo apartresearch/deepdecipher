@@ -4,7 +4,7 @@ use tokio::runtime::Runtime;
 
 use crate::data::{retrieve, ModelHandle};
 
-use super::data_object_handle::PyDataObjectHandle;
+use super::{data_object_handle::PyDataObjectHandle, service_handle::PyServiceHandle};
 
 #[pyclass(name = "ModelHandle")]
 pub struct PyModelHandle {
@@ -52,6 +52,13 @@ impl PyModelHandle {
                     .delete_data_object(&data_object.data_object)
                     .await
             })?;
+        Ok(())
+    }
+
+    pub fn add_service(&mut self, service: &PyServiceHandle) -> PyResult<()> {
+        Runtime::new()
+            .context("Failed to start async runtime to add service.")?
+            .block_on(async { self.model.add_service(&service.service_handle).await })?;
         Ok(())
     }
 }

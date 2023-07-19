@@ -5,6 +5,7 @@ use super::{Database, Operation};
 use anyhow::{Context, Result};
 use rusqlite::OptionalExtension;
 
+#[derive(Clone)]
 pub struct ServiceHandle {
     id: i64,
     name: String,

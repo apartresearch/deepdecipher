@@ -9,7 +9,7 @@ pub use neuron_store::{NeuronStore, SimilarNeurons, TokenSearch, TokenSearchType
 pub mod retrieve;
 
 pub mod database;
-pub use database::{data_types, DataObjectHandle, Database, ModelHandle};
+pub use database::{data_types, DataObjectHandle, Database, ModelHandle, ServiceHandle};
 
 mod payload;
 pub use payload::Payload;

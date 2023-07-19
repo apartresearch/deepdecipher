@@ -4,12 +4,13 @@ use tokio::runtime::Runtime;
 
 use crate::{
     data::{retrieve, Database},
-    server,
+    server::{self, Service},
 };
 
 use super::{
     data_object_handle::PyDataObjectHandle, model_handle::PyModelHandle,
-    model_metadata::PyModelMetadata,
+    model_metadata::PyModelMetadata, service_handle::PyServiceHandle,
+    service_provider::PyServiceProvider,
 };
 
 #[pyclass(name = "Database")]
@@ -65,6 +66,31 @@ impl PyDatabase {
             .context("Failed to start async runtime to get data object.")?
             .block_on(async { self.database.data_object(data_object_name).await })?
             .map(PyDataObjectHandle::new);
+        Ok(result)
+    }
+
+    fn add_service(
+        &mut self,
+        name: String,
+        provider: PyServiceProvider,
+    ) -> PyResult<PyServiceHandle> {
+        let service = Service::new(name, provider.provider);
+        let result = Runtime::new()
+            .context("Failed to start async runtime to add service.")?
+            .block_on(async {
+                self.database
+                    .add_service(service)
+                    .await
+                    .map(PyServiceHandle::new)
+            })?;
+        Ok(result)
+    }
+
+    fn service(&self, service_name: &str) -> PyResult<Option<PyServiceHandle>> {
+        let result = Runtime::new()
+            .context("Failed to start async runtime to get service.")?
+            .block_on(async { self.database.service(service_name).await })?
+            .map(PyServiceHandle::new);
         Ok(result)
     }
 
