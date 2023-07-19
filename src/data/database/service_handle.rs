@@ -125,7 +125,7 @@ impl ServiceHandle {
             .with_context(|| format!("Problem deleting service '{name}'."))
     }
 
-    pub async fn service(&self) -> Result<Option<Service>> {
+    pub async fn service(&self) -> Result<Service> {
         const GET_SERVICE: &str = r#"
         SELECT 
             provider
@@ -134,7 +134,7 @@ impl ServiceHandle {
 
         let params = (self.id(),);
 
-        if let Some(provider_bytes) = self
+        let provider_bytes: Vec<u8> = self
             .database
             .connection
             .call(move |connection| {
@@ -150,11 +150,15 @@ impl ServiceHandle {
                     self.name(),
                 )
             })?
-        {
-            let service_provider = ServiceProvider::from_binary(provider_bytes)?;
-            Ok(Some(Service::new(self.name.to_owned(), service_provider)))
-        } else {
-            Ok(None)
-        }
+            .with_context(|| {
+                format!(
+                    "Row for service '{}' with name '{}' does not exist.",
+                    self.id(),
+                    self.name()
+                )
+            })?;
+
+        let service_provider = ServiceProvider::from_binary(provider_bytes)?;
+        Ok(Service::new(self.name.to_owned(), service_provider))
     }
 }

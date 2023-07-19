@@ -1,4 +1,7 @@
-use crate::data::Metadata;
+use crate::{
+    data::Metadata,
+    server::{Service, ServiceProvider},
+};
 
 use super::{
     data_types::ModelDataObject, service_handle::ServiceHandle, DataObjectHandle, Database,
@@ -6,6 +9,7 @@ use super::{
 };
 
 use anyhow::{Context, Result};
+use fallible_iterator::FallibleIterator;
 use rusqlite::OptionalExtension;
 
 #[derive(Clone)]
@@ -197,6 +201,72 @@ impl ModelHandle {
             .await?;
 
         Ok(())
+    }
+
+    pub async fn has_service(&self, service: &ServiceHandle) -> Result<bool> {
+        const CHECK_MODEL_SERVICE: &str = r#"
+        SELECT
+            *
+        FROM model_service
+        WHERE model_id = ?1
+        AND service_id = ?2;
+        "#;
+
+        let params = (self.id, service.id());
+
+        self.database
+            .connection
+            .call(move |connection| connection.prepare(CHECK_MODEL_SERVICE)?.exists(params))
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to check whether model '{}' has service '{}'.",
+                    self.name(),
+                    service.name()
+                )
+            })
+    }
+
+    pub async fn services(&self) -> Result<impl Iterator<Item = Service>> {
+        const GET_SERVICES: &str = r#"
+        SELECT
+            service.name,
+            service.provider
+        FROM service
+        INNER JOIN model_service
+        ON service.id = model_service.service_id
+        WHERE model_service.model_id = ?1;
+        "#;
+
+        let params = (self.id,);
+
+        let services: Vec<(String, Vec<u8>)> = self
+            .database
+            .connection
+            .call(move |connection| {
+                connection
+                    .prepare(GET_SERVICES)?
+                    .query(params)?
+                    .map(|row| Ok((row.get(0)?, row.get(1)?)))
+                    .collect()
+            })
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to query for all services of model '{}'.",
+                    self.name()
+                )
+            })?;
+        let services: Vec<_> = services
+            .into_iter()
+            .map(|(name, provider)| {
+                Ok(Service {
+                    name,
+                    provider: ServiceProvider::from_binary(provider)?,
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok(services.into_iter())
     }
 
     fn add_data_object_inner(&self, data_object: &DataObjectHandle) -> impl Operation<()> {
