@@ -5,6 +5,8 @@ use anyhow::{bail, Result};
 use rusqlite::Transaction;
 use tokio_rusqlite::Connection;
 
+use crate::server::{Service, ServiceProvider};
+
 use self::data_types::ModelDataObject;
 
 use super::{data_types::DataType, Metadata};
@@ -61,7 +63,8 @@ impl Database {
                 .await?;
         }
 
-        database.add_service("metadata", "metadata", vec![]).await?;
+        let metadata_service = Service::new("metadata".to_owned(), ServiceProvider::Metadata);
+        database.add_service(metadata_service).await?;
 
         Ok(database)
     }
@@ -109,13 +112,8 @@ impl Database {
         ModelHandle::new(self.clone(), model_name.as_ref().to_owned()).await
     }
 
-    pub async fn add_service(
-        &self,
-        service_name: impl AsRef<str>,
-        provider: impl AsRef<str>,
-        provider_args: impl AsRef<[u8]>,
-    ) -> Result<ServiceHandle> {
-        ServiceHandle::create(self.clone(), service_name, provider, provider_args).await
+    pub async fn add_service(&self, service: Service) -> Result<ServiceHandle> {
+        ServiceHandle::create(self.clone(), service).await
     }
 
     pub async fn service(&self, service_name: impl AsRef<str>) -> Result<Option<ServiceHandle>> {

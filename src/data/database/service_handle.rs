@@ -1,3 +1,5 @@
+use crate::server::{Service, ServiceProvider};
+
 use super::{Database, Operation};
 
 use anyhow::{Context, Result};
@@ -13,22 +15,19 @@ impl ServiceHandle {
     fn create_inner(
         database: Database,
         service_name: String,
-        provider_name: String,
-        provider_args: Vec<u8>,
+        provider_bytes: Vec<u8>,
     ) -> impl Operation<Self> {
         const ADD_SERVICE: &str = r#"
         INSERT INTO service (
             name,
-            provider,
-            provider_args
+            provider
         ) VALUES (
             ?1,
-            ?2,
-            ?3
+            ?2
         );
         "#;
 
-        let params = (service_name.clone(), provider_name, provider_args);
+        let params = (service_name.clone(), provider_bytes);
 
         |transaction| {
             let id = transaction
@@ -45,16 +44,13 @@ impl ServiceHandle {
 
     pub(super) async fn create(
         mut database: Database,
-        service_name: impl AsRef<str>,
-        provider: impl AsRef<str>,
-        provider_args: impl AsRef<[u8]>,
+        Service { name, provider }: Service,
     ) -> Result<Self> {
         database
             .execute(Self::create_inner(
                 database.clone(),
-                service_name.as_ref().to_owned(),
-                provider.as_ref().to_owned(),
-                provider_args.as_ref().to_vec(),
+                name,
+                provider.to_binary()?,
             ))
             .await
     }
@@ -126,5 +122,38 @@ impl ServiceHandle {
             .execute(self.delete_inner())
             .await
             .with_context(|| format!("Problem deleting service '{name}'."))
+    }
+
+    pub async fn service(&self) -> Result<Option<Service>> {
+        const GET_SERVICE: &str = r#"
+        SELECT 
+            provider
+        FROM service 
+        WHERE id = ?1;"#;
+
+        let params = (self.id(),);
+
+        if let Some(provider_bytes) = self
+            .database
+            .connection
+            .call(move |connection| {
+                let mut statement = connection.prepare(GET_SERVICE)?;
+                statement
+                    .query_row(params, |row| row.get::<_, Vec<u8>>(0))
+                    .optional()
+            })
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to get service provider data for service '{}'.",
+                    self.name(),
+                )
+            })?
+        {
+            let service_provider = ServiceProvider::from_binary(provider_bytes)?;
+            Ok(Some(Service::new(self.name.to_owned(), service_provider)))
+        } else {
+            Ok(None)
+        }
     }
 }

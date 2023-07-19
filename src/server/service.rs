@@ -5,8 +5,8 @@ use super::{ServiceProvider, State};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Service {
-    name: String,
-    provider: ServiceProvider,
+    pub name: String,
+    pub provider: ServiceProvider,
 }
 
 impl Service {

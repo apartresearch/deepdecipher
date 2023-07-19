@@ -1,9 +1,10 @@
 use std::{future::Future, pin::Pin};
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use delegate::delegate;
 use serde::{Deserialize, Serialize};
+use strum::AsRefStr;
 
 use super::{
     metadata::Metadata, neuron2graph::Neuron2Graph, neuron2graph_search::Neuron2GraphSearch,
@@ -46,7 +47,7 @@ pub trait ServiceProviderTrait: Clone + Serialize + Deserialize<'static> + Send 
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, AsRefStr)]
 pub enum ServiceProvider {
     Metadata,
     Neuroscope,
@@ -93,5 +94,18 @@ impl ServiceProvider {
                 neuron_index: u32,
             ) -> Pin<Box<dyn Future<Output = Result<serde_json::Value>> + Send + 'a >>;
         }
+    }
+
+    pub fn to_binary(&self) -> Result<Vec<u8>> {
+        postcard::to_allocvec(self).with_context(|| {
+            format!(
+                "Failed to serialize service provider. Type: '{}'",
+                self.as_ref()
+            )
+        })
+    }
+
+    pub fn from_binary(bytes: impl AsRef<[u8]>) -> Result<Self> {
+        postcard::from_bytes(bytes.as_ref()).context("Failed to deserialize service provider.")
     }
 }
