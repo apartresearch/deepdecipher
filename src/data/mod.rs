@@ -6,6 +6,8 @@ mod neuroscope;
 pub use neuroscope::{NeuroscopeLayerPage, NeuroscopeModelPage, NeuroscopeNeuronPage};
 mod neuron_store;
 pub use neuron_store::{NeuronStore, SimilarNeurons, TokenSearch, TokenSearchType};
+pub mod neuron2graph;
+
 pub mod retrieve;
 
 pub mod database;

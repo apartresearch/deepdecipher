@@ -44,6 +44,23 @@ impl PyModelHandle {
         Ok(())
     }
 
+    pub fn add_neuron2graph_graphs(&mut self, neuron2graph_path: &str) -> PyResult<()> {
+        Runtime::new()
+            .context("Failed to start async runtime to add neuron2graph graphs.")?
+            .block_on(async {
+                retrieve::neuron2graph::retrieve_neuron2graph(&mut self.model, neuron2graph_path)
+                    .await
+            })?;
+        Ok(())
+    }
+
+    pub fn has_data_object(&self, data_object: &PyDataObjectHandle) -> PyResult<bool> {
+        let result = Runtime::new()
+            .context("Failed to start async runtime to check whether model has data object.")?
+            .block_on(async { self.model.has_data_object(&data_object.data_object).await })?;
+        Ok(result)
+    }
+
     pub fn delete_data_object(&mut self, data_object: &PyDataObjectHandle) -> PyResult<()> {
         Runtime::new()
             .context("Failed to start async runtime to delete model.")?
