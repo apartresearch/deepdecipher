@@ -98,15 +98,11 @@ Tested in Windows Subsystem for Linux with Ubuntu 22.04.2 LTS.
 6. Install the `maturin` package by running `python -m pip install maturin`.
 7. Build the package by running `maturin develop --release`.
    The package will now be installed in your environment.
-8. Now start python interpreter and run `import neuronav as nrnv`.
-   If this works, neuronav is installed correctly.
-9. Run `nrnv.scrape_model_to_files("data", "solu-1l")` to scrape the `solu-1l` model from Neuroscope.
-   This will take a while depending on your internet connection.
-   You can change the model name if you want, but be aware that larger models will take even longer.
-   The `data` folder will be created if it doesn't exist.
-10. Exit the Python interpreter and run `python -m neuronav` in the terminal to start the server.
-    It will automatically use the data you scraped in the previous step.
-11. Visit [`http://localhost:8080/api/solu-1l/neuroscope/0/9`](http://localhost:8080/api/solu-1l/neuroscope/0/9) in the browser and you should see a JSON response with all the Neuroscope information on the 9th neuron of the `solu-1l` model.
+8. Run the scrape Neuroscope script with `python -m scripts.scrape_neuroscope`.
+   If this works, DeepDecipher is installed correctly.
+   A file called `data.db` should be created in the root folder.
+9. Run `python -m neuronav data.db` in the terminal to start the server.
+10. Visit [`http://localhost:8080/api/solu-1l/neuroscope/0/9`](http://localhost:8080/api/solu-1l/neuroscope/0/9) in the browser and you should see a JSON response with all the Neuroscope information on the 9th neuron of the `solu-1l` model.
 
 The frontend runs with express.js and html + javascript.
 
