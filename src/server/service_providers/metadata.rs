@@ -1,11 +1,9 @@
-use std::{fs, path::Path};
-
-use anyhow::{Context, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::{data::ModelMetadata, server::State};
+use crate::{data::ModelHandle, server::State};
 
 use super::ServiceProviderTrait;
 
@@ -19,11 +17,9 @@ impl ServiceProviderTrait for Metadata {
         _service_name: &str,
         _state: &State,
         _query: &serde_json::Value,
-        model_name: &str,
+        model: &ModelHandle,
     ) -> Result<serde_json::Value> {
-        let path: std::path::PathBuf = Path::new("data").join(model_name).join("metadata.json");
-        let text = fs::read_to_string(path)?;
-        let metadata = serde_json::from_str(&text)?;
+        let metadata = serde_json::to_value(model.metadata())?;
         Ok(metadata)
     }
 
@@ -32,17 +28,10 @@ impl ServiceProviderTrait for Metadata {
         _service_name: &str,
         _state: &State,
         _query: &serde_json::Value,
-        model_name: &str,
-        layer_index: u32,
+        model: &ModelHandle,
+        _layer_index: u32,
     ) -> Result<serde_json::Value> {
-        let path = Path::new("data").join(model_name).join("metadata.json");
-        let text = fs::read_to_string(path)?;
-        let model_metadata: ModelMetadata = serde_json::from_str(&text)?;
-        let layer_metadata = &model_metadata
-            .layers
-            .get(layer_index as usize)
-            .context("Layer index out of bounds.")?;
-        let metadata = serde_json::to_value(layer_metadata)?;
+        let metadata = json!({"layer_size": model.metadata().layer_size});
         Ok(metadata)
     }
 
@@ -51,7 +40,7 @@ impl ServiceProviderTrait for Metadata {
         _service_name: &str,
         _state: &State,
         _query: &serde_json::Value,
-        _model_name: &str,
+        _model: &ModelHandle,
         _layer_index: u32,
         _neuron_index: u32,
     ) -> Result<serde_json::Value> {

@@ -1,13 +1,14 @@
-
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+
+use crate::data::ModelHandle;
 
 use super::{ServiceProvider, State};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Service {
-    name: String,
-    provider: ServiceProvider,
+    pub name: String,
+    pub provider: ServiceProvider,
 }
 
 impl Service {
@@ -16,23 +17,29 @@ impl Service {
         Self { name, provider }
     }
 
+    pub fn metadata() -> Self {
+        Self {
+            name: "metadata".to_string(),
+            provider: ServiceProvider::Metadata,
+        }
+    }
+
     pub fn name(&self) -> &str {
         &self.name
     }
 
     pub fn is_metadata(&self) -> bool {
-        assert_eq!(self.provider.is_metadata(), self.name == "metadata");
-        self.provider.is_metadata()
+        false
     }
 
     pub async fn model_page(
         &self,
         state: &State,
         query: &serde_json::Value,
-        model_name: &str,
+        model_handle: &ModelHandle,
     ) -> Result<serde_json::Value> {
         self.provider
-            .model_page(self.name(), state, query, model_name)
+            .model_page(self.name(), state, query, model_handle)
             .await
     }
 
@@ -40,11 +47,11 @@ impl Service {
         &self,
         state: &State,
         query: &serde_json::Value,
-        model_name: &str,
+        model_handle: &ModelHandle,
         layer_index: u32,
     ) -> Result<serde_json::Value> {
         self.provider
-            .layer_page(self.name(), state, query, model_name, layer_index)
+            .layer_page(self.name(), state, query, model_handle, layer_index)
             .await
     }
 
@@ -52,7 +59,7 @@ impl Service {
         &self,
         state: &State,
         query: &serde_json::Value,
-        model_name: &str,
+        model_handle: &ModelHandle,
         layer_index: u32,
         neuron_index: u32,
     ) -> Result<serde_json::Value> {
@@ -61,7 +68,7 @@ impl Service {
                 self.name(),
                 state,
                 query,
-                model_name,
+                model_handle,
                 layer_index,
                 neuron_index,
             )

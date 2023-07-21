@@ -7,17 +7,20 @@ use serde::{Deserialize, Serialize};
 
 use anyhow::{Context, Result};
 
+use super::NeuronIndex;
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ModelMetadata {
+pub struct Metadata {
     pub name: String,
-    pub layers: Vec<LayerMetadata>,
+    pub num_layers: u32,
+    pub layer_size: u32,
     pub activation_function: String,
     pub num_total_neurons: u32,
     pub num_total_parameters: u32,
     pub dataset: String,
 }
 
-impl ModelMetadata {
+impl Metadata {
     pub fn to_file<P: AsRef<Path>>(&self, data_path: P) -> Result<()> {
         let model_metadata_path = data_path.as_ref().join(&self.name).join("metadata.json");
         fs::create_dir_all(
@@ -31,9 +34,14 @@ impl ModelMetadata {
         serde_json::to_writer(model_metadata_file, self)?;
         Ok(())
     }
-}
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct LayerMetadata {
-    pub num_neurons: u32,
+    pub fn neuron_indices(&self) -> impl Iterator<Item = NeuronIndex> {
+        let layer_size = self.layer_size;
+        (0..self.num_layers).flat_map(move |layer_index| {
+            (0..layer_size).map(move |neuron_index| NeuronIndex {
+                layer: layer_index,
+                neuron: neuron_index,
+            })
+        })
+    }
 }

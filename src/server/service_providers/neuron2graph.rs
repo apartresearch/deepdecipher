@@ -1,17 +1,51 @@
-use std::{fs, path::Path};
-
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::{data::NeuronIndex, server::State};
+use crate::{
+    data::{
+        data_types::{Neuron2Graph as Neuron2GraphData, NeuronStore as NeuronStoreData},
+        ModelHandle,
+    },
+    server::State,
+};
 
 use super::service_provider::ServiceProviderTrait;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Neuron2Graph;
+
+async fn data_object(
+    state: &State,
+    model: &ModelHandle,
+) -> Result<(Neuron2GraphData, NeuronStoreData)> {
+    let model_name = model.name();
+    let database = state.database();
+    let n2g_object_name = "neuron2graph";
+    let n2g_data_object = database
+        .data_object(n2g_object_name)
+        .await?
+        .with_context(|| format!("No data object with name '{n2g_object_name}'."))?;
+    let n2g_data_object = model.data_object(&n2g_data_object).await.with_context(|| {
+        format!("Failed to get neuron2graph data object for model '{model_name}'.")
+    })?;
+
+    let neuron_store_object_name = "neuron_store";
+    let neuron_store_data_object: crate::data::DataObjectHandle = database
+        .data_object(neuron_store_object_name)
+        .await?
+        .with_context(|| format!("No data object with name '{neuron_store_object_name}'."))?;
+    let neuron_store_data_object = model
+        .data_object(&neuron_store_data_object)
+        .await
+        .with_context(|| {
+            format!("Failed to get neuron store data object for model '{model_name}'.")
+        })?;
+
+    Ok((n2g_data_object, neuron_store_data_object))
+}
 
 #[async_trait]
 impl ServiceProviderTrait for Neuron2Graph {
@@ -20,46 +54,21 @@ impl ServiceProviderTrait for Neuron2Graph {
         _service_name: &str,
         state: &State,
         _query: &serde_json::Value,
-        model: &str,
+        model: &ModelHandle,
         layer_index: u32,
         neuron_index: u32,
     ) -> Result<serde_json::Value> {
-        let path = Path::new("data")
-            .join(model)
-            .join("neuron2graph")
-            .join(format!("layer_{layer_index}",))
-            .join(format!("{layer_index}_{neuron_index}"))
-            .join("graph");
-        let graph = fs::read_to_string(path).map(|page| json!(page)).with_context(|| format!("Failed to read neuron2graph page for neuron {neuron_index} in layer {layer_index} of model '{model}'."))?;
-        let similar_neurons = state
-            .neuron_store(model)
-            .await?
-            .similar_neurons(
-                NeuronIndex {
-                    layer: layer_index,
-                    neuron: neuron_index,
-                },
-                0.4,
-            )?
-            .into_iter()
-            .map(
-                |(
-                    NeuronIndex {
-                        layer: layer_index,
-                        neuron: neuron_index,
-                    },
-                    similarity,
-                )| {
-                    json!({
-                        "layer": layer_index,
-                        "neuron": neuron_index,
-                        "similarity": similarity,
-                    })
-                },
-            )
-            .collect::<Vec<_>>();
+        let (n2g_data_object, neuron_store_data_object) = data_object(state, model).await?;
+        let neuron_graph = n2g_data_object
+            .neuron_graph(layer_index, neuron_index)
+            .await?;
+
+        let similar_neurons = neuron_store_data_object
+            .neuron_similarities(layer_index, neuron_index)
+            .await?;
+
         Ok(json!({
-        "graph": graph,
+        "graph": neuron_graph.graph,
         "similar": similar_neurons,}))
     }
 }

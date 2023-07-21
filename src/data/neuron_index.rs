@@ -23,6 +23,12 @@ impl NeuronIndex {
     pub fn flat_index(&self, layer_size: u32) -> usize {
         (self.layer * layer_size + self.neuron) as usize
     }
+
+    pub fn iter(num_layers: u32, layer_size: u32) -> impl Iterator<Item = Self> {
+        (0..num_layers)
+            .cartesian_product(0..layer_size)
+            .map(|(layer, neuron)| Self { layer, neuron })
+    }
 }
 
 impl FromStr for NeuronIndex {

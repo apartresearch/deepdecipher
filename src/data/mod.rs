@@ -5,10 +5,13 @@ pub use neuron_viewer_object::NeuronViewerObject;
 mod neuroscope;
 pub use neuroscope::{NeuroscopeLayerPage, NeuroscopeModelPage, NeuroscopeNeuronPage};
 mod neuron_store;
-pub use neuron_store::{NeuronStore, TokenSearch, TokenSearchType};
-mod metadata;
-pub mod retrieve;
-pub use metadata::{LayerMetadata, ModelMetadata};
+pub use neuron_store::{NeuronStore, SimilarNeurons, TokenSearch, TokenSearchType};
+pub mod neuron2graph;
 
-mod payload;
-pub use payload::Payload;
+pub mod retrieve;
+
+pub mod database;
+pub use database::{data_types, DataObjectHandle, Database, ModelHandle, ServiceHandle};
+
+mod metadata;
+pub use metadata::Metadata;

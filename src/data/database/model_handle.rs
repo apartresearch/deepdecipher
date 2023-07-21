@@ -1,0 +1,574 @@
+use crate::{
+    data::Metadata,
+    server::{Service, ServiceProvider},
+};
+
+use super::{
+    data_types::ModelDataObject, service_handle::ServiceHandle, DataObjectHandle, Database,
+    Operation,
+};
+
+use anyhow::{Context, Result};
+use fallible_iterator::FallibleIterator;
+use rusqlite::OptionalExtension;
+
+#[derive(Clone)]
+pub struct ModelHandle {
+    id: i64,
+    metadata: Metadata,
+    database: Database,
+}
+
+impl ModelHandle {
+    fn create_inner(database: Database, metadata: Metadata) -> impl Operation<Self> {
+        const ADD_MODEL: &str = r#"
+        INSERT INTO model (
+            name,
+            num_layers,
+            neurons_per_layer,
+            activation_function,
+            num_total_parameters,
+            dataset
+        ) VALUES (
+            ?1,
+            ?2,
+            ?3,
+            ?4,
+            ?5,
+            ?6
+        );
+        "#;
+
+        let params = (
+            metadata.name.clone(),
+            metadata.num_layers,
+            metadata.layer_size,
+            metadata.activation_function.clone(),
+            metadata.num_total_parameters,
+            metadata.dataset.clone(),
+        );
+
+        |transaction| {
+            let id = transaction.prepare(ADD_MODEL)?.insert(params)?;
+            let model = ModelHandle {
+                id,
+                metadata,
+                database: database.clone(),
+            };
+            let metadata_service =
+                ServiceHandle::new_inner(database, "metadata".to_owned())(transaction)?
+                    .context("A 'metadata' service should always exist.")?;
+
+            model.add_service_inner(&metadata_service)(transaction)?;
+            Ok(model)
+        }
+    }
+
+    pub(super) async fn create(mut database: Database, metadata: Metadata) -> Result<Self> {
+        database
+            .execute(Self::create_inner(database.clone(), metadata))
+            .await
+    }
+
+    pub(super) async fn new(database: Database, model_name: String) -> Result<Option<Self>> {
+        const GET_MODEL: &str = r#"
+        SELECT
+            id,
+            name,
+            num_layers,
+            neurons_per_layer,
+            activation_function,
+            num_total_parameters,
+            dataset
+        FROM model
+        WHERE name = ?1;
+        "#;
+
+        let params = (model_name.clone(),);
+        let metadata = database
+            .connection
+            .call(|connection| {
+                let mut statement = connection.prepare(GET_MODEL)?;
+                let mut rows = statement.query(params)?;
+
+                let row = if let Some(row) = rows.next()? {
+                    row
+                } else {
+                    return Ok(None);
+                };
+
+                let num_layers: u32 = row.get(2)?;
+                let layer_size = row.get(3)?;
+
+                Ok(Some((
+                    row.get(0)?,
+                    Metadata {
+                        name: row.get(1)?,
+                        num_layers,
+                        layer_size,
+                        activation_function: row.get(4)?,
+                        num_total_neurons: num_layers * layer_size,
+                        num_total_parameters: row.get(5)?,
+                        dataset: row.get(6)?,
+                    },
+                )))
+            })
+            .await?;
+
+        Ok(metadata.map(|(id, metadata)| ModelHandle {
+            id,
+            metadata,
+            database,
+        }))
+    }
+
+    pub(super) fn id(&self) -> i64 {
+        self.id
+    }
+
+    pub fn name(&self) -> &str {
+        &self.metadata.name
+    }
+
+    pub fn metadata(&self) -> &Metadata {
+        &self.metadata
+    }
+
+    pub fn database(&self) -> &Database {
+        &self.database
+    }
+
+    fn delete_inner(&self) -> impl Operation<()> {
+        const DELETE_MODEL_REFERENCES: &str = r#"
+        DELETE FROM $TABLE
+        WHERE model_id = ?1;
+        "#;
+        const DELETE_MODEL: &str = r#"
+        DELETE FROM model
+        WHERE id = ?1;
+        "#;
+        const REFERENCE_TABLES: [&str; 5] = [
+            "model_service",
+            "model_data_object",
+            "model_data",
+            "layer_data",
+            "neuron_data",
+        ];
+
+        let params = (self.id,);
+        move |transaction| {
+            for table in REFERENCE_TABLES.iter() {
+                let mut statement = transaction
+                    .prepare(DELETE_MODEL_REFERENCES.replace("$TABLE", table).as_str())?;
+                statement.execute(params)?;
+            }
+            transaction.prepare(DELETE_MODEL)?.execute(params)?;
+            Ok(())
+        }
+    }
+
+    pub async fn delete(mut self) -> Result<()> {
+        let name = self.name().to_owned();
+
+        self.database
+            .execute(self.delete_inner())
+            .await
+            .with_context(|| format!("Problem deleting model '{name}'."))
+    }
+
+    fn add_service_inner(&self, service: &ServiceHandle) -> impl Operation<()> {
+        const ADD_MODEL_SERVICE: &str = r#"
+        INSERT INTO model_service (
+            model_id,
+            service_id
+        ) VALUES (
+            ?1,
+            ?2
+        );
+        "#;
+
+        let params = (self.id, service.id());
+
+        move |transaction| {
+            transaction.prepare(ADD_MODEL_SERVICE)?.insert(params)?;
+            Ok(())
+        }
+    }
+
+    pub async fn add_service(&mut self, service: &ServiceHandle) -> Result<()> {
+        self.database
+            .execute(self.add_service_inner(service))
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn has_service(&self, service: &ServiceHandle) -> Result<bool> {
+        const CHECK_MODEL_SERVICE: &str = r#"
+        SELECT
+            *
+        FROM model_service
+        WHERE model_id = ?1
+        AND service_id = ?2;
+        "#;
+
+        let params = (self.id, service.id());
+
+        self.database
+            .connection
+            .call(move |connection| connection.prepare(CHECK_MODEL_SERVICE)?.exists(params))
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to check whether model '{}' has service '{}'.",
+                    self.name(),
+                    service.name()
+                )
+            })
+    }
+
+    pub async fn services(&self) -> Result<impl Iterator<Item = Service>> {
+        const GET_SERVICES: &str = r#"
+        SELECT
+            service.name,
+            service.provider
+        FROM service
+        INNER JOIN model_service
+        ON service.id = model_service.service_id
+        WHERE model_service.model_id = ?1;
+        "#;
+
+        let params = (self.id,);
+
+        let services: Vec<(String, Vec<u8>)> = self
+            .database
+            .connection
+            .call(move |connection| {
+                connection
+                    .prepare(GET_SERVICES)?
+                    .query(params)?
+                    .map(|row| Ok((row.get(0)?, row.get(1)?)))
+                    .collect()
+            })
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to query for all services of model '{}'.",
+                    self.name()
+                )
+            })?;
+        let services: Vec<_> = services
+            .into_iter()
+            .map(|(name, provider)| {
+                Ok(Service {
+                    name,
+                    provider: ServiceProvider::from_binary(provider)?,
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok(services.into_iter())
+    }
+
+    fn add_data_object_inner(&self, data_object: &DataObjectHandle) -> impl Operation<()> {
+        const ADD_DATA_OBJECT: &str = r#"
+        INSERT INTO model_data_object (
+            model_id,
+            data_object_id
+        ) VALUES (
+            ?1,
+            ?2
+        );
+        "#;
+        let params = (self.id(), data_object.id());
+
+        move |transaction| {
+            transaction.prepare(ADD_DATA_OBJECT)?.insert(params)?;
+            Ok(())
+        }
+    }
+
+    pub async fn add_data_object(&mut self, data_object: &DataObjectHandle) -> Result<()> {
+        let data_object_name = data_object.name().to_owned();
+        let model_name = self.name().to_owned();
+
+        self.database
+            .execute(self.add_data_object_inner(data_object))
+            .await
+            .with_context(|| {
+                format!("Failed to add data object '{data_object_name}' to model '{model_name}'.")
+            })
+    }
+
+    fn delete_data_object_inner(&self, data_object: &DataObjectHandle) -> impl Operation<()> {
+        const DELETE_DATA: &str = r#"
+        DELETE FROM $DATABASE
+        WHERE model_id = ?1 AND data_object_id = ?2"#;
+        const REFERENCE_TABLES: [&str; 4] = [
+            "model_data",
+            "layer_data",
+            "neuron_data",
+            "model_data_object",
+        ];
+
+        let params = (self.id, data_object.id());
+        move |transaction| {
+            for table in REFERENCE_TABLES.iter() {
+                let mut statement =
+                    transaction.prepare(DELETE_DATA.replace("$DATABASE", table).as_str())?;
+                statement.execute(params)?;
+            }
+            Ok(())
+        }
+    }
+
+    pub async fn delete_data_object(&mut self, data_object: &DataObjectHandle) -> Result<()> {
+        self.database
+            .execute(self.delete_data_object_inner(data_object))
+            .await
+            .with_context(|| {
+                format!(
+                    "Problem deleting data object '{data_object_name}' from model '{name}.",
+                    data_object_name = data_object.name(),
+                    name = self.name()
+                )
+            })
+    }
+
+    pub async fn has_data_object(&self, data_object: &DataObjectHandle) -> Result<bool> {
+        const CHECK_DATA_OBJECT: &str = r#"
+        SELECT 
+            model_id
+        FROM model_data_object
+        WHERE model_id = ?1 AND data_object_id = ?2;
+        "#;
+
+        let data_object_name = data_object.name();
+
+        let params = (self.id(), data_object.id());
+
+        self.database
+            .connection
+            .call(move |connection| connection.prepare(CHECK_DATA_OBJECT)?.exists(params))
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to check whether model '{}' has data object '{data_object_name}'",
+                    self.name()
+                )
+            })
+    }
+
+    pub async fn data_object<D>(&self, data_object: &DataObjectHandle) -> Result<D>
+    where
+        D: ModelDataObject,
+    {
+        self.database.model_data_object(self, data_object).await
+    }
+
+    fn add_model_data_inner(
+        &self,
+        data_object: &DataObjectHandle,
+        data: Vec<u8>,
+    ) -> impl Operation<()> {
+        const ADD_MODEL_DATA: &str = r#"
+        INSERT INTO model_data (
+            model_id,
+            data_object_id,
+            data
+        ) VALUES (
+            ?1,
+            ?2,
+            ?3
+        );
+        "#;
+
+        let params = (self.id(), data_object.id(), data);
+        move |transaction| {
+            transaction.prepare(ADD_MODEL_DATA)?.insert(params)?;
+            Ok(())
+        }
+    }
+
+    pub async fn add_model_data(
+        &mut self,
+        data_object: &DataObjectHandle,
+        data: Vec<u8>,
+    ) -> Result<()> {
+        let model_name = self.name().to_owned();
+
+        self.database
+            .execute(self.add_model_data_inner(data_object, data))
+            .await
+            .with_context(|| format!("Failed to add model data to model '{model_name}'."))
+    }
+
+    fn add_layer_data_inner(
+        &self,
+        data_object: &DataObjectHandle,
+        layer_index: u32,
+        data: Vec<u8>,
+    ) -> impl Operation<()> {
+        const ADD_LAYER_DATA: &str = r#"
+        INSERT INTO layer_data (
+            model_id,
+            data_object_id,
+            layer_index,
+            data
+        ) VALUES (
+            ?1,
+            ?2,
+            ?3,
+            ?4
+        );
+        "#;
+
+        let params = (self.id(), data_object.id(), layer_index, data);
+
+        move |transaction| {
+            transaction.prepare(ADD_LAYER_DATA)?.insert(params)?;
+            Ok(())
+        }
+    }
+
+    pub async fn add_layer_data(
+        &mut self,
+        data_object: &DataObjectHandle,
+        layer_index: u32,
+        data: Vec<u8>,
+    ) -> Result<()> {
+        self.database
+            .execute(self.add_layer_data_inner(data_object, layer_index, data))
+            .await
+            .context("Failed to add layer data.")
+    }
+
+    fn add_neuron_data_inner(
+        &self,
+        data_object: &DataObjectHandle,
+        layer_index: u32,
+        neuron_index: u32,
+        data: Vec<u8>,
+    ) -> impl Operation<()> {
+        const ADD_NEURON_DATA: &str = r#"
+        INSERT INTO neuron_data (
+            model_id,
+            data_object_id,
+            layer_index,
+            neuron_index,
+            data
+        ) VALUES (
+            ?1,
+            ?2,
+            ?3,
+            ?4,
+            ?5
+        );
+        "#;
+
+        let params = (self.id(), data_object.id(), layer_index, neuron_index, data);
+
+        move |transaction| {
+            transaction.prepare(ADD_NEURON_DATA)?.insert(params)?;
+            Ok(())
+        }
+    }
+
+    pub async fn add_neuron_data(
+        &mut self,
+        data_object: &DataObjectHandle,
+        layer_index: u32,
+        neuron_index: u32,
+        data: Vec<u8>,
+    ) -> Result<()> {
+        self.database
+            .execute(self.add_neuron_data_inner(data_object, layer_index, neuron_index, data))
+            .await
+            .context("Failed to add neuron data.")
+    }
+
+    pub async fn model_data(&self, data_object: &DataObjectHandle) -> Result<Option<Vec<u8>>> {
+        const GET_MODEL_DATA: &str = r#"
+        SELECT
+            data
+        FROM model_data
+        WHERE model_id = ?1 AND data_object_id = ?2;
+        "#;
+
+        let params = (self.id(), data_object.id());
+
+        self.database
+            .connection
+            .call(move |connection| {
+                let mut statement = connection.prepare(GET_MODEL_DATA)?;
+                statement.query_row(params, |row| row.get(0)).optional()
+            })
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to get model data for data object '{}' for model '{}'.",
+                    self.name(),
+                    data_object.name()
+                )
+            })
+    }
+
+    pub async fn layer_data(
+        &self,
+        data_object: &DataObjectHandle,
+        layer_index: u32,
+    ) -> Result<Option<Vec<u8>>> {
+        const GET_LAYER_DATA: &str = r#"
+        SELECT
+            data
+        FROM layer_data
+        WHERE model_id = ?1 AND data_object_id = ?2 AND layer_index = ?3;
+        "#;
+
+        let params = (self.id(), data_object.id(), layer_index);
+        self.database
+            .connection
+            .call(move |connection| {
+                let mut statement = connection.prepare(GET_LAYER_DATA)?;
+                statement.query_row(params, |row| row.get(0)).optional()
+            })
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to get layer data for layer {layer_index} data object '{}' for model '{}'.",
+                    self.name(),
+                    data_object.name()
+                )
+            })
+    }
+
+    pub async fn neuron_data(
+        &self,
+        data_object: &DataObjectHandle,
+        layer_index: u32,
+        neuron_index: u32,
+    ) -> Result<Option<Vec<u8>>> {
+        const GET_NEURON_DATA: &str = r#"
+        SELECT
+            data
+        FROM neuron_data
+        WHERE model_id = ?1 AND data_object_id = ?2 AND layer_index = ?3 AND neuron_index = ?4;
+        "#;
+
+        let params = (self.id(), data_object.id(), layer_index, neuron_index);
+
+        self.database
+            .connection
+            .call(move |connection| {
+                let mut statement = connection.prepare(GET_NEURON_DATA)?;
+                statement.query_row(params, |row| row.get(0)).optional()
+            })
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to get neuron data for neuron l{layer_index}n{neuron_index} for data object '{}' for model '{}'.",
+                    data_object.name(),
+                    self.name(),
+                )
+            })
+    }
+}

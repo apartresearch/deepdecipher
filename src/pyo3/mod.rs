@@ -1,131 +1,49 @@
-use crate::{
-    data::{retrieve, NeuronIndex, NeuronViewerObject, NeuroscopeNeuronPage},
-    server,
-};
-use anyhow::{Context, Result};
 use pyo3::prelude::*;
-use tokio::runtime::Runtime;
+
+mod database;
+use database::PyDatabase;
+mod model_handle;
+use model_handle::PyModelHandle;
+mod data_object_handle;
+use data_object_handle::PyDataObjectHandle;
+mod model_metadata;
+use model_metadata::PyModelMetadata;
+mod service_provider;
+use service_provider::PyServiceProvider;
+mod service_handle;
+use service_handle::PyServiceHandle;
 
 #[pyfunction]
-fn start_server() {
-    server::start_server().unwrap();
-}
-
-#[pyfunction]
-fn scrape_layer_to_files(
-    data_path: &str,
-    model: &str,
-    layer_index: u32,
-    num_neurons: u32,
-) -> PyResult<()> {
-    Runtime::new()
-        .context("Failed to start async runtime to scrape neuroscope.")?
-        .block_on(async {
-            println!("Scraping layer {layer_index} of model '{model}' to '{data_path}'.");
-            retrieve::neuroscope::scrape_layer_to_files(data_path, model, layer_index, num_neurons)
-                .await
-                .context("Failed to scrape layer.")
-        })?;
-    Ok(())
-}
-
-#[pyfunction]
-fn scrape_model_to_files(data_path: &str, model: &str) -> PyResult<()> {
-    Runtime::new()
-        .context("Failed to start async runtime to scrape neuroscope.")?
-        .block_on(async {
-            println!("Scraping model '{model}' to '{data_path}'.");
-            retrieve::neuroscope::scrape_model_to_files(data_path, model)
-                .await
-                .context("Failed to scrape model.")
-        })?;
-    Ok(())
-}
-
-#[pyfunction]
-fn scrape_model_metadata_to_file(data_path: &str, model: &str) -> PyResult<()> {
-    Runtime::new()
-        .context("Failed to start async runtime to scrape neuroscope.")?
-        .block_on(async {
-            println!("Scraping metadata of model {model} to {data_path}.");
-            retrieve::neuroscope::scrape_model_metadata_to_file(data_path, model)
-                .await
-                .context("Failed to scrape model metadata.")
-        })?;
-    Ok(())
-}
-
-#[pyclass(name = "NeuronViewerObject")]
-struct PyNeuronViewerObject {
-    object: NeuronViewerObject,
-}
-
-#[pymethods]
-impl PyNeuronViewerObject {
-    #[new]
-    fn new(json: &str) -> PyResult<Self> {
-        let json_value = serde_json::from_str(json).context("failed to parse json")?;
-        Ok(PyNeuronViewerObject {
-            object: NeuronViewerObject::from_json(&json_value)?,
-        })
-    }
-
-    fn to_file(&self, path: &str) {
-        self.object.to_file(path);
-    }
-}
-
-#[pyclass(name = "NeuroscopePage")]
-struct PyNeuroscopePage {
-    object: NeuroscopeNeuronPage,
-}
-
-#[pymethods]
-impl PyNeuroscopePage {
-    #[new]
-    fn new(html: &str, layer_index: u32, neuron_index: u32) -> PyResult<Self> {
-        let neuron_index = NeuronIndex {
-            layer: layer_index,
-            neuron: neuron_index,
-        };
-        Ok(PyNeuroscopePage {
-            object: NeuroscopeNeuronPage::from_html_str(html, neuron_index).with_context(|| {
-                format!("Failed to parse html of neuroscope page for neuron {neuron_index}.")
-            })?,
-        })
-    }
-
-    fn to_json(&self) -> Result<String> {
-        serde_json::to_string(&self.object).context("Failed to serialize neuroscope page.")
-    }
-
-    fn __repr__(&self) -> String {
-        format!("{:?}", self.object)
-    }
-
-    fn to_file(&self, path: &str) -> Result<()> {
-        self.object
-            .to_file(path)
-            .with_context(|| format!("Failed to write neuroscope page to file '{path:?}'."))
-    }
-
-    #[staticmethod]
-    fn from_file(path: &str) -> Result<Self> {
-        Ok(PyNeuroscopePage {
-            object: NeuroscopeNeuronPage::from_file(path)
-                .with_context(|| format!("Failed to read neuroscope page from file '{path:?}'."))?,
-        })
+fn setup_keyboard_interrupt() {
+    if let Err(error) = ctrlc::set_handler(move || {
+        println!("Keyboard interrupt received, exiting...");
+        std::process::abort();
+    }) {
+        match error {
+            ctrlc::Error::MultipleHandlers => {
+                eprintln!("A handler already exists for keyboard interrupts.");
+            }
+            ctrlc::Error::NoSuchSignal(signal_type) => {
+                eprintln!("Signal type not found on system: {signal_type:?}");
+            }
+            ctrlc::Error::System(error) => {
+                eprintln!(
+                    "Unexpected system error while setting keyboard interrupt handler: {error}"
+                );
+            }
+        }
     }
 }
 
 /// A Python module implemented in Rust.
 #[pymodule]
 fn neuronav(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(start_server, m)?)?;
-    m.add_function(wrap_pyfunction!(scrape_layer_to_files, m)?)?;
-    m.add_function(wrap_pyfunction!(scrape_model_to_files, m)?)?;
-    m.add_function(wrap_pyfunction!(scrape_model_metadata_to_file, m)?)?;
-    m.add_class::<PyNeuronViewerObject>()?;
-    m.add_class::<PyNeuroscopePage>()?;
+    m.add_function(wrap_pyfunction!(setup_keyboard_interrupt, m)?)?;
+    m.add_class::<PyDatabase>()?;
+    m.add_class::<PyModelHandle>()?;
+    m.add_class::<PyModelMetadata>()?;
+    m.add_class::<PyDataObjectHandle>()?;
+    m.add_class::<PyServiceProvider>()?;
+    m.add_class::<PyServiceHandle>()?;
     Ok(())
 }
