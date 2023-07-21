@@ -109,13 +109,12 @@ The frontend runs with express.js and html + javascript.
 12. Start a new terminal in the root folder and navigate to the `/frontend` folder with `cd frontend`.
 13. Run `node server.js` while running the API at port `8080`.
 14. Navigate to [`http://localhost:3000/viz/solu-1l/all/0/9`](http://localhost:3000/solu-1l/neuroscope/0/9) and see visualizations of the neuron activations over token sequences.
-15. [optional] You might have to disable cross-origin policies in your browser for a local server to query another local server (by default disabled due to security risks). See instructions for [Edge](https://answers.microsoft.com/en-us/microsoftedge/forum/all/disable-cors/55c89fb6-8d72-4318-9ee3-e9cdfc6fa708#:~:text=1.%20In%20edge%3A%2F%2Fflags%2C%20kindly%20search%20cross-origin%20%26%20disable,prevention%22%20%26%20%22Block%20potential%20unwanted%20apps%22%20toggled%20OFF.), [Chrome](https://stackoverflow.com/questions/3102819/disable-same-origin-policy-in-chrome), [Firefox](https://stackoverflow.com/questions/17088609/disable-firefox-same-origin-policy), and [Safari](https://stackoverflow.com/questions/4556429/disabling-same-origin-policy-in-safari). Tested in Edge and Chrome on an M1 Mac.
 
 ![Screenshot of the frontend](media/frontend.png)
 
 ### Windows notes
 
-On Windows, Maturin works less well, but there are work arounds.
+On Windows, Maturin works less well, but there are workarounds.
 
 1. Make sure you clone the project into a path with no spaces.
 2. When building with Maturin, if you get the error `Invalid python interpreter version` or `Unsupported Python interpreter`, this is likely because Maturin fails to find your environment's interpreter.
@@ -124,9 +123,9 @@ On Windows, Maturin works less well, but there are work arounds.
 
 ### M1 notes
 
-Problems arise when your Python version does not match your machines architecture.
-This can happen on M1 chips, since it is possible to run x86 Python even if the architecture is ARM.
-In this case you can get an error that looks like
+Problems arise when your Python version does not match your machine's architecture.
+This can happen on M1 chips since it is possible to run x86 Python even if the architecture is ARM.
+In this case, you can get an error that looks like
 
 ```
 error[E0463]: can't find crate for `core`
