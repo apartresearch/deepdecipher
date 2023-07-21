@@ -69,6 +69,6 @@ impl ServiceProviderTrait for Neuron2Graph {
 
         Ok(json!({
         "graph": neuron_graph.graph,
-        "similar": similar_neurons,}))
+        "similar": similar_neurons.to_json(),}))
     }
 }

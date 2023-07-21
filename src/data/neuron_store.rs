@@ -9,6 +9,7 @@ use itertools::Itertools;
 use ndarray::{s, Array2};
 use serde::Deserialize;
 use serde::Serialize;
+use serde_json::json;
 use snap::raw::{Decoder, Encoder};
 
 use super::NeuronIndex;
@@ -83,6 +84,19 @@ impl SimilarNeurons {
     pub fn from_binary(bytes: &[u8]) -> Result<Self> {
         let result = postcard::from_bytes(bytes)?;
         Ok(result)
+    }
+
+    pub fn to_json(&self) -> serde_json::Value {
+        self.similar_neurons
+            .iter()
+            .map(|(neuron_index, similarity)| {
+                json!({
+                    "layer": neuron_index.layer,
+                    "neuron": neuron_index.neuron,
+                    "similarity": similarity,
+                })
+            })
+            .collect()
     }
 }
 

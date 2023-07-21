@@ -27,7 +27,7 @@ const generate_token_viz = (token, activation, color) => {
   return div;
 };
 
-const constructGraph = (g) => {};
+const constructGraph = (g) => { };
 
 if (source_name != "all") {
   // Put an h1 in the #meta that says that only /all/ are supported for visualization
@@ -72,18 +72,20 @@ if (source_name != "all") {
           document.getElementById("n2g").appendChild(not_available);
         }
 
-        if (data["similar"] != null) {
-          for (let i = 0; i < data["similar"].length; i++) {
+        if (data["neuron2graph"] != null && data.neuron2graph["similar"] != null) {
+          console.log(data.neuron2graph);
+          console.log(data.neuron2graph);
+          const similar = data.neuron2graph.similar;
+          console.log("num similar: " + similar.length);
+          for (let i = 0; i < similar.length; i++) {
             const similar_neuron = document.createElement("a");
             similar_neuron.classList.add("similar_neurons");
             similar_neuron.innerHTML =
-              data.similar[i].layer +
+              similar[i].layer +
               ":" +
-              data.similar[i].neuron +
+              similar[i].neuron +
               " <span data-tooltip='The similarity score to\nthis neuron'>E" +
-              data.similar[i].similarity +
-              "</span> <span data-tooltip='The token this neuron\nactivates the most to'>" +
-              data.similar[i].token +
+              similar[i].similarity +
               "</span>";
             similar_neuron.href =
               "/viz/" +
@@ -91,9 +93,9 @@ if (source_name != "all") {
               "/" +
               source_name +
               "/" +
-              data.similar[i].layer +
+              similar[i].layer +
               "/" +
-              data.similar[i].neuron;
+              similar[i].neuron;
             document.getElementById("similar").appendChild(similar_neuron);
           }
         } else {
@@ -153,16 +155,14 @@ if (source_name != "all") {
           const [prev_url, next_url, layer_url, model_url] = [
             (layer_index_n == 0) & (neuron_index_n == 0)
               ? alert("This is the first neuron in the model.")
-              : `${base_url_ui}${base_ext_ui}/${model_name}/${source_name}/${
-                  neuron_index_n != 0 ? layer_index_n : layer_index_n - 1
-                }/${neuron_index_n != 0 ? neuron_index_n - 1 : last_neuron}`,
+              : `${base_url_ui}${base_ext_ui}/${model_name}/${source_name}/${neuron_index_n != 0 ? layer_index_n : layer_index_n - 1
+              }/${neuron_index_n != 0 ? neuron_index_n - 1 : last_neuron}`,
             (layer_index_n == last_layer) & (neuron_index_n == last_neuron)
               ? alert("This is the last neuron in the model.")
-              : `${base_url_ui}${base_ext_ui}/${model_name}/${source_name}/${
-                  neuron_index_n != last_neuron
-                    ? layer_index_n
-                    : layer_index_n + 1
-                }/${neuron_index_n != last_neuron ? neuron_index_n + 1 : 0}`,
+              : `${base_url_ui}${base_ext_ui}/${model_name}/${source_name}/${neuron_index_n != last_neuron
+                ? layer_index_n
+                : layer_index_n + 1
+              }/${neuron_index_n != last_neuron ? neuron_index_n + 1 : 0}`,
             ,
             `${base_url_ui}${base_ext_ui}/${model_name}/${source_name}/${layer_index_n}`,
             `${base_url_ui}${base_ext_ui}/${model_name}/${source_name}`,
