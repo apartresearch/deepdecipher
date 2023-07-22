@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 
 use rusqlite::Transaction;
 use tokio_rusqlite::Connection;
@@ -118,6 +118,23 @@ impl Database {
 
     pub async fn service(&self, service_name: impl AsRef<str>) -> Result<Option<ServiceHandle>> {
         ServiceHandle::new(self.clone(), service_name.as_ref().to_owned()).await
+    }
+
+    pub async fn all_service_names(&self) -> Result<impl Iterator<Item = String>> {
+        const GET_ALL_SERVICE_NAMES: &str = r#"
+            SELECT name FROM service;
+        "#;
+
+        self.connection
+            .call(|connection| {
+                connection
+                    .prepare(GET_ALL_SERVICE_NAMES)?
+                    .query_map([], |row| row.get(0))?
+                    .collect::<std::result::Result<Vec<_>, _>>()
+            })
+            .await
+            .context("Failed to get the names of all services.")
+            .map(Vec::into_iter)
     }
 
     pub async fn add_data_object(

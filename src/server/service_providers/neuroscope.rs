@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::data::data_types::Neuroscope as NeuroscopeData;
-use crate::data::ModelHandle;
+use crate::data::{DataObjectHandle, Database, ModelHandle};
 use crate::server::State;
 
 use super::service_provider::ServiceProviderTrait;
@@ -29,6 +29,15 @@ async fn data_object(state: &State, model: &ModelHandle) -> Result<NeuroscopeDat
 
 #[async_trait]
 impl ServiceProviderTrait for Neuroscope {
+    async fn required_data_objects(&self, database: &Database) -> Result<Vec<DataObjectHandle>> {
+        let data_object_name = "neuroscope";
+        let data_object = database
+            .data_object(data_object_name)
+            .await?
+            .with_context(|| format!("No data object with name '{data_object_name}'. This should have been checked when the service was created."))?;
+        Ok(vec![data_object])
+    }
+
     async fn model_page(
         &self,
         _service_name: &str,

@@ -10,11 +10,16 @@ use super::{
     metadata::Metadata, neuron2graph::Neuron2Graph, neuron2graph_search::Neuron2GraphSearch,
     neuroscope::Neuroscope,
 };
-use crate::{data::ModelHandle, server::State};
+use crate::{
+    data::{DataObjectHandle, Database, ModelHandle},
+    server::State,
+};
 
 #[allow(unused_variables)]
 #[async_trait]
 pub trait ServiceProviderTrait: Clone + Serialize + Deserialize<'static> + Send + Sync {
+    async fn required_data_objects(&self, database: &Database) -> Result<Vec<DataObjectHandle>>;
+
     async fn model_page(
         &self,
         service_name: &str,
@@ -67,6 +72,10 @@ impl ServiceProvider {
             ServiceProvider::Neuron2Graph => Neuron2Graph,
             ServiceProvider::Neuron2GraphSearch => Neuron2GraphSearch,
         } {
+            pub fn required_data_objects<'a>(
+                &'a self, database: &'a Database,
+            ) -> Pin<Box<dyn Future<Output = Result<Vec<DataObjectHandle>>> + Send + 'a>>;
+
             pub fn model_page<'a>(
                 &'a self,
                 service_name: &'a str,
