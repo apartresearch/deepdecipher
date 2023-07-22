@@ -1,7 +1,7 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use crate::data::ModelHandle;
+use crate::data::{DataObjectHandle, Database, ModelHandle};
 
 use super::{ServiceProvider, State};
 
@@ -30,6 +30,13 @@ impl Service {
 
     pub fn is_metadata(&self) -> bool {
         false
+    }
+
+    pub async fn required_data_objects(
+        &self,
+        database: &Database,
+    ) -> Result<Vec<DataObjectHandle>> {
+        self.provider.required_data_objects(database).await
     }
 
     pub async fn model_page(

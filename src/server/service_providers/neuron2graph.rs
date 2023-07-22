@@ -49,6 +49,23 @@ async fn data_object(
 
 #[async_trait]
 impl ServiceProviderTrait for Neuron2Graph {
+    async fn required_data_objects(
+        &self,
+        database: &crate::data::Database,
+    ) -> Result<Vec<crate::data::DataObjectHandle>> {
+        let n2g_object_name = "neuron2graph";
+        let neuron_store_object_name = "neuron_store";
+        let n2g_data_object = database
+            .data_object(n2g_object_name)
+            .await?
+            .with_context(|| format!("No data object with name '{n2g_object_name}'. This should have been checked when service was created."))?;
+        let neuron_store_data_object = database
+            .data_object(neuron_store_object_name)
+            .await?
+            .with_context(|| format!("No data object with name '{neuron_store_object_name}'. This should have been checked when service was created."))?;
+        Ok(vec![n2g_data_object, neuron_store_data_object])
+    }
+
     async fn neuron_page(
         &self,
         _service_name: &str,

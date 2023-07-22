@@ -72,17 +72,19 @@ impl PyModelHandle {
         Ok(())
     }
 
-    pub fn has_service(&self, service: &PyServiceHandle) -> PyResult<bool> {
+    pub fn missing_data_objects(&self, service: &PyServiceHandle) -> PyResult<Vec<String>> {
         let result = Runtime::new()
-            .context("Failed to start async runtime to check whether model has service.")?
-            .block_on(async { self.model.has_service(&service.service_handle).await })?;
+            .context("Failed to start async runtime to check missing data objects for service.")?
+            .block_on(async {
+                self.model
+                    .missing_data_objects(&service.service_handle)
+                    .await
+            })?;
         Ok(result)
     }
 
-    pub fn add_service(&mut self, service: &PyServiceHandle) -> PyResult<()> {
-        Runtime::new()
-            .context("Failed to start async runtime to add service.")?
-            .block_on(async { self.model.add_service(&service.service_handle).await })?;
-        Ok(())
+    pub fn has_service(&self, service: &PyServiceHandle) -> PyResult<bool> {
+        self.missing_data_objects(service)
+            .map(|missing| missing.is_empty())
     }
 }

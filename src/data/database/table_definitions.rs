@@ -19,15 +19,6 @@ CREATE TABLE service (
   ) STRICT;
 "#;
 
-const MODEL_SERVICE_TABLE: &str = r#"
-CREATE TABLE model_service (
-    model_id                   INTEGER NOT NULL,
-    service_id                 INTEGER NOT NULL,
-    FOREIGN KEY(model_id) REFERENCES model(id),
-    FOREIGN KEY(service_id) REFERENCES service(id)
-  ) STRICT;
-"#;
-
 const DATA_OBJECT_TABLE: &str = r#"
 CREATE TABLE data_object (
     id                      INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,10 +75,9 @@ CREATE TABLE neuron_data (
   ) STRICT;
 "#;
 
-pub const TABLES: [&str; 8] = [
+pub const TABLES: [&str; 7] = [
     MODEL_TABLE,
     SERVICE_TABLE,
-    MODEL_SERVICE_TABLE,
     DATA_OBJECT_TABLE,
     MODEL_DATA_OBJECT_TABLE,
     MODEL_DATA_TABLE,

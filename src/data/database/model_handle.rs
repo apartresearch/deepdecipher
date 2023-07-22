@@ -1,7 +1,4 @@
-use crate::{
-    data::Metadata,
-    server::{Service, ServiceProvider},
-};
+use crate::data::Metadata;
 
 use super::{
     data_types::ModelDataObject, service_handle::ServiceHandle, DataObjectHandle, Database,
@@ -9,7 +6,6 @@ use super::{
 };
 
 use anyhow::{Context, Result};
-use fallible_iterator::FallibleIterator;
 use rusqlite::OptionalExtension;
 
 #[derive(Clone)]
@@ -53,13 +49,8 @@ impl ModelHandle {
             let model = ModelHandle {
                 id,
                 metadata,
-                database: database.clone(),
+                database,
             };
-            let metadata_service =
-                ServiceHandle::new_inner(database, "metadata".to_owned())(transaction)?
-                    .context("A 'metadata' service should always exist.")?;
-
-            model.add_service_inner(&metadata_service)(transaction)?;
             Ok(model)
         }
     }
@@ -176,97 +167,14 @@ impl ModelHandle {
             .with_context(|| format!("Problem deleting model '{name}'."))
     }
 
-    fn add_service_inner(&self, service: &ServiceHandle) -> impl Operation<()> {
-        const ADD_MODEL_SERVICE: &str = r#"
-        INSERT INTO model_service (
-            model_id,
-            service_id
-        ) VALUES (
-            ?1,
-            ?2
-        );
-        "#;
-
-        let params = (self.id, service.id());
-
-        move |transaction| {
-            transaction.prepare(ADD_MODEL_SERVICE)?.insert(params)?;
-            Ok(())
+    pub async fn missing_data_objects(&self, service: &ServiceHandle) -> Result<Vec<String>> {
+        let mut missing_data_objects = vec![];
+        for data_object in service.required_data_objects().await? {
+            if !self.has_data_object(&data_object).await? {
+                missing_data_objects.push(data_object.name().to_owned());
+            }
         }
-    }
-
-    pub async fn add_service(&mut self, service: &ServiceHandle) -> Result<()> {
-        self.database
-            .execute(self.add_service_inner(service))
-            .await?;
-
-        Ok(())
-    }
-
-    pub async fn has_service(&self, service: &ServiceHandle) -> Result<bool> {
-        const CHECK_MODEL_SERVICE: &str = r#"
-        SELECT
-            *
-        FROM model_service
-        WHERE model_id = ?1
-        AND service_id = ?2;
-        "#;
-
-        let params = (self.id, service.id());
-
-        self.database
-            .connection
-            .call(move |connection| connection.prepare(CHECK_MODEL_SERVICE)?.exists(params))
-            .await
-            .with_context(|| {
-                format!(
-                    "Failed to check whether model '{}' has service '{}'.",
-                    self.name(),
-                    service.name()
-                )
-            })
-    }
-
-    pub async fn services(&self) -> Result<impl Iterator<Item = Service>> {
-        const GET_SERVICES: &str = r#"
-        SELECT
-            service.name,
-            service.provider
-        FROM service
-        INNER JOIN model_service
-        ON service.id = model_service.service_id
-        WHERE model_service.model_id = ?1;
-        "#;
-
-        let params = (self.id,);
-
-        let services: Vec<(String, Vec<u8>)> = self
-            .database
-            .connection
-            .call(move |connection| {
-                connection
-                    .prepare(GET_SERVICES)?
-                    .query(params)?
-                    .map(|row| Ok((row.get(0)?, row.get(1)?)))
-                    .collect()
-            })
-            .await
-            .with_context(|| {
-                format!(
-                    "Failed to query for all services of model '{}'.",
-                    self.name()
-                )
-            })?;
-        let services: Vec<_> = services
-            .into_iter()
-            .map(|(name, provider)| {
-                Ok(Service {
-                    name,
-                    provider: ServiceProvider::from_binary(provider)?,
-                })
-            })
-            .collect::<Result<Vec<_>>>()?;
-        Ok(services.into_iter())
+        Ok(missing_data_objects)
     }
 
     fn add_data_object_inner(&self, data_object: &DataObjectHandle) -> impl Operation<()> {

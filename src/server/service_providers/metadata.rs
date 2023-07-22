@@ -3,7 +3,10 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::{data::ModelHandle, server::State};
+use crate::{
+    data::{DataObjectHandle, Database, ModelHandle},
+    server::State,
+};
 
 use super::ServiceProviderTrait;
 
@@ -12,6 +15,10 @@ pub struct Metadata;
 
 #[async_trait]
 impl ServiceProviderTrait for Metadata {
+    async fn required_data_objects(&self, _database: &Database) -> Result<Vec<DataObjectHandle>> {
+        Ok(vec![])
+    }
+
     async fn model_page(
         &self,
         _service_name: &str,

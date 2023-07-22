@@ -1,6 +1,6 @@
 use crate::server::{Service, ServiceProvider};
 
-use super::{Database, Operation};
+use super::{DataObjectHandle, Database, Operation};
 
 use anyhow::{Context, Result};
 use rusqlite::OptionalExtension;
@@ -56,10 +56,7 @@ impl ServiceHandle {
             .await
     }
 
-    pub(super) fn new_inner(
-        database: Database,
-        service_name: String,
-    ) -> impl Operation<Option<Self>> {
+    pub fn new_inner(database: Database, service_name: String) -> impl Operation<Option<Self>> {
         const GET_SERVICE: &str = r#"
         SELECT
             id,
@@ -86,12 +83,46 @@ impl ServiceHandle {
             .await
     }
 
+    pub async fn all_services(database: &Database) -> Result<impl Iterator<Item = ServiceHandle>> {
+        const ALL_SERVICES: &str = r#"
+            SELECT id, name
+            FROM service
+        "#;
+
+        let database2 = database.clone();
+        let services = database
+            .connection
+            .call(move |connection| {
+                let services = connection
+                    .prepare(ALL_SERVICES)?
+                    .query_map((), |row| Ok((row.get(0)?, row.get(1)?)))?
+                    .map(|row| {
+                        row.map(|(id, name)| ServiceHandle {
+                            id,
+                            name,
+                            database: database2.clone(),
+                        })
+                    })
+                    .collect::<std::result::Result<Vec<_>, rusqlite::Error>>()?;
+                Ok(services)
+            })
+            .await?;
+        Ok(services.into_iter())
+    }
+
     pub(super) fn id(&self) -> i64 {
         self.id
     }
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub async fn required_data_objects(&self) -> Result<Vec<DataObjectHandle>> {
+        self.service()
+            .await?
+            .required_data_objects(&self.database)
+            .await
     }
 
     fn delete_inner(&self) -> impl Operation<()> {

@@ -6,7 +6,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::{
-    data::{data_types::NeuronStore as NeuronStoreObject, ModelHandle, TokenSearch},
+    data::{
+        data_types::NeuronStore as NeuronStoreObject, DataObjectHandle, Database, ModelHandle,
+        TokenSearch,
+    },
     server::State,
 };
 
@@ -17,6 +20,12 @@ pub struct Neuron2GraphSearch;
 
 #[async_trait]
 impl ServiceProviderTrait for Neuron2GraphSearch {
+    async fn required_data_objects(&self, database: &Database) -> Result<Vec<DataObjectHandle>> {
+        database.data_object("neuron_store").await?.context(
+            "No data object named 'neuron_store' in database. This should have been checked when service was created."
+        ).map(|data_object| vec![data_object])
+    }
+
     async fn model_page(
         &self,
         _service_name: &str,
@@ -35,7 +44,7 @@ impl ServiceProviderTrait for Neuron2GraphSearch {
             .await
             .with_context(|| {
                 format!(
-                    "Model '{}' has no 'neuron_store' data object.",
+                    "Model '{}' has no 'neuron_store' data object. This should have been checked earlier.",
                     model.name()
                 )
             })?;

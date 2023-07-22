@@ -112,26 +112,4 @@ impl PyDatabase {
             .map(PyModelHandle::new)?;
         Ok(result)
     }
-
-    fn add_model_service(&self, model_name: &str, service_name: &str) -> PyResult<()> {
-        Runtime::new()
-            .context("Failed to start async runtime to add model service.")?
-            .block_on(async {
-                let mut model = self
-                    .database
-                    .model(model_name.to_owned())
-                    .await?
-                    .with_context(|| format!("Model '{model_name}' does not exist in database."))?;
-                let service = self
-                    .database
-                    .service(service_name.to_owned())
-                    .await?
-                    .with_context(|| {
-                        format!("Service '{service_name}' does not exist in database.")
-                    })?;
-                println!("Adding service '{service_name}' to model '{model_name}'...");
-                model.add_service(&service).await
-            })?;
-        Ok(())
-    }
 }
