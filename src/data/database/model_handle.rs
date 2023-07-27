@@ -1,4 +1,4 @@
-use crate::data::Metadata;
+use crate::{data::Metadata, Index};
 
 use super::{
     data_types::ModelDataObject, service_handle::ServiceHandle, DataObjectHandle, Database,
@@ -394,6 +394,22 @@ impl ModelHandle {
             .context("Failed to add neuron data.")
     }
 
+    pub async fn add_data(
+        &mut self,
+        data_object: &DataObjectHandle,
+        index: Index,
+        data: Vec<u8>,
+    ) -> Result<()> {
+        match index {
+            Index::Model => self.add_model_data(data_object, data).await,
+            Index::Layer(layer_index) => self.add_layer_data(data_object, layer_index, data).await,
+            Index::Neuron(layer_index, neuron_index) => {
+                self.add_neuron_data(data_object, layer_index, neuron_index, data)
+                    .await
+            }
+        }
+    }
+
     pub async fn model_data(&self, data_object: &DataObjectHandle) -> Result<Option<Vec<u8>>> {
         const GET_MODEL_DATA: &str = r#"
         SELECT
@@ -478,5 +494,20 @@ impl ModelHandle {
                     self.name(),
                 )
             })
+    }
+
+    pub async fn data(
+        &self,
+        data_object: &DataObjectHandle,
+        index: Index,
+    ) -> Result<Option<Vec<u8>>> {
+        match index {
+            Index::Model => self.model_data(data_object).await,
+            Index::Layer(layer_index) => self.layer_data(data_object, layer_index).await,
+            Index::Neuron(layer_index, neuron_index) => {
+                self.neuron_data(data_object, layer_index, neuron_index)
+                    .await
+            }
+        }
     }
 }

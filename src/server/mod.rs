@@ -11,37 +11,15 @@ use anyhow::{anyhow, Result};
 
 use serde_json::json;
 
-use crate::data::{database::Database, Metadata, ModelHandle, ServiceHandle};
+use crate::{
+    data::{database::Database, ModelHandle, ServiceHandle},
+    Index,
+};
 
 mod service;
 pub use service::Service;
 mod service_providers;
 pub use service_providers::ServiceProvider;
-
-#[derive(Clone, Copy, Debug)]
-enum PageIndex {
-    Model,
-    Layer(u32),
-    Neuron(u32, u32),
-}
-
-impl PageIndex {
-    pub fn in_model(self, metadata: &Metadata) -> Result<()> {
-        let model_name = metadata.name.as_str();
-        let num_layers = metadata.num_layers;
-        let layer_size = metadata.layer_size;
-
-        match self {
-            PageIndex::Layer(layer_index) | PageIndex::Neuron(layer_index, _) if layer_index >= num_layers => Err(anyhow!(
-                "Layer index is {layer_index} but model '{model_name}' only has {num_layers} layers."
-            )),
-            PageIndex::Neuron(_, neuron_index) if neuron_index >= layer_size => Err(anyhow!(
-                "Neuron index is {neuron_index} but model '{model_name}' only has {layer_size} neurons per layer."
-            )),
-            _ => Ok(())
-        }
-    }
-}
 
 struct Response {
     body: String,
@@ -80,16 +58,16 @@ async fn service_page(
     query: &serde_json::Value,
     model_handle: &ModelHandle,
     service: &Service,
-    page_index: PageIndex,
+    page_index: Index,
 ) -> Result<serde_json::Value> {
     match page_index {
-        PageIndex::Model => service.model_page(state, query, model_handle).await,
-        PageIndex::Layer(layer_index) => {
+        Index::Model => service.model_page(state, query, model_handle).await,
+        Index::Layer(layer_index) => {
             service
                 .layer_page(state, query, model_handle, layer_index)
                 .await
         }
-        PageIndex::Neuron(layer_index, neuron_index) => {
+        Index::Neuron(layer_index, neuron_index) => {
             service
                 .neuron_page(state, query, model_handle, layer_index, neuron_index)
                 .await
@@ -100,11 +78,11 @@ async fn service_page(
 async fn preprocess_model(
     model_name: impl AsRef<str>,
     database: &Database,
-    page_index: PageIndex,
+    page_index: Index,
 ) -> Result<ModelHandle> {
     let model_name = model_name.as_ref();
     if let Some(model_handle) = database.model(model_name).await? {
-        page_index.in_model(model_handle.metadata())?;
+        page_index.valid_in_model(model_handle.metadata())?;
         Ok(model_handle)
     } else {
         Err(anyhow!("Model '{model_name}' not found."))
@@ -116,7 +94,7 @@ async fn response(
     query: &serde_json::Value,
     model_name: impl AsRef<str>,
     service_name: impl AsRef<str>,
-    page_index: PageIndex,
+    page_index: Index,
 ) -> Response {
     let database = state.database();
 
@@ -185,7 +163,7 @@ async fn service_value(
     query: &serde_json::Value,
     model_handle: &ModelHandle,
     service_handle: &ServiceHandle,
-    page_index: PageIndex,
+    page_index: Index,
 ) -> Result<serde_json::Value> {
     let missing_data_objects = model_handle.missing_data_objects(service_handle).await?;
     let service = service_handle.service().await?;
@@ -202,7 +180,7 @@ async fn all_response(
     state: web::Data<State>,
     query: web::Query<serde_json::Value>,
     model_name: impl AsRef<str>,
-    page_index: PageIndex,
+    page_index: Index,
 ) -> Response {
     let database = state.database();
 
@@ -245,15 +223,9 @@ pub async fn model(
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
     let (model_name, service_name) = indices.into_inner();
-    response(
-        state,
-        query.deref(),
-        model_name,
-        service_name,
-        PageIndex::Model,
-    )
-    .await
-    .finalize()
+    response(state, query.deref(), model_name, service_name, Index::Model)
+        .await
+        .finalize()
 }
 
 #[get("/api/{model_name}/{service}/{layer_index}")]
@@ -268,7 +240,7 @@ pub async fn layer(
         query.deref(),
         model_name,
         service_name,
-        PageIndex::Layer(layer_index),
+        Index::Layer(layer_index),
     )
     .await
     .finalize()
@@ -286,7 +258,7 @@ pub async fn neuron(
         query.deref(),
         model_name,
         service_name,
-        PageIndex::Neuron(layer_index, neuron_index),
+        Index::Neuron(layer_index, neuron_index),
     )
     .await
     .finalize()
@@ -299,7 +271,7 @@ async fn all_model(
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
     let model_name = indices.into_inner();
-    all_response(state, query, model_name, PageIndex::Model)
+    all_response(state, query, model_name, Index::Model)
         .await
         .finalize()
 }
@@ -311,7 +283,7 @@ async fn all_layer(
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
     let (model_name, layer_index) = indices.into_inner();
-    all_response(state, query, model_name, PageIndex::Layer(layer_index))
+    all_response(state, query, model_name, Index::Layer(layer_index))
         .await
         .finalize()
 }
@@ -327,7 +299,7 @@ async fn all_neuron(
         state,
         query,
         model_name,
-        PageIndex::Neuron(layer_index, neuron_index),
+        Index::Neuron(layer_index, neuron_index),
     )
     .await
     .finalize()

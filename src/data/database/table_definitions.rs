@@ -34,6 +34,7 @@ CREATE TABLE model_data_object (
     data_object_id          INTEGER NOT NULL,
     FOREIGN KEY(model_id) REFERENCES model(id),
     FOREIGN KEY(data_object_id) REFERENCES data_object(id)
+    UNIQUE(model_id, data_object_id)
 )
 "#;
 

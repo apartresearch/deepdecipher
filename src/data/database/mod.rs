@@ -171,7 +171,7 @@ impl Database {
         if !model.has_data_object(data_object).await? {
             bail!("Model '{model_name}' does not have data object '{data_object_name}'.");
         }
-        let result = D::new(model, data_object.data_type().into()).await?;
+        let result = D::new(model.clone(), data_object.clone()).await?;
         if let Some(result) = result {
             Ok(result)
         } else {

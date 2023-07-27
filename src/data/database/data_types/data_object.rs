@@ -4,7 +4,7 @@ use anyhow::{ensure, Context, Result};
 use async_trait::async_trait;
 use strum::{AsRefStr, EnumDiscriminants, EnumString};
 
-use crate::data::ModelHandle;
+use crate::data::{DataObjectHandle, ModelHandle};
 
 #[derive(Clone, Debug, AsRefStr, EnumString, EnumDiscriminants, PartialEq)]
 #[strum_discriminants(derive(EnumString, AsRefStr))]
@@ -12,6 +12,7 @@ pub enum DataType {
     Neuroscope,
     Neuron2Graph,
     NeuronStore { similarity_threshold: f32 },
+    Json,
 }
 
 impl DataType {
@@ -45,6 +46,13 @@ impl DataType {
                     similarity_threshold,
                 })
             }
+            DataTypeDiscriminants::Json => {
+                ensure!(
+                    type_args.is_empty(),
+                    "Json data objects do not take type arguments."
+                );
+                Ok(Self::Json)
+            }
         }
     }
 
@@ -55,13 +63,14 @@ impl DataType {
             Self::NeuronStore {
                 similarity_threshold,
             } => postcard::to_allocvec(similarity_threshold).expect("Failed to serialize f32."),
+            Self::Json => Vec::new(),
         }
     }
 }
 
 #[async_trait]
 pub trait ModelDataObject: Sized {
-    async fn new(model: &ModelHandle, datatype: DataTypeDiscriminants) -> Result<Option<Self>>;
+    async fn new(model: ModelHandle, data_object: DataObjectHandle) -> Result<Option<Self>>;
     fn data_type() -> DataTypeDiscriminants;
     fn model_handle(&self) -> &ModelHandle;
 }

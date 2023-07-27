@@ -14,17 +14,9 @@ pub struct NeuronStore {
 
 #[async_trait]
 impl ModelDataObject for NeuronStore {
-    async fn new(model: &ModelHandle, datatype: DataTypeDiscriminants) -> Result<Option<Self>> {
-        let data_object = model
-            .database()
-            .data_object("neuron_store")
-            .await?
-            .context("No neuron store data object in database.")?;
-        match datatype {
-            DataTypeDiscriminants::NeuronStore => Ok(Some(Self {
-                model: model.clone(),
-                data_object,
-            })),
+    async fn new(model: ModelHandle, data_object: DataObjectHandle) -> Result<Option<Self>> {
+        match data_object.data_type().into() {
+            DataTypeDiscriminants::NeuronStore => Ok(Some(Self { model, data_object })),
             _ => bail!("Invalid type for neuron store data object."),
         }
     }

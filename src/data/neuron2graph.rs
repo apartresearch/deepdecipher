@@ -17,7 +17,7 @@ impl Graph {
     pub fn from_binary(bytes: impl AsRef<[u8]>) -> Result<Self> {
         let bytes = Decoder::new()
             .decompress_vec(bytes.as_ref())
-            .context("Failed to decompress neuron2graph neuron graph")?;
+            .context("Failed to decompress neuron2graph neuron graph.")?;
         String::from_utf8(bytes)
             .context("Neuron2Graph graph string is not valid UTF-8.")
             .map(|graph| Self { graph })
