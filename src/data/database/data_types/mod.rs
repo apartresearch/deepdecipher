@@ -6,3 +6,5 @@ mod neuron2graph;
 pub use neuron2graph::Neuron2Graph;
 mod neuron_store;
 pub use neuron_store::NeuronStore;
+mod json;
+pub use json::Json;

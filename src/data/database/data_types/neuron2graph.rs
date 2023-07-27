@@ -12,23 +12,15 @@ pub struct Neuron2Graph {
 
 #[async_trait]
 impl ModelDataObject for Neuron2Graph {
-    async fn new(model: &ModelHandle, datatype: DataTypeDiscriminants) -> Result<Option<Self>> {
-        let data_object = model
-            .database()
-            .data_object("neuron2graph")
-            .await?
-            .context("No neuron2graph data object in database.")?;
-        match datatype {
-            DataTypeDiscriminants::Neuron2Graph => Ok(Some(Self {
-                model: model.clone(),
-                data_object,
-            })),
+    async fn new(model: ModelHandle, data_object: DataObjectHandle) -> Result<Option<Self>> {
+        match data_object.data_type().into() {
+            DataTypeDiscriminants::Neuron2Graph => Ok(Some(Self { model, data_object })),
             _ => bail!("Invalid type for Neuron2Graph data object."),
         }
     }
 
     fn data_type() -> DataTypeDiscriminants {
-        DataTypeDiscriminants::Neuroscope
+        DataTypeDiscriminants::Neuron2Graph
     }
 
     fn model_handle(&self) -> &ModelHandle {

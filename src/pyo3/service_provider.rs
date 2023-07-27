@@ -31,6 +31,13 @@ impl PyServiceProvider {
         }
     }
 
+    #[staticmethod]
+    pub fn json(data_object_name: String) -> Self {
+        PyServiceProvider {
+            provider: ServiceProvider::json(data_object_name),
+        }
+    }
+
     pub fn __repr__(&self) -> &str {
         self.provider.as_ref()
     }

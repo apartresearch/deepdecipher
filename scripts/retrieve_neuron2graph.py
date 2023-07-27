@@ -32,7 +32,3 @@ service = database.service("neuron2graph")
 if service is None:
     print("Adding neuron2graph service.")
     service = database.add_service("neuron2graph", ServiceProvider.neuron2graph())
-
-if not model.has_service(service):
-    print("Adding neuron2graph service to model.")
-    model.add_service(service)

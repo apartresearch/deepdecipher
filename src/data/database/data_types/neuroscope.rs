@@ -15,17 +15,9 @@ pub struct Neuroscope {
 
 #[async_trait]
 impl ModelDataObject for Neuroscope {
-    async fn new(model: &ModelHandle, datatype: DataTypeDiscriminants) -> Result<Option<Self>> {
-        let data_object = model
-            .database()
-            .data_object("neuroscope")
-            .await?
-            .context("No neuroscope data object in database.")?;
-        match datatype {
-            DataTypeDiscriminants::Neuroscope => Ok(Some(Self {
-                model: model.clone(),
-                data_object,
-            })),
+    async fn new(model: ModelHandle, data_object: DataObjectHandle) -> Result<Option<Self>> {
+        match data_object.data_type().into() {
+            DataTypeDiscriminants::Neuroscope => Ok(Some(Self { model, data_object })),
             _ => bail!("Invalid type for Neuroscope data object.",),
         }
     }
@@ -50,7 +42,7 @@ impl Neuroscope {
                 format!("Failed to get neuroscope model data for model '{model_name}'.",)
             })?
             .with_context(|| {
-                format!("Database has no neuroscope model data for model '{model_name}'")
+                format!("Database has no neuroscope model data for model '{model_name}'.")
             })?;
         NeuroscopeModelPage::from_binary(raw_data.as_slice())
     }
@@ -58,9 +50,11 @@ impl Neuroscope {
         let model_name = self.model.name();
         let raw_data = self.model
             .layer_data( &self.data_object, layer_index)
-            .await?
+            .await.with_context(|| {
+                format!("Failed to get neuroscope layer data for layer {layer_index} in model '{model_name}'.")
+            })?
             .with_context(|| {
-                format!("Database has no neuroscope layer data for layer {layer_index} in model '{model_name}'")
+                format!("Database has no neuroscope layer data for layer {layer_index} in model '{model_name}'.")
             })?;
         NeuroscopeLayerPage::from_binary(raw_data.as_slice())
     }
@@ -72,9 +66,11 @@ impl Neuroscope {
         let model_name = self.model.name();
         let raw_data = self.model
             .neuron_data( &self.data_object, layer_index, neuron_index)
-            .await?
+            .await.with_context(|| {
+                format!("Failed to get neuroscope neuron data for neuron l{layer_index}n{neuron_index} in model '{model_name}'.")
+            })?
             .with_context(|| {
-                format!("Database has no neuroscope neuron data for neuron l{layer_index}n{neuron_index} in model '{model_name}'")
+                format!("Database has no neuroscope neuron data for neuron l{layer_index}n{neuron_index} in model '{model_name}'.")
             })?;
         NeuroscopeNeuronPage::from_binary(raw_data.as_slice())
     }

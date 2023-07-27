@@ -1,10 +1,12 @@
-use anyhow::Context;
+use anyhow::{Context, bail};
 use pyo3::prelude::*;
 use tokio::runtime::Runtime;
 
 use crate::data::{retrieve, ModelHandle};
 
-use super::{data_object_handle::PyDataObjectHandle, service_handle::PyServiceHandle};
+use super::{
+    data_object_handle::PyDataObjectHandle, index::PyIndex, service_handle::PyServiceHandle, model_metadata::PyModelMetadata,
+};
 
 #[pyclass(name = "ModelHandle")]
 pub struct PyModelHandle {
@@ -19,6 +21,10 @@ impl PyModelHandle {
 
 #[pymethods]
 impl PyModelHandle {
+    pub fn metadata(&self) -> PyModelMetadata {
+        PyModelMetadata{ metadata: self.model.metadata().clone() }
+    }
+
     pub fn delete(&self) -> PyResult<()> {
         Runtime::new()
             .context("Failed to start async runtime to delete model.")?
@@ -51,6 +57,57 @@ impl PyModelHandle {
                 retrieve::neuron2graph::retrieve_neuron2graph(&mut self.model, neuron2graph_path)
                     .await
             })?;
+        Ok(())
+    }
+
+    pub fn add_json_data(
+        &mut self,
+        data_object: &PyDataObjectHandle,
+        index: PyIndex,
+        json_data: &str,
+    ) -> PyResult<()> {
+        let model = &mut self.model;
+        let data_object = &data_object.data_object;
+        let json = serde_json::from_str(json_data).context("Failed to parse JSON data.")?;
+        Runtime::new()
+            .context("Failed to start async runtime to add JSON data.")?
+            .block_on(async {
+                if !model.has_data_object(data_object).await.with_context(|| 
+                    format!(
+                        "Failed to check whether model '{model_name}' has data object '{data_object_name}'.", 
+                        model_name=model.name(), 
+                        data_object_name=data_object.name()
+                    )
+                )? {
+                    bail!("Cannot add JSON data to data object '{data_object_name}' for {index} in model '{model_name}' because model does not have data object.", 
+                        data_object_name=data_object.name(), 
+                        index=index.index.error_string(), 
+                        model_name=model.name())
+                }
+                retrieve::json::store_json_data(
+                    model,
+                    data_object,
+                    index.into(),
+                    json,
+                )
+                .await.with_context(|| format!(
+                    "Failed to add JSON data to '{data_object_name}' for {index} in model '{model_name}'.", 
+                    data_object_name=data_object.name(), 
+                    index=index.index.error_string(), 
+                    model_name=model.name()
+                ))
+            })?;
+        Ok(())
+    }
+
+    pub fn add_data_object(&mut self, data_object: &PyDataObjectHandle) -> PyResult<()> {
+        Runtime::new()
+            .context("Failed to start async runtime to add data object to model.")?
+            .block_on(async { 
+                self.model.add_data_object(&data_object.data_object).await.with_context(|| format!("Failed to add data object '{data_object_name}' to model '{model_name}'.", 
+                    data_object_name=data_object.data_object.name(), 
+                    model_name=self.model.name()))
+             })?;
         Ok(())
     }
 

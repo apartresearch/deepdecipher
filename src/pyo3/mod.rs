@@ -4,14 +4,18 @@ mod database;
 use database::PyDatabase;
 mod model_handle;
 use model_handle::PyModelHandle;
-mod data_object_handle;
-use data_object_handle::PyDataObjectHandle;
 mod model_metadata;
 use model_metadata::PyModelMetadata;
+mod data_object_handle;
+use data_object_handle::PyDataObjectHandle;
+mod data_type;
+use data_type::PyDataType;
 mod service_provider;
 use service_provider::PyServiceProvider;
 mod service_handle;
 use service_handle::PyServiceHandle;
+mod index;
+use index::PyIndex;
 
 #[pyfunction]
 fn setup_keyboard_interrupt() {
@@ -43,7 +47,9 @@ fn neuronav(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyModelHandle>()?;
     m.add_class::<PyModelMetadata>()?;
     m.add_class::<PyDataObjectHandle>()?;
-    m.add_class::<PyServiceProvider>()?;
+    m.add_class::<PyDataType>()?;
     m.add_class::<PyServiceHandle>()?;
+    m.add_class::<PyServiceProvider>()?;
+    m.add_class::<PyIndex>()?;
     Ok(())
 }

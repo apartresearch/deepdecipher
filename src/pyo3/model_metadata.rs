@@ -52,6 +52,16 @@ impl PyModelMetadata {
     }
 
     #[getter]
+    fn num_layers(&self) -> u32 {
+        self.metadata.num_layers
+    }
+
+    #[getter]
+    fn layer_size(&self) -> u32 {
+        self.metadata.layer_size
+    }
+
+    #[getter]
     fn dataset(&self) -> String {
         self.metadata.dataset.clone()
     }

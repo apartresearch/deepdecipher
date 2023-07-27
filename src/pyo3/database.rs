@@ -3,12 +3,12 @@ use pyo3::prelude::*;
 use tokio::runtime::Runtime;
 
 use crate::{
-    data::{retrieve, Database},
+    data::{data_types::DataType, retrieve, Database},
     server::{self, Service},
 };
 
 use super::{
-    data_object_handle::PyDataObjectHandle, model_handle::PyModelHandle,
+    data_object_handle::PyDataObjectHandle, data_type::PyDataType, model_handle::PyModelHandle,
     model_metadata::PyModelMetadata, service_handle::PyServiceHandle,
     service_provider::PyServiceProvider,
 };
@@ -58,6 +58,30 @@ impl PyDatabase {
             .context("Failed to start async runtime to get model.")?
             .block_on(async { self.database.model(model_name).await })?
             .map(PyModelHandle::new);
+        Ok(result)
+    }
+
+    fn add_data_object(
+        &mut self,
+        data_object_name: &str,
+        data_type: PyDataType,
+    ) -> PyResult<PyDataObjectHandle> {
+        match data_type.as_ref() {
+            DataType::Json => {}
+            data_type => return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                "Objects of data type {data_type:?} should be added with the appropriate method.",
+            ))),
+        }
+        let result = Runtime::new()
+            .context("Failed to start async runtime to add data object.")?
+            .block_on(async {
+                self.database
+                    .add_data_object(data_object_name, data_type.into())
+                    .await
+                    .with_context(|| format!("Failed to create data object '{data_object_name}'."))
+            })
+            .map(PyDataObjectHandle::new)?;
+
         Ok(result)
     }
 
