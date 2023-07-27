@@ -11,8 +11,7 @@ impl JsonData {
     }
 
     pub fn to_binary(&self) -> Result<Vec<u8>> {
-        let bytes =
-            postcard::to_allocvec(&self.value).context("Failed to serialize JSON value.")?;
+        let bytes = serde_json::to_vec(&self.value).context("Failed to serialize JSON value.")?;
         Encoder::new()
             .compress_vec(bytes.as_slice())
             .context("Failed to compress JSON value.")
@@ -22,7 +21,7 @@ impl JsonData {
         let bytes = Decoder::new()
             .decompress_vec(bytes.as_ref())
             .context("Failed to decompress JSON value.")?;
-        postcard::from_bytes(bytes.as_slice())
+        serde_json::from_slice(bytes.as_slice())
             .context("Failed to deserialize JSON value.")
             .map(|value| Self { value })
     }

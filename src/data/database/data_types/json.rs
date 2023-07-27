@@ -15,7 +15,7 @@ pub struct Json {
 impl ModelDataObject for Json {
     async fn new(model: ModelHandle, data_object: DataObjectHandle) -> Result<Option<Self>> {
         match data_object.data_type().into() {
-            DataTypeDiscriminants::NeuronStore => Ok(Some(Self { model, data_object })),
+            DataTypeDiscriminants::Json => Ok(Some(Self { model, data_object })),
             _ => bail!("Invalid type for JSON data object."),
         }
     }
