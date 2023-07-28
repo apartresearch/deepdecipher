@@ -18,17 +18,6 @@ document.addEventListener("mousemove", (e) => {
 const [_, viz, model_name, service_name, layer_index, neuron_index] =
   location.pathname.split("/");
 
-const generate_token_viz = (token, activation, color) => {
-  const div = document.createElement("span");
-  div.className = "token";
-  div.style.backgroundColor = color;
-  div.textContent = token;
-  div.setAttribute("data-tooltip", token + "\n" + activation);
-  return div;
-};
-
-const constructGraph = (g) => { };
-
 if (service_name != "all") {
   // Put an h1 in the #meta that says that only /all/ are supported for visualization
   const supporting = document.createElement("h1");
