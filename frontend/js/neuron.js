@@ -18,24 +18,7 @@ document.addEventListener("mousemove", (e) => {
 const [_, viz, model_name, service_name, layer_index, neuron_index] =
   location.pathname.split("/");
 
-if (service_name != "all") {
-  // Put an h1 in the #meta that says that only /all/ are supported for visualization
-  const supporting = document.createElement("h1");
-  console.log("MEME MACHINE");
-  supporting.innerHTML =
-    service_name +
-    " is not supported. Go to <a href='" +
-    base_url_ui +
-    base_ext_ui +
-    "" +
-    model_name +
-    "/all/" +
-    layer_index +
-    "/" +
-    neuron_index +
-    "'>/all/</a> to visualize everything.";
-  document.getElementById("meta").appendChild(supporting);
-} else {
+if (service_name == "all") {
   // Fetch data from the server
   fetch(
     `${base_url_api}${base_ext_api}/${model_name}/${service_name}/${layer_index}/${neuron_index}`
@@ -256,4 +239,21 @@ if (service_name != "all") {
         document.getElementById("neuroscope").appendChild(not_available);
       }
     });
+} else {
+  // Put an h1 in the #meta that says that only /all/ are supported for visualization
+  const supporting = document.createElement("h1");
+  console.log("MEME MACHINE");
+  supporting.innerHTML =
+    service_name +
+    " is not supported. Go to <a href='" +
+    base_url_ui +
+    base_ext_ui +
+    "" +
+    model_name +
+    "/all/" +
+    layer_index +
+    "/" +
+    neuron_index +
+    "'>/all/</a> to visualize everything.";
+  document.getElementById("meta").appendChild(supporting);
 }
