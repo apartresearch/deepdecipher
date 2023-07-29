@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use strum::AsRefStr;
 
 use super::{
-    json::Json, metadata::Metadata, neuron2graph::Neuron2Graph,
+    json::Json, json_search::JsonSearch, metadata::Metadata, neuron2graph::Neuron2Graph,
     neuron2graph_search::Neuron2GraphSearch, neuroscope::Neuroscope,
 };
 use crate::{
@@ -59,11 +59,16 @@ pub enum ServiceProvider {
     Neuron2Graph,
     Neuron2GraphSearch,
     Json(Json),
+    JsonSearch(JsonSearch),
 }
 
 impl ServiceProvider {
     pub fn json(data_object_name: String) -> Self {
         ServiceProvider::Json(Json::new(data_object_name))
+    }
+
+    pub fn json_search(data_object_name: String) -> Self {
+        ServiceProvider::JsonSearch(JsonSearch::new(data_object_name))
     }
 }
 
@@ -79,6 +84,7 @@ impl ServiceProvider {
             ServiceProvider::Neuron2Graph => Neuron2Graph,
             ServiceProvider::Neuron2GraphSearch => Neuron2GraphSearch,
             ServiceProvider::Json(json) => json,
+            ServiceProvider::JsonSearch(json) => json,
         } {
             pub fn required_data_objects<'a>(
                 &'a self, database: &'a Database,
