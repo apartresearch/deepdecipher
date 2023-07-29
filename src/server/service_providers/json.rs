@@ -40,7 +40,7 @@ async fn page(data_object_name: &str, state: &State, query: &serde_json::Value, 
     let json_object = data_object(&state.database(), model, data_object_name).await?;
     let query = query.as_object().context("Query is not an object.")?;
     let json = json_object.page(index).await.with_context(|| 
-        format!("Failed to get json data object '{data_object_name}' for '{index}' of model '{model_name}'.", index = index.error_string())
+        format!("Failed to get json data object '{data_object_name}' for {index} of model '{model_name}'.", index = index.error_string())
     )?.value;
     if query.is_empty() {
         Ok(json)
@@ -51,7 +51,7 @@ async fn page(data_object_name: &str, state: &State, query: &serde_json::Value, 
         let mut json = json;
         json
             .get_mut(json_query)
-            .with_context(|| format!("Failed to get json value '{json_query}'."))
+            .with_context(|| format!("Failed to get json value '{json_query}' for {index} of model '{model_name}' and data object '{data_object_name}'.", index = index.error_string()))
             .map(serde_json::Value::take)
     } else {
         bail!("Invalid query for json service. Query must be empty or contain a 'get' field. Query: {query:?}")
