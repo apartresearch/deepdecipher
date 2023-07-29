@@ -2,7 +2,6 @@ mod metadata;
 mod neuroscope;
 
 mod json;
-mod json_search;
 mod neuron2graph;
 mod neuron2graph_search;
 mod service_provider;

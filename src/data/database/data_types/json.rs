@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::data::{json::JsonData, DataObjectHandle, ModelHandle};
+use crate::{data::{json::JsonData, DataObjectHandle, ModelHandle}, Index};
 
 use super::{DataTypeDiscriminants, ModelDataObject};
 
@@ -30,6 +30,16 @@ impl ModelDataObject for Json {
 }
 
 impl Json {
+    pub async fn page(&self, index: Index) -> Result<JsonData> {
+        let model_name = self.model.name();
+        let data_object_name = self.data_object.name();
+        let index_error_string = index.error_string();
+        let raw_data = self.model.data(&self.data_object, index).await.with_context(|| 
+            format!("Failed to get '{data_object_name}' data for '{index_error_string}' in model '{model_name}'.")
+        )?.with_context(|| format!("Database has no '{data_object_name}' data for '{index_error_string}' in model '{model_name}'."))?;
+        JsonData::from_binary(raw_data.as_slice())
+    }
+
     pub async fn model_page(&self) -> Result<JsonData> {
         let model_name = self.model.name();
         let data_object_name = self.data_object.name();
