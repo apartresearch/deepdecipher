@@ -1,6 +1,7 @@
-use std::{fmt::Debug, ops::Deref};
+use std::{fmt::Debug, fs, ops::Deref};
 
 use actix_web::{
+    body::BoxBody,
     get,
     http::{header::ContentType, StatusCode},
     rt,
@@ -36,6 +37,14 @@ impl Response {
         }
     }
 
+    pub fn html(file: String) -> Self {
+        Self {
+            body: file,
+            content_type: ContentType::html(),
+            status: StatusCode::OK,
+        }
+    }
+
     pub fn error(error: impl Debug, status: StatusCode) -> Self {
         assert!(status.is_client_error() || status.is_server_error());
         Self {
@@ -44,12 +53,17 @@ impl Response {
             status,
         }
     }
+}
 
-    pub fn finalize(self) -> impl Responder {
+impl Responder for Response {
+    type Body = BoxBody;
+
+    fn respond_to(self, req: &actix_web::HttpRequest) -> HttpResponse<Self::Body> {
         HttpResponse::build(self.status)
             .append_header(("Access-Control-Allow-Origin", "*"))
             .content_type(self.content_type)
             .body(self.body)
+            .respond_to(req)
     }
 }
 
@@ -223,9 +237,7 @@ pub async fn model(
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
     let (model_name, service_name) = indices.into_inner();
-    response(state, query.deref(), model_name, service_name, Index::Model)
-        .await
-        .finalize()
+    response(state, query.deref(), model_name, service_name, Index::Model).await
 }
 
 #[get("/api/{model_name}/{service}/{layer_index}")]
@@ -243,7 +255,6 @@ pub async fn layer(
         Index::Layer(layer_index),
     )
     .await
-    .finalize()
 }
 
 #[get("/api/{model_name}/{service}/{layer_index}/{neuron_index}")]
@@ -261,7 +272,6 @@ pub async fn neuron(
         Index::Neuron(layer_index, neuron_index),
     )
     .await
-    .finalize()
 }
 
 #[get("/api/{model_name}/all")]
@@ -271,9 +281,7 @@ async fn all_model(
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
     let model_name = indices.into_inner();
-    all_response(state, query, model_name, Index::Model)
-        .await
-        .finalize()
+    all_response(state, query, model_name, Index::Model).await
 }
 
 #[get("/api/{model_name}/all/{layer_index}")]
@@ -283,9 +291,7 @@ async fn all_layer(
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
     let (model_name, layer_index) = indices.into_inner();
-    all_response(state, query, model_name, Index::Layer(layer_index))
-        .await
-        .finalize()
+    all_response(state, query, model_name, Index::Layer(layer_index)).await
 }
 
 #[get("/api/{model_name}/all/{layer_index}/{neuron_index}")]
@@ -302,7 +308,33 @@ async fn all_neuron(
         Index::Neuron(layer_index, neuron_index),
     )
     .await
-    .finalize()
+}
+
+fn viz_response(file: &str) -> Response {
+    match fs::read_to_string(format!("frontend/{file}.html")) {
+        Ok(file) => Response::html(file),
+        Err(error) => Response::error(error, StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+#[get("/viz")]
+async fn index_viz() -> impl Responder {
+    viz_response("index")
+}
+
+#[get("/viz/{model_name}/{service}")]
+async fn model_viz() -> impl Responder {
+    viz_response("model")
+}
+
+#[get("/viz/{model_name}/{service}/{layer_index}")]
+async fn layer_viz() -> impl Responder {
+    viz_response("layer")
+}
+
+#[get("/viz/{model_name}/{service}/{layer_index}/{neuron_index}")]
+async fn neuron_viz() -> impl Responder {
+    viz_response("neuron")
 }
 
 pub struct State {
@@ -334,6 +366,12 @@ pub fn start_server(database: Database) -> std::io::Result<()> {
                 .service(model)
                 .service(layer)
                 .service(neuron)
+                .service(actix_files::Files::new("/js", "./frontend/js"))
+                .service(actix_files::Files::new("/css", "./frontend/css"))
+                .service(index_viz)
+                .service(model_viz)
+                .service(layer_viz)
+                .service(neuron_viz)
         })
         .bind((url, port))?
         .run(),
