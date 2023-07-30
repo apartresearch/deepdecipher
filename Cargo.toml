@@ -30,36 +30,31 @@ anyhow = "1.0.71"
 regex = "1.8.4"
 
 # Iterators
-itertools = "0.10.5"
+itertools = "0.11.0"
 
 # Compression
 flate2 = "1.0.26"
 
 # Interfacing with Python
-pyo3 = { version = "0.18.3", features = ["extension-module", "anyhow"], optional = true }
-numpy = { version = "0.18", optional = true }
+pyo3 = { version = "0.19.1", features = ["extension-module", "anyhow"], optional = true }
+numpy = { version = "0.19", optional = true }
 
 # SIGINT handling
 ctrlc = { version = "3.2.5", optional = true }
 
 tokio = { version = "1.28.2", features = ["rt", "rt-multi-thread", "sync", "fs"] }
 reqwest = "0.11.18"
-thiserror = "1.0.40"
 env_logger = "0.10.0"
 log = "0.4.19"
 ndarray = { version = "0.15.6", features = ["serde"] }
-scraper = "0.16.0"
-delegate = "0.9.0"
+scraper = "0.17.1"
+delegate = "0.10.0"
 async-trait = "0.1.68"
 rusqlite = { version = "0.29.0", features = ["bundled"] }
 strum = { version = "0.25.0", features = ["derive"] }
 tokio-rusqlite = "0.4.0"
-rand = "0.8.5"
-deflate = "1.0.0"
 snap = "1.1.0"
-miniz_oxide = { version = "0.7.1", features = ["simd-adler32"] }
 zstd = "0.12.3"
-fallible-iterator = "0.3.0"
 
 [features]
 python = ["dep:pyo3", "dep:numpy", "dep:ctrlc"]
