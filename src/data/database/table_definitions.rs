@@ -15,7 +15,7 @@ const SERVICE_TABLE: &str = r#"
 CREATE TABLE service (
     id                      INTEGER PRIMARY KEY AUTOINCREMENT,
     name                    TEXT NOT NULL UNIQUE,
-    provider                BLOB NOT NULL,
+    provider                BLOB NOT NULL
   ) STRICT;
 "#;
 

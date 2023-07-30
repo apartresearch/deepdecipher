@@ -1,36 +1,35 @@
 const express = require("express");
 const axios = require("axios");
 const path = require("path");
-const cors = require("cors");
 const app = express();
 const port = 3000;
 
-app.get(
-  "/viz/:model_name/:source_name/:layer_index/:neuron_index",
-  (req, res) => {
-    res.sendFile(path.join(__dirname, "neuron.html"));
-  }
-);
-
-app.get("/viz/:model_name/:layer_index", (req, res) => {
-  res.sendFile(path.join(__dirname, "layer.html"));
-});
-
-app.get("/viz/:model_name", (req, res) => {
-  res.sendFile(path.join(__dirname, "model.html"));
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
 app.get("/viz/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+app.get("/viz/:model_name", (req, res) => {
+  res.sendFile(path.join(__dirname, "model.html"));
 });
 
-app.get("/viz/:model_name/:source_name/:layer_index", (req, res) => {
+app.get("/viz/:model_name/:service_name", (req, res) => {
+  res.sendFile(path.join(__dirname, "model.html"));
+});
+
+app.get("/viz/:model_name/:service_name/:layer_index", (req, res) => {
   res.sendFile(path.join(__dirname, "layer.html"));
 });
+
+app.get(
+  "/viz/:model_name/:service_name/:layer_index/:neuron_index",
+  (req, res) => {
+    res.sendFile(path.join(__dirname, "neuron.html"));
+  }
+);
 
 // Fetch js and css from the server
 app.get("/js/:filename", (req, res) => {
@@ -52,6 +51,7 @@ app.get(
       );
       res.json(response.data);
     } catch (err) {
+      console.log(err);
       res.status(500).send("Error occurred while fetching data");
     }
   }
