@@ -318,42 +318,22 @@ fn viz_response(file: &str) -> Response {
 }
 
 #[get("/viz")]
-async fn index_viz(
-    _state: web::Data<State>,
-    _indices: web::Path<(String, String)>,
-) -> impl Responder {
+async fn index_viz() -> impl Responder {
     viz_response("index")
 }
 
-#[get("/viz/{model_name}")]
-async fn model_viz(
-    _state: web::Data<State>,
-    _indices: web::Path<(String, String)>,
-) -> impl Responder {
-    viz_response("model")
-}
-
 #[get("/viz/{model_name}/{service}")]
-async fn model_service_viz(
-    _state: web::Data<State>,
-    _indices: web::Path<(String, String)>,
-) -> impl Responder {
+async fn model_viz() -> impl Responder {
     viz_response("model")
 }
 
 #[get("/viz/{model_name}/{service}/{layer_index}")]
-async fn layer_viz(
-    _state: web::Data<State>,
-    _indices: web::Path<(String, String)>,
-) -> impl Responder {
+async fn layer_viz() -> impl Responder {
     viz_response("layer")
 }
 
 #[get("/viz/{model_name}/{service}/{layer_index}/{neuron_index}")]
-async fn neuron_viz(
-    _state: web::Data<State>,
-    _indices: web::Path<(String, String)>,
-) -> impl Responder {
+async fn neuron_viz() -> impl Responder {
     viz_response("neuron")
 }
 
@@ -388,8 +368,8 @@ pub fn start_server(database: Database) -> std::io::Result<()> {
                 .service(neuron)
                 .service(actix_files::Files::new("/js", "./frontend/js"))
                 .service(actix_files::Files::new("/css", "./frontend/css"))
+                .service(index_viz)
                 .service(model_viz)
-                .service(model_service_viz)
                 .service(layer_viz)
                 .service(neuron_viz)
         })
