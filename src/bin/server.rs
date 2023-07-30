@@ -1,7 +1,7 @@
 use std::{env, path::PathBuf};
 
 use anyhow::{Context, Result};
-use neuronav::{data::Database, server};
+use deepdecipher::{data::Database, server};
 use tokio::runtime::Runtime;
 
 pub fn main() -> Result<()> {

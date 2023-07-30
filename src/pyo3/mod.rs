@@ -41,7 +41,7 @@ fn setup_keyboard_interrupt() {
 
 /// A Python module implemented in Rust.
 #[pymodule]
-fn neuronav(_py: Python, m: &PyModule) -> PyResult<()> {
+fn deepdecipher(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(setup_keyboard_interrupt, m)?)?;
     m.add_class::<PyDatabase>()?;
     m.add_class::<PyModelHandle>()?;
