@@ -44,15 +44,21 @@ async fn page(data_object_name: &str, state: &State, query: &serde_json::Value, 
     )?.value;
     if query.is_empty() {
         Ok(json)
-    } else if let Some(json_query) = query.get("get") {
-        let json_query = json_query
-            .as_str()
-            .context("Query 'get' field is not a string.")?;
+    } else if let Some(json_index) = query.get("get") {
         let mut json = json;
-        json
-            .get_mut(json_query)
-            .with_context(|| format!("Failed to get json value '{json_query}' for {index} of model '{model_name}' and data object '{data_object_name}'.", index = index.error_string()))
-            .map(serde_json::Value::take)
+        match json_index {
+            serde_json::Value::String(json_index) => {
+                if let Some(value) = json.get_mut(json_index) {
+                    Some(value)
+                } else {
+                    let int_index = json_index.parse::<usize>().with_context(|| format!("No field '{json_index}' exists and the index is not an integer."))?;
+                    json.get_mut(int_index)
+                }
+            }
+            serde_json::Value::Number(json_index) => json.get_mut(json_index.as_u64().context("Query 'get' field is not a u64.")? as usize),
+            _ => bail!("Query 'get' field is not a string or a number."),
+        }.with_context(|| format!("Failed to get json value '{json_index}' for {index} of model '{model_name}' and data object '{data_object_name}'.", index = index.error_string()))
+        .map(serde_json::Value::take)
     } else {
         bail!("Invalid query for json service. Query must be empty or contain a 'get' field. Query: {query:?}")
     }
