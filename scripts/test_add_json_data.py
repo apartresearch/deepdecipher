@@ -36,4 +36,4 @@ print("Added json-test data to model.                           ")
 service = database.service("power-service")
 if service is None:
     print("Adding power-service service.")
-    service = database.add_service("power-service", ServiceProvider.json("json-test"))
+    service = database.add_service("power-service", ServiceProvider.json(data_object))
