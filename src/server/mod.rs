@@ -322,7 +322,7 @@ impl State {
 pub fn start_server(database: Database) -> std::io::Result<()> {
     let url = "127.0.0.1";
     let port = 8080;
-    println!("Serving neuronav on http://{url}:{port}/");
+    println!("Serving deepdecipher on http://{url}:{port}/");
     let state = web::Data::new(State::new(database));
     rt::System::new().block_on(
         HttpServer::new(move || {

@@ -1,7 +1,7 @@
 from os import path
 import sys
 
-from neuronav import Database
+from deepdecipher import Database
 
 if len(sys.argv) < 3:
     raise RuntimeError(

@@ -1,4 +1,4 @@
-from .neuronav import (
+from .deepdecipher import (
     Database,
     ModelHandle,
     ModelMetadata,
@@ -9,4 +9,4 @@ from .neuronav import (
     Index,
 )
 
-neuronav.setup_keyboard_interrupt()
+deepdecipher.setup_keyboard_interrupt()

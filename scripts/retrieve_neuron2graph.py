@@ -1,7 +1,7 @@
 from os import path
 import sys
 
-from neuronav import Database, ModelMetadata, ServiceProvider
+from deepdecipher import Database, ModelMetadata, ServiceProvider
 
 if len(sys.argv) < 2:
     raise RuntimeError("Please specify a database file as the first argument.")

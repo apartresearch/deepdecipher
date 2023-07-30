@@ -1,6 +1,6 @@
 from os import path
 import sys
-from neuronav import Database
+from deepdecipher import Database
 
 if len(sys.argv) < 2:
     raise RuntimeError("Please specify a database file as the first argument.")

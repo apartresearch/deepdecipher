@@ -2,7 +2,7 @@ from os import path
 import sys
 import json
 
-from neuronav import Database, DataType, Index, ServiceProvider
+from deepdecipher import Database, DataType, Index, ServiceProvider
 
 if len(sys.argv) < 2:
     raise RuntimeError("Please specify a database file as the first argument.")

@@ -16,11 +16,11 @@ See the neuron information UI pages in action here:
 
 ## Features
 
-- [x] The NeuroNav Python package to dynamically load neuron information from any available existing APIs, such as [neuroscope.io](https://neuroscope.io) and the [OpenAI Neuron Explainer](https://openaipublic.blob.core.windows.net/neuron-explainer/neuron-viewer/index.html) [API](https://github.com/openai/automated-interpretability).
-- [x] The NeuroNav Python package also provides functionality to compile data folders from any setup script and serve it as a data-efficient API on a server. This includes a simple setup to use raw JSON.
-- [x] The NeuroNav API is an extensible and active API to [relevant variables for single-neuron analysis](#data-available-per-neuron)
+- [x] The DeepDecipher Python package to dynamically load neuron information from any available existing APIs, such as [neuroscope.io](https://neuroscope.io) and the [OpenAI Neuron Explainer](https://openaipublic.blob.core.windows.net/neuron-explainer/neuron-viewer/index.html) [API](https://github.com/openai/automated-interpretability).
+- [x] The DeepDecipher Python package also provides functionality to compile data folders from any setup script and serve it as a data-efficient API on a server. This includes a simple setup to use raw JSON.
+- [x] The DeepDecipher API is an extensible and active API to [relevant variables for single-neuron analysis](#data-available-per-neuron)
 - [ ] The API has access to relevant layer- and model-size information, such as layer neurons sorted by how interesting they are
-- [x] The NeuroNav front-end is an application to navigate the neurons in the style of neuroscope [(Nanda, 2022)](neuroscope.io)
+- [x] The DeepDecipher front-end is an application to navigate the neurons in the style of neuroscope [(Nanda, 2022)](neuroscope.io)
 - [x] We implement a search that reveal interesting examples of behavior
 
 ## Data available per neuron
@@ -58,7 +58,7 @@ Future data ideas:
 ## JSON response
 
 ```
-> print(request.get("https://apartresearch.com/neuronav/api/GPT-2-XL/5/2332").json())
+> print(request.get("https://apartresearch.com/DeepDecipher/api/GPT-2-XL/5/2332").json())
 
 {
     "model" : "GPT-2 XL",
@@ -84,7 +84,7 @@ Future data ideas:
 
 ## Contributor setup
 
-This guide will ensure you have the right environment and start a small instance of Neuronav that serves only Neuroscope data on the `solu-1l` model.
+This guide will ensure you have the right environment and start a small instance of DeepDecipher that serves only Neuroscope data on the `solu-1l` model.
 Tested in Windows Subsystem for Linux with Ubuntu 22.04.2 LTS.
 
 1. Ensure you have a working Python installation (at least version 3.7, tested with version 3.10.7).
@@ -101,7 +101,7 @@ Tested in Windows Subsystem for Linux with Ubuntu 22.04.2 LTS.
 8. Run the scrape Neuroscope script with `python -m scripts.scrape_neuroscope`.
    If this works, DeepDecipher is installed correctly.
    A file called `data.db` should be created in the root folder.
-9. Run `python -m neuronav data.db` in the terminal to start the server.
+9. Run `python -m DeepDecipher data.db` in the terminal to start the server.
 10. Visit [`http://localhost:8080/api/solu-1l/neuroscope/0/9`](http://localhost:8080/api/solu-1l/neuroscope/0/9) in the browser and you should see a JSON response with all the Neuroscope information on the 9th neuron of the `solu-1l` model.
 
 The frontend runs with express.js and html + javascript.
