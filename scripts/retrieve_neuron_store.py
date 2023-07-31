@@ -3,10 +3,13 @@ import sys
 
 from deepdecipher import Database, ModelMetadata, ServiceProvider
 
-if len(sys.argv) < 2:
-    raise RuntimeError("Please specify a database file as the first argument.")
+if len(sys.argv) < 3:
+    raise RuntimeError(
+        "Please specify a database file as the first argument and the neuron store path as the second argument."
+    )
 
 database_path = sys.argv[1]
+neuron_store_path = sys.argv[2]
 
 if path.isfile(database_path):
     database = Database.open(sys.argv[1])
@@ -25,7 +28,7 @@ if data_object is not None:
     model.delete_data_object(data_object)
 
 print("Adding neuron store data for model.")
-model.add_neuron_store("data\\solu-6l\\neuron2graph-search\\neuron_store.json", 0.4)
+model.add_neuron_store(neuron_store_path, 0.4)
 
 service = database.service("neuron2graph-search")
 if service is None:

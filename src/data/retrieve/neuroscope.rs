@@ -202,5 +202,6 @@ pub async fn scrape_model_to_database(database: &Database, model: &mut ModelHand
     let model_page = NeuroscopeModelPage::new(neuron_importance);
     model
         .add_model_data(&data_object, model_page.to_binary()?)
-        .await
+        .await?;
+    model.add_data_object(&data_object).await
 }

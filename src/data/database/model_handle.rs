@@ -138,8 +138,7 @@ impl ModelHandle {
         DELETE FROM model
         WHERE id = ?1;
         "#;
-        const REFERENCE_TABLES: [&str; 5] = [
-            "model_service",
+        const REFERENCE_TABLES: [&str; 4] = [
             "model_data_object",
             "model_data",
             "layer_data",

@@ -126,23 +126,13 @@ impl ServiceHandle {
     }
 
     fn delete_inner(&self) -> impl Operation<()> {
-        const DELETE_SERVICE_REFERENCES: &str = r#"
-        DELETE FROM $TABLE
-        WHERE service_id = ?1;
-        "#;
         const DELETE_SERVICE: &str = r#"
         DELETE FROM service
         WHERE id = ?1;
         "#;
-        const REFERENCE_TABLES: [&str; 1] = ["model_service"];
 
         let params = (self.id,);
         move |transaction| {
-            for table in REFERENCE_TABLES.iter() {
-                let mut statement = transaction
-                    .prepare(DELETE_SERVICE_REFERENCES.replace("$TABLE", table).as_str())?;
-                statement.execute(params)?;
-            }
             transaction.prepare(DELETE_SERVICE)?.execute(params)?;
             Ok(())
         }
