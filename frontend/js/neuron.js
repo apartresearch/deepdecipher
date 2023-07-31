@@ -15,13 +15,13 @@ document.addEventListener("mousemove", (e) => {
 });
 
 // Parse model_name, service_name, layer_index, and neuron_index from the URL
-const [_, viz, model_name, service_name, layer_index, neuron_index] =
+const [base_url, viz, model_name, service_name, layer_index, neuron_index] =
   location.pathname.split("/");
 
 if (service_name == "all") {
   // Fetch data from the server
   fetch(
-    `${base_url_api}${base_ext_api}/${model_name}/${service_name}/${layer_index}/${neuron_index}`
+    `${base_url}/${base_ext_api}/${model_name}/${service_name}/${layer_index}/${neuron_index}`
   )
     .then((response) => response.json())
     .then((data) => {
@@ -46,7 +46,7 @@ if (service_name == "all") {
       if (data["neuron2graph"] != null && data.neuron2graph["data"] != null && data.neuron2graph.data["similar"] != null) {
         const similar = data.neuron2graph.data.similar;
         for (let i = 0; i < similar.length; i++) {
-          const href = `${base_ext_ui}/${model_name}/${service_name}/${similar[i].layer}/${similar[i].neuron}`
+          const href = `/${base_ext_ui}/${model_name}/${service_name}/${similar[i].layer}/${similar[i].neuron}`
           const similar_neuron = document.createElement("div");
           similar_neuron.classList.add("similar_neurons");
           const similar_neuron_link = document.createElement("a");
@@ -111,15 +111,15 @@ if (service_name == "all") {
           parseInt(data.metadata.layer_size - 1),
           parseInt(data.metadata.num_layers - 1),
         ];
-        const model_url = `${base_url_ui}${base_ext_ui}/${model_name}/${service_name}`;
-        const layer_url = `${base_url_ui}${base_ext_ui}/${model_name}/${service_name}/${layer_index_n}`;
+        const model_url = `${base_url}/${base_ext_ui}/${model_name}/${service_name}`;
+        const layer_url = `${base_url}/${base_ext_ui}/${model_name}/${service_name}/${layer_index_n}`;
         const prev_url = (layer_index_n == 0) & (neuron_index_n == 0)
           ? alert("This is the first neuron in the model.")
-          : `${base_url_ui}${base_ext_ui}/${model_name}/${service_name}/${neuron_index_n != 0 ? layer_index_n : layer_index_n - 1
+          : `${base_url}/${base_ext_ui}/${model_name}/${service_name}/${neuron_index_n != 0 ? layer_index_n : layer_index_n - 1
           }/${neuron_index_n != 0 ? neuron_index_n - 1 : last_neuron}`;
         const next_url = (layer_index_n == last_layer) & (neuron_index_n == last_neuron)
           ? alert("This is the last neuron in the model.")
-          : `${base_url_ui}${base_ext_ui}/${model_name}/${service_name}/${neuron_index_n != last_neuron
+          : `${base_url}/${base_ext_ui}/${model_name}/${service_name}/${neuron_index_n != last_neuron
             ? layer_index_n
             : layer_index_n + 1
           }/${neuron_index_n != last_neuron ? neuron_index_n + 1 : 0}`;
