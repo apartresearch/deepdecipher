@@ -62,16 +62,16 @@ impl Neuroscope {
         &self,
         layer_index: u32,
         neuron_index: u32,
-    ) -> Result<NeuroscopeNeuronPage> {
+    ) -> Result<Option<NeuroscopeNeuronPage>> {
         let model_name = self.model.name();
         let raw_data = self.model
             .neuron_data( &self.data_object, layer_index, neuron_index)
             .await.with_context(|| {
                 format!("Failed to get neuroscope neuron data for neuron l{layer_index}n{neuron_index} in model '{model_name}'.")
-            })?
-            .with_context(|| {
-                format!("Database has no neuroscope neuron data for neuron l{layer_index}n{neuron_index} in model '{model_name}'.")
             })?;
-        NeuroscopeNeuronPage::from_binary(raw_data.as_slice())
+        raw_data.map(|raw_data| NeuroscopeNeuronPage::from_binary(raw_data.as_slice())
+            .with_context(|| {
+                format!("Failed to deserialize neuroscope neuron data for neuron l{layer_index}n{neuron_index} in model '{model_name}'.")
+            })).transpose()
     }
 }

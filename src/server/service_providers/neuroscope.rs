@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::data::data_types::Neuroscope as NeuroscopeData;
-use crate::data::{DataObjectHandle, Database, ModelHandle};
+use crate::data::retrieve::neuroscope::scrape_neuron_page;
+use crate::data::{DataObjectHandle, Database, ModelHandle, NeuronIndex};
 use crate::server::State;
 
 use super::service_provider::ServiceProviderTrait;
@@ -73,10 +74,18 @@ impl ServiceProviderTrait for Neuroscope {
         layer_index: u32,
         neuron_index: u32,
     ) -> Result<serde_json::Value> {
-        let page = data_object(state, model)
+        let page = if let Some(page) = data_object(state, model)
             .await?
             .neuron_page(layer_index, neuron_index)
-            .await?;
+            .await? {
+                page
+            } else {
+                scrape_neuron_page(model.name(), NeuronIndex{layer: layer_index, neuron: neuron_index}).await.with_context(|| 
+                    format!("No neuroscope page exists for neuron l{layer_index}n{neuron_index} in model '{model_name}' and fetching from source failed.", 
+                        model_name = model.name()
+                    )
+                )?
+            };
         Ok(json!(page))
     }
 }
