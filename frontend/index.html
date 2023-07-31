@@ -14,7 +14,7 @@
         const searchTerm = searchField.value;
 
         fetch(
-          `${base_url_api}${base_ext_api}/solu-6l/neuron2graph-search?query=any:${searchTerm
+          `${base_url}${base_ext_api}/solu-6l/neuron2graph-search?query=any:${searchTerm
             .toString()
             .toLowerCase()}`
         )
@@ -29,7 +29,7 @@
               results.forEach((result) => {
                 const resultLink = document.createElement("a");
                 resultLink.classList.add("result");
-                resultLink.href = `${base_url_ui}${base_ext_ui}/solu-6l/all/${result.layer_index}/${result.neuron_index}`;
+                resultLink.href = `${base_url}${base_ext_ui}/solu-6l/all/${result.layer_index}/${result.neuron_index}`;
                 resultLink.target = "_blank";
                 resultLink.innerHTML = `${result.layer_index}:${result.neuron_index} ↗`;
                 resultsDiv.appendChild(resultLink);

@@ -14,9 +14,6 @@ document.addEventListener("mousemove", (e) => {
   }
 });
 
-// Parse model_name, service_name, layer_index, and neuron_index from the URL
-const [base_url, viz, model_name, service_name, layer_index, neuron_index] =
-  location.pathname.split("/");
 
 if (service_name == "all") {
   // Fetch data from the server
@@ -103,17 +100,18 @@ if (service_name == "all") {
         "</td>";
       document.getElementById("meta-information").appendChild(meta_info);
 
-      if (data["metadata"] != null) {
-        const surrounding_neurons = document.createElement("tr");
-        const [layer_index_n, neuron_index_n, last_neuron, last_layer] = [
+      if (data["metadata"] != null && data["metadata"]["data"] != null) {
+        let metadata = data.metadata.data;
+        const surroundingNeurons = document.createElement("tr");
+        const [layer_index_n, neuron_index_n, last_layer, last_neuron] = [
           parseInt(layer_index),
           parseInt(neuron_index),
-          parseInt(data.metadata.layer_size - 1),
-          parseInt(data.metadata.num_layers - 1),
+          metadata.num_layers - 1,
+          metadata.layer_size - 1,
         ];
         const model_url = `${base_url}/${base_ext_ui}/${model_name}/${service_name}`;
         const layer_url = `${base_url}/${base_ext_ui}/${model_name}/${service_name}/${layer_index_n}`;
-        const prev_url = (layer_index_n == 0) & (neuron_index_n == 0)
+        const prev_url = ((layer_index_n == 0) && (neuron_index_n == 0))
           ? alert("This is the first neuron in the model.")
           : `${base_url}/${base_ext_ui}/${model_name}/${service_name}/${neuron_index_n != 0 ? layer_index_n : layer_index_n - 1
           }/${neuron_index_n != 0 ? neuron_index_n - 1 : last_neuron}`;
@@ -123,14 +121,16 @@ if (service_name == "all") {
             ? layer_index_n
             : layer_index_n + 1
           }/${neuron_index_n != last_neuron ? neuron_index_n + 1 : 0}`;
-        surrounding_neurons.innerHTML = `<td class='meta-data first' data-tooltip='Visit the current model page'><a href='${model_url}'>Model</a></td><td class='meta-data' data-tooltip='Visit the current layer page'><a href='${layer_url}'>Layer</a></td><td class='meta-data' data-tooltip='Visit the previous neuron page'><a href='${prev_url}'>Previous</a></td><td class='meta-data' data-tooltip='Visit the next neuron page'><a href='${next_url}'>Next</a></td>`;
+        surroundingNeurons.innerHTML = `<td class='meta-data first' data-tooltip='Visit the current model page'><a href='${model_url}'>Model</a></td><td class='meta-data' data-tooltip='Visit the current layer page'><a href='${layer_url}'>Layer</a></td><td class='meta-data' data-tooltip='Visit the previous neuron page'><a href='${prev_url}'>Previous</a></td><td class='meta-data' data-tooltip='Visit the next neuron page'><a href='${next_url}'>Next</a></td>`;
         document
           .getElementById("meta-information")
-          .appendChild(surrounding_neurons);
+          .appendChild(surroundingNeurons);
       }
 
-      if (data["neuroscope"] != null) {
-        for (var j = 0; j < data.neuroscope.texts.length; j++) {
+      if (data["neuroscope"] != null && data["neuroscope"]["data"] != null) {
+        const neuroscopeData = data.neuroscope.data;
+        const texts = neuroscopeData.texts;
+        for (var j = 0; j < texts.length; j++) {
           // Add a header for the current text
           const header = document.createElement("h2");
           header.classList.add("text-title");
@@ -138,19 +138,19 @@ if (service_name == "all") {
             "Text " +
             j +
             "<span class='meta-info'>" +
-            data.neuroscope.texts[j].min_act +
+            texts[j].min_activation +
             " to " +
-            data.neuroscope.texts[j].max_act +
+            texts[j].max_activation +
             " activation within the range " +
-            data.neuroscope.texts[j].min_range +
+            texts[j].min_range +
             " to " +
-            data.neuroscope.texts[j].max_range +
+            texts[j].max_range +
             ". Data index " +
-            data.neuroscope.texts[j].data_index +
+            texts[j].data_index +
             ". Max activating token located at index " +
-            data.neuroscope.texts[j].max_activating_token_index +
+            texts[j].max_activating_token_index +
             " of the text of length " +
-            data.neuroscope.texts[j].tokens.length +
+            texts[j].tokens.length +
             "." +
             "</span>";
           // "Text {i + 1}";
@@ -161,8 +161,8 @@ if (service_name == "all") {
           document.getElementById("visualization").appendChild(token_string);
 
           // Get the tokens and activations for the current text
-          const tokens = data.neuroscope.texts[j].tokens;
-          const activations = data.neuroscope.texts[j].activations;
+          const tokens = texts[j].tokens;
+          const activations = texts[j].activations;
           const abs_activations = activations.map(Math.abs);
 
           // Get the index of the token with the maximum activation

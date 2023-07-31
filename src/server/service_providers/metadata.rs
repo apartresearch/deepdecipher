@@ -1,7 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 use crate::{
     data::{DataObjectHandle, Database, ModelHandle},
@@ -38,7 +37,7 @@ impl ServiceProviderTrait for Metadata {
         model: &ModelHandle,
         _layer_index: u32,
     ) -> Result<serde_json::Value> {
-        let metadata = json!({"layer_size": model.metadata().layer_size});
+        let metadata = serde_json::to_value(model.metadata())?;
         Ok(metadata)
     }
 
@@ -47,10 +46,11 @@ impl ServiceProviderTrait for Metadata {
         _service_name: &str,
         _state: &State,
         _query: &serde_json::Value,
-        _model: &ModelHandle,
+        model: &ModelHandle,
         _layer_index: u32,
         _neuron_index: u32,
     ) -> Result<serde_json::Value> {
-        Ok(json!({}))
+        let metadata = serde_json::to_value(model.metadata())?;
+        Ok(metadata)
     }
 }
