@@ -230,6 +230,7 @@ pub async fn model(
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
     let (model_name, service_name) = indices.into_inner();
+    log::debug!("Received request for service '{service_name}' for model '{model_name}'.");
     response(state, query.deref(), model_name, service_name, Index::Model).await
 }
 
@@ -240,6 +241,7 @@ pub async fn layer(
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
     let (model_name, service_name, layer_index) = indices.into_inner();
+    log::debug!("Received request for service '{service_name}' for layer {layer_index} in model '{model_name}'.");
     response(
         state,
         query.deref(),
@@ -257,6 +259,7 @@ pub async fn neuron(
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
     let (model_name, service_name, layer_index, neuron_index) = indices.into_inner();
+    log::debug!("Received request for service '{service_name}' for neuron l{layer_index}n{neuron_index} in model '{model_name}'.");
     response(
         state,
         query.deref(),
@@ -274,6 +277,7 @@ async fn all_model(
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
     let model_name = indices.into_inner();
+    log::debug!("Received request for all services for model '{model_name}'.");
     all_response(state, query, model_name, Index::Model).await
 }
 
@@ -284,6 +288,9 @@ async fn all_layer(
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
     let (model_name, layer_index) = indices.into_inner();
+    log::debug!(
+        "Received request for all services for layer {layer_index} in model '{model_name}'."
+    );
     all_response(state, query, model_name, Index::Layer(layer_index)).await
 }
 
@@ -294,6 +301,7 @@ async fn all_neuron(
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
     let (model_name, layer_index, neuron_index) = indices.into_inner();
+    log::debug!("Received request for all services for neuron l{layer_index}n{neuron_index} in model '{model_name}'.");
     all_response(
         state,
         query,
@@ -304,6 +312,7 @@ async fn all_neuron(
 }
 
 async fn viz_response(file: &str) -> Response {
+    log::debug!("Sending viz file '{file}.html'.");
     match fs::read_to_string(format!("frontend/{file}.html")).await {
         Ok(file) => Response::html(file),
         Err(error) => Response::error(error, StatusCode::INTERNAL_SERVER_ERROR),
