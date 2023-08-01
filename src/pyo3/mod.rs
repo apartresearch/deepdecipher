@@ -1,3 +1,7 @@
+use std::ffi::OsString;
+
+use anyhow::Context;
+use clap::Parser;
 use pyo3::prelude::*;
 
 mod database;
@@ -16,6 +20,9 @@ mod service_handle;
 use service_handle::PyServiceHandle;
 mod index;
 use index::PyIndex;
+use tokio::runtime::Runtime;
+
+use crate::cli::ServerConfig;
 
 #[pyfunction]
 fn setup_keyboard_interrupt() {
@@ -39,10 +46,20 @@ fn setup_keyboard_interrupt() {
     }
 }
 
+#[pyfunction]
+fn start_server(cli_arguments: Vec<OsString>) -> PyResult<()> {
+    Runtime::new()
+        .context("Failed to start async runtime to start server.")?
+        .block_on(async { ServerConfig::parse_from(cli_arguments).start().await })?;
+
+    Ok(())
+}
+
 /// A Python module implemented in Rust.
 #[pymodule]
 fn deepdecipher(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(setup_keyboard_interrupt, m)?)?;
+    m.add_function(wrap_pyfunction!(start_server, m)?)?;
     m.add_class::<PyDatabase>()?;
     m.add_class::<PyModelHandle>()?;
     m.add_class::<PyModelMetadata>()?;

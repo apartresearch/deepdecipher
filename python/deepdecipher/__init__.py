@@ -1,4 +1,5 @@
 from .deepdecipher import (
+    start_server,
     Database,
     ModelHandle,
     ModelMetadata,
