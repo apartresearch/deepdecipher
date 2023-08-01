@@ -1,6 +1,6 @@
 # DeepDecipher
 
-🦠 Official repository and open-source website for DeepDecipher By Albert, Esben, Alex and Fazl
+🦠 Official repository and open-source website for DeepDecipher By Albert Grade, Esben Kran, Alex Foote and Fazl Barez - The associated paper is under review. 
 
 Contributers, see [below](#contributor-setup) for a setup guide. See [the data available](#data-available-per-neuron) through the official API (TBD).
 
