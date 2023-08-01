@@ -37,16 +37,29 @@ itertools = "0.11.0"
 flate2 = "1.0.26"
 
 # Interfacing with Python
-pyo3 = { version = "0.19.1", features = ["extension-module", "anyhow"], optional = true }
+pyo3 = { version = "0.19.1", features = [
+    "extension-module",
+    "anyhow",
+], optional = true }
 numpy = { version = "0.19", optional = true }
 
 # SIGINT handling
 ctrlc = { version = "3.2.5", optional = true }
 
-tokio = { version = "1.28.2", features = ["rt", "rt-multi-thread", "sync", "fs"] }
-reqwest = "0.11.18"
-env_logger = "0.10.0"
+# Logging
 log = "0.4.19"
+env_logger = "0.10.0"
+multi_log = "0.1.2"
+clap = { version = "4.3.19", features = ["derive"] }
+
+tokio = { version = "1.28.2", features = [
+    "rt",
+    "rt-multi-thread",
+    "sync",
+    "fs",
+    "macros",
+] }
+reqwest = "0.11.18"
 ndarray = { version = "0.15.6", features = ["serde"] }
 scraper = "0.17.1"
 delegate = "0.10.0"

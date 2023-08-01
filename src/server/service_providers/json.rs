@@ -37,7 +37,7 @@ async fn data_object(
 
 async fn page(data_object_name: &str, state: &State, query: &serde_json::Value, model: &ModelHandle, index: Index)-> Result<serde_json::Value> {
     let model_name = model.name();
-    let json_object = data_object(&state.database(), model, data_object_name).await?;
+    let json_object = data_object(state.database(), model, data_object_name).await?;
     let query = query.as_object().context("Query is not an object.")?;
     let json = json_object.page(index).await.with_context(|| 
         format!("Failed to get json data object '{data_object_name}' for {index} of model '{model_name}'.", index = index.error_string())

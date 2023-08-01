@@ -4,7 +4,7 @@ use tokio::runtime::Runtime;
 
 use crate::{
     data::{data_types::DataType, retrieve, Database},
-    server::{self, Service},
+    server::Service,
 };
 
 use super::{
@@ -36,11 +36,6 @@ impl PyDatabase {
         Ok(PyDatabase { database })
     }
 
-    fn start_server(&self) -> PyResult<()> {
-        server::start_server(self.database.clone())?;
-        Ok(())
-    }
-
     fn add_model(&mut self, model_metadata: &PyModelMetadata) -> PyResult<PyModelHandle> {
         let result = Runtime::new()
             .context("Failed to start async runtime to add model.")?
@@ -68,9 +63,11 @@ impl PyDatabase {
     ) -> PyResult<PyDataObjectHandle> {
         match data_type.as_ref() {
             DataType::Json => {}
-            data_type => return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+            data_type => {
+                return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
                 "Objects of data type {data_type:?} should be added with the appropriate method.",
-            ))),
+            )))
+            }
         }
         let result = Runtime::new()
             .context("Failed to start async runtime to add data object.")?
