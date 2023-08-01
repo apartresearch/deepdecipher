@@ -4,22 +4,26 @@ use anyhow::{bail, Result};
 use crate::{
     cli::ServerConfig,
     data::Database,
+    logging,
     server::{response, State},
 };
 
 pub async fn start_server(config: ServerConfig) -> Result<()> {
+    logging::log_init(&config);
+
     let database_path = config.database_path();
     let database = if database_path.exists() {
-        log::info!("Opening database at '{:?}'.", database_path);
+        log::info!("Opening database at {:?}.", database_path);
         Database::open(database_path).await?
     } else {
-        log::info!("Initializing database at '{:?}'.", database_path);
+        log::info!("Initializing database at {:?}.", database_path);
         Database::initialize(database_path).await?
     };
     let url = "127.0.0.1";
     let port = config.port();
-    log::info!("Serving deepdecipher on http://{url}:{port}/");
+    log::info!("Serving DeepDecipher on http://{url}:{port}/");
     let state = web::Data::new(State { database });
+
     HttpServer::new(move || {
         App::new()
             .app_data(state.clone())

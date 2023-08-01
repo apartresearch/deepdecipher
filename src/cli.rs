@@ -10,6 +10,8 @@ pub struct ServerConfig {
     database_path: PathBuf,
     #[arg(long, default_value = "8080")]
     port: u16,
+    #[arg(long, short = 'l')]
+    log_path: Option<PathBuf>,
 }
 
 impl ServerConfig {
@@ -23,5 +25,9 @@ impl ServerConfig {
 
     pub fn port(&self) -> u16 {
         self.port
+    }
+
+    pub fn log_path(&self) -> Option<&Path> {
+        self.log_path.as_deref()
     }
 }

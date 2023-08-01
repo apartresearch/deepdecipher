@@ -50,6 +50,9 @@ ctrlc = { version = "3.2.5", optional = true }
 log = "0.4.19"
 env_logger = "0.10.0"
 multi_log = "0.1.2"
+log-panics = { version = "2", features = ["with-backtrace"] }
+
+# CLI
 clap = { version = "4.3.19", features = ["derive"] }
 
 tokio = { version = "1.28.2", features = [

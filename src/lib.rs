@@ -6,3 +6,4 @@ mod index;
 pub mod server;
 pub use index::Index;
 pub mod cli;
+pub mod logging;
