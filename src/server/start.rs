@@ -17,7 +17,7 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
         Database::initialize(database_path).await?
     };
     let url = "127.0.0.1";
-    let port = 8080;
+    let port = config.port();
     log::info!("Serving deepdecipher on http://{url}:{port}/");
     let state = web::Data::new(State { database });
     HttpServer::new(move || {

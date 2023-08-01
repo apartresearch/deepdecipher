@@ -8,6 +8,8 @@ use crate::server;
 #[derive(Parser, Clone, Debug)]
 pub struct ServerConfig {
     database_path: PathBuf,
+    #[arg(long, default_value = "8080")]
+    port: u16,
 }
 
 impl ServerConfig {
@@ -17,5 +19,9 @@ impl ServerConfig {
 
     pub fn database_path(&self) -> &Path {
         self.database_path.as_path()
+    }
+
+    pub fn port(&self) -> u16 {
+        self.port
     }
 }
