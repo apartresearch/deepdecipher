@@ -20,20 +20,22 @@
         )
           .then((response) => response.json())
           .then((data) => {
-            const results = data;
+            const results = data.data;
             const resultsDiv = document.querySelector(".results");
             resultsDiv.innerHTML = "";
             if (results.length == 0) {
               resultsDiv.innerHTML = "No results found";
             } else {
-              results.forEach((result) => {
+              for (result of results) {
+                const layerIndex = result.layer;
+                const neuronIndex = result.neuron;
                 const resultLink = document.createElement("a");
                 resultLink.classList.add("result");
-                resultLink.href = `${base_url}${base_ext_ui}/solu-6l/all/${result.layer_index}/${result.neuron_index}`;
+                resultLink.href = `${base_url}${base_ext_ui}/solu-6l/all/${layerIndex}/${neuronIndex}`;
                 resultLink.target = "_blank";
-                resultLink.innerHTML = `${result.layer_index}:${result.neuron_index} ↗`;
+                resultLink.innerHTML = `${layerIndex}:${neuronIndex} ↗`;
                 resultsDiv.appendChild(resultLink);
-              });
+              }
             }
             hideLoader();
           })
