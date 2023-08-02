@@ -15,10 +15,10 @@ document.addEventListener("mousemove", (e) => {
 });
 
 
-if (service_name == "all") {
+if (serviceName == "all") {
   // Fetch data from the server
   fetch(
-    `${base_url}/${base_ext_api}/${model_name}/${service_name}/${layer_index}/${neuron_index}`
+    `${baseUrl}/${baseExtApi}/${modelName}/${serviceName}/${layerIndex}/${neuronIndex}`
   )
     .then((response) => response.json())
     .then((data) => {
@@ -43,7 +43,7 @@ if (service_name == "all") {
       if (data["neuron2graph"] != null && data.neuron2graph["data"] != null && data.neuron2graph.data["similar"] != null) {
         const similar = data.neuron2graph.data.similar;
         for (let i = 0; i < similar.length; i++) {
-          const href = `/${base_ext_ui}/${model_name}/${service_name}/${similar[i].layer}/${similar[i].neuron}`
+          const href = `/${baseExtUi}/${modelName}/${serviceName}/${similar[i].layer}/${similar[i].neuron}`
           const similar_neuron = document.createElement("div");
           similar_neuron.classList.add("similar_neurons");
           const similar_neuron_link = document.createElement("a");
@@ -82,7 +82,7 @@ if (service_name == "all") {
       header.id = "header";
       header.classList.add("meta");
       document.getElementById("visualization").appendChild(header);
-      // Add a header for the service_name, layer_index and neuron_index
+      // Add a header for the serviceName, layerIndex and neuronIndex
       const meta = document.createElement("div");
       meta.id = "meta";
       meta.classList.add("meta");
@@ -90,37 +90,37 @@ if (service_name == "all") {
       const meta_info = document.createElement("tr");
       meta_info.innerHTML =
         "<td class='meta-data first' data-tooltip='The model name'>" +
-        model_name +
+        modelName +
         "</td><td class='meta-data' data-tooltip='The data service (all includes\n all available services)'>" +
-        service_name +
+        serviceName +
         "</td><td class='meta-data' data-tooltip='Layer index in the model (from 0)'>" +
-        layer_index +
+        layerIndex +
         "</td><td class='meta-data' data-tooltip='Neuron index in the layer (from 0)'>" +
-        neuron_index +
+        neuronIndex +
         "</td>";
       document.getElementById("meta-information").appendChild(meta_info);
 
       if (data["metadata"] != null && data["metadata"]["data"] != null) {
         let metadata = data.metadata.data;
         const surroundingNeurons = document.createElement("tr");
-        const [layer_index_n, neuron_index_n, last_layer, last_neuron] = [
-          parseInt(layer_index),
-          parseInt(neuron_index),
+        const [layerIndex_n, neuronIndex_n, last_layer, last_neuron] = [
+          parseInt(layerIndex),
+          parseInt(neuronIndex),
           metadata.num_layers - 1,
           metadata.layer_size - 1,
         ];
-        const model_url = `${base_url}/${base_ext_ui}/${model_name}/${service_name}`;
-        const layer_url = `${base_url}/${base_ext_ui}/${model_name}/${service_name}/${layer_index_n}`;
-        const prev_url = ((layer_index_n == 0) && (neuron_index_n == 0))
+        const model_url = `${baseUrl}/${baseExtUi}/${modelName}/${serviceName}`;
+        const layer_url = `${baseUrl}/${baseExtUi}/${modelName}/${serviceName}/${layerIndex_n}`;
+        const prev_url = ((layerIndex_n == 0) && (neuronIndex_n == 0))
           ? alert("This is the first neuron in the model.")
-          : `${base_url}/${base_ext_ui}/${model_name}/${service_name}/${neuron_index_n != 0 ? layer_index_n : layer_index_n - 1
-          }/${neuron_index_n != 0 ? neuron_index_n - 1 : last_neuron}`;
-        const next_url = (layer_index_n == last_layer) & (neuron_index_n == last_neuron)
+          : `${baseUrl}/${baseExtUi}/${modelName}/${serviceName}/${neuronIndex_n != 0 ? layerIndex_n : layerIndex_n - 1
+          }/${neuronIndex_n != 0 ? neuronIndex_n - 1 : last_neuron}`;
+        const next_url = (layerIndex_n == last_layer) & (neuronIndex_n == last_neuron)
           ? alert("This is the last neuron in the model.")
-          : `${base_url}/${base_ext_ui}/${model_name}/${service_name}/${neuron_index_n != last_neuron
-            ? layer_index_n
-            : layer_index_n + 1
-          }/${neuron_index_n != last_neuron ? neuron_index_n + 1 : 0}`;
+          : `${baseUrl}/${baseExtUi}/${modelName}/${serviceName}/${neuronIndex_n != last_neuron
+            ? layerIndex_n
+            : layerIndex_n + 1
+          }/${neuronIndex_n != last_neuron ? neuronIndex_n + 1 : 0}`;
         surroundingNeurons.innerHTML = `<td class='meta-data first' data-tooltip='Visit the current model page'><a href='${model_url}'>Model</a></td><td class='meta-data' data-tooltip='Visit the current layer page'><a href='${layer_url}'>Layer</a></td><td class='meta-data' data-tooltip='Visit the previous neuron page'><a href='${prev_url}'>Previous</a></td><td class='meta-data' data-tooltip='Visit the next neuron page'><a href='${next_url}'>Next</a></td>`;
         document
           .getElementById("meta-information")
@@ -244,16 +244,16 @@ if (service_name == "all") {
   const supporting = document.createElement("h1");
   console.log("MEME MACHINE");
   supporting.innerHTML =
-    service_name +
+    serviceName +
     " is not supported. Go to <a href='" +
-    base_url_ui +
-    base_ext_ui +
+    baseUrl_ui +
+    baseExtUi +
     "" +
-    model_name +
+    modelName +
     "/all/" +
-    layer_index +
+    layerIndex +
     "/" +
-    neuron_index +
+    neuronIndex +
     "'>/all/</a> to visualize everything.";
   document.getElementById("meta").appendChild(supporting);
 }

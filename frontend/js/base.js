@@ -1,10 +1,10 @@
-const [base_ext_ui, base_ext_api] = [
+const [baseExtUi, baseExtApi] = [
   "viz",
   "api",
 ];
 
-// Parse model_name, service_name, layer_index, and neuron_index from the URL
-const [base_url, viz, model_name, service_name, layer_index, neuron_index] =
+// Parse model name, service name, layer index, and neuron index from the URL
+const [baseUrl, viz, modelName, serviceName, layerIndex, neuronIndex] =
   location.pathname.split("/");
 
 const capitalizeWords = (str) => {
