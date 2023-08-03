@@ -272,6 +272,24 @@ impl ModelHandle {
         self.database.model_data_object(self, data_object).await
     }
 
+    pub async fn available_services(&self) -> Result<Vec<ServiceHandle>> {
+        let mut services = vec![];
+        for service in ServiceHandle::all_services(&self.database)
+            .await
+            .context("Failed to get list of services.")?
+        {
+            if self.missing_data_objects(&service).await.with_context(|| 
+                format!("Failed to get list of missing data objects for model '{model_name}' and service '{service_name}'.", 
+                model_name = self.name(), 
+                service_name = service.name()
+                    )
+                )?.is_empty() {
+                services.push(service);
+                }
+        }
+        Ok(services)
+    }
+
     fn add_model_data_inner(
         &self,
         data_object: &DataObjectHandle,
