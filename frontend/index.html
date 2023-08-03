@@ -10,29 +10,7 @@
 <body>
   <div class="container">
     <h1>DeepDecipher front page</h1>
-    <div class="search-wrapper">
-      <p>
-        By searching for a token below, you'll receive a list of neurons that
-        activate to these tokens. Be aware that most tokens start with
-        <span class="code">" "</span> (e.g.
-        <span class="code">Transformers</span> would be
-        <span class="code">" Transformers"</span>) however, this searches over
-        a token database that is trimmed and lowercase (i.e.
-        <span class="code">" Transformers"</span> becomes
-        <span class="code">"transformers"</span>).
-      </p>
-      <input type="text" id="search" placeholder="Search..." onkeyup="enterKey(event)" />
-      <button onclick="fetchStates()">Search</button>
-      <div id="search-message">Search for a token</div>
-      <p>
-        All results are for the
-        <a href="https://huggingface.co/NeelNanda/SoLU_6L768W_C4_Code">
-          SoLU-6L model
-        </a>
-        in this demonstration.
-      </p>
-      <div class="results"></div>
-    </div>
+
     <div id="tooltip"></div>
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.2.0/d3.min.js"></script>
