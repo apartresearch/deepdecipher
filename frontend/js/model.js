@@ -30,3 +30,17 @@ searchElement.addEventListener("keyup", (event) => {
     }
 });
 
+getMetadata(modelName, (metadata) => {
+    if (metadata.available_services.includes("neuron2graph-search")) {
+        const noSearchMessage = document.getElementById("no-search-message");
+        console.log("Keeping search...")
+        noSearchMessage.style.display = "none";
+    } else {
+        const searchWrapper = document.getElementById("search-wrapper");
+        console.log("Removing search...")
+        searchWrapper.style.display = "none";
+    }
+})
+
+
+

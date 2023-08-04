@@ -11,7 +11,7 @@
 
 <body>
   <h1>DeepDecipher model page</h1>
-  <div class="search-wrapper">
+  <div id="search-wrapper">
     <p>
       By searching for a token below, you'll receive a list of neurons that
       activate to these tokens. Be aware that most tokens start with
@@ -26,6 +26,9 @@
     <button onclick="n2gSearch()">Search</button>
     <div id="search-message">Search for a token</div>
     <div class="results"></div>
+  </div>
+  <div id="no-search-message" class="not_available">
+    Neuron to Graph search is not available for this model.
   </div>
   <div id="visualization"></div>
   <div id="full_tokens_section"></div>

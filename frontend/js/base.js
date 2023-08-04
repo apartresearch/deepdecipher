@@ -4,8 +4,9 @@ const [baseExtUi, baseExtApi] = [
 ];
 
 // Parse model name, service name, layer index, and neuron index from the URL
-const [baseUrl, viz, modelName, serviceName, layerIndex, neuronIndex] =
-  location.pathname.split("/");
+const [http, doubleSlash, url, viz, modelName, serviceName, layerIndex, neuronIndex] =
+  window.location.href.split("/");
+const baseUrl = [http, doubleSlash, url].join("/");
 
 const capitalizeWords = (str) => {
   return str
@@ -23,3 +24,13 @@ const generate_token_viz = (token, activation, color) => {
   div.setAttribute("data-tooltip", token + "\n" + activation);
   return div;
 };
+
+const getMetadata = async (modelName, callback) => {
+  const url = `${baseUrl}/${baseExtApi}/${modelName}/metadata`;
+  fetch(
+    url
+  ).then((response) => response.json()
+  ).then((data) => {
+    callback(data.data);
+  })
+}
