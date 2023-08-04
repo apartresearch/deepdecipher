@@ -16,8 +16,8 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
         log::info!("Opening database at {:?}.", database_path);
         Database::open(database_path).await?
     } else {
-        log::info!("Initializing database at {:?}.", database_path);
-        Database::initialize(database_path).await?
+        log::error!("Database not found at {database_path:?}.");
+        bail!("Database not found at {database_path:?}.");
     };
     let url = "127.0.0.1";
     let port = config.port();
