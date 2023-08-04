@@ -27,6 +27,7 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(state.clone())
+            .service(response::api_index)
             .service(response::all_model)
             .service(response::all_layer)
             .service(response::all_neuron)

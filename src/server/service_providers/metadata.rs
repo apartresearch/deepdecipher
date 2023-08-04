@@ -4,22 +4,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     data::{DataObjectHandle, Database, ModelHandle},
-    server::State,
+    server::{self, State},
 };
 
 use super::ServiceProviderTrait;
-
-async fn metadata_value(model_handle: &ModelHandle) -> Result<serde_json::Value> {
-    let mut metadata = serde_json::to_value(model_handle.metadata())?;
-    let available_services: Vec<_> = model_handle
-        .available_services()
-        .await?
-        .into_iter()
-        .map(|service| service.name().to_owned())
-        .collect();
-    metadata["available_services"] = serde_json::to_value(available_services)?;
-    Ok(metadata)
-}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Metadata;
@@ -37,7 +25,7 @@ impl ServiceProviderTrait for Metadata {
         _query: &serde_json::Value,
         model: &ModelHandle,
     ) -> Result<serde_json::Value> {
-        metadata_value(model).await
+        server::metadata_value(model).await
     }
 
     async fn layer_page(
@@ -48,7 +36,7 @@ impl ServiceProviderTrait for Metadata {
         model: &ModelHandle,
         _layer_index: u32,
     ) -> Result<serde_json::Value> {
-        metadata_value(model).await
+        server::metadata_value(model).await
     }
 
     async fn neuron_page(
@@ -60,6 +48,6 @@ impl ServiceProviderTrait for Metadata {
         _layer_index: u32,
         _neuron_index: u32,
     ) -> Result<serde_json::Value> {
-        metadata_value(model).await
+        server::metadata_value(model).await
     }
 }
