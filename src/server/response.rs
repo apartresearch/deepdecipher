@@ -319,6 +319,11 @@ async fn viz_response(file: &str) -> Response {
     }
 }
 
+#[get("/")]
+async fn base() -> impl Responder {
+    viz_response("index").await
+}
+
 #[get("/viz")]
 async fn index_viz() -> impl Responder {
     viz_response("index").await

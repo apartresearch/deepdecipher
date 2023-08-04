@@ -35,6 +35,7 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
             .service(response::neuron)
             .service(actix_files::Files::new("/js", "./frontend/js"))
             .service(actix_files::Files::new("/css", "./frontend/css"))
+            .service(response::base)
             .service(response::index_viz)
             .service(response::model_viz)
             .service(response::layer_viz)
