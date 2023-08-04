@@ -22,7 +22,6 @@ if (serviceName == "all") {
   )
     .then((response) => { console.log("response", response); return response.json(); })
     .then((data) => {
-      console.log("json", data)
       // If Neuron2Graph data is available
       if (data["neuron2graph"] != null && data.neuron2graph["data"] != null) {
         neuron2graph_data = data.neuron2graph.data;
