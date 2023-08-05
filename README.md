@@ -103,12 +103,7 @@ Tested in Windows Subsystem for Linux with Ubuntu 22.04.2 LTS.
    A file called `data.db` should be created in the root folder.
 9. Run `python -m DeepDecipher data.db` in the terminal to start the server.
 10. Visit [`http://localhost:8080/api/solu-1l/neuroscope/0/9`](http://localhost:8080/api/solu-1l/neuroscope/0/9) in the browser and you should see a JSON response with all the Neuroscope information on the 9th neuron of the `solu-1l` model.
-
-The frontend runs with express.js and html + javascript.
-
-12. Start a new terminal in the root folder and navigate to the `/frontend` folder with `cd frontend`.
-13. Run `node server.js` while running the API at port `8080`.
-14. Navigate to [`http://localhost:3000/viz/solu-1l/all/0/9`](http://localhost:3000/solu-1l/neuroscope/0/9) and see visualizations of the neuron activations over token sequences.
+11. Navigate to [`http://localhost:8080/viz/solu-1l/all/0/9`](http://localhost:8080/solu-1l/neuroscope/0/9) and see various visualizations of the same neuron.
 
 ![Screenshot of the frontend](media/frontend.png)
 

@@ -16,8 +16,8 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
         log::info!("Opening database at {:?}.", database_path);
         Database::open(database_path).await?
     } else {
-        log::info!("Initializing database at {:?}.", database_path);
-        Database::initialize(database_path).await?
+        log::error!("Database not found at {database_path:?}.");
+        bail!("Database not found at {database_path:?}.");
     };
     let url = "127.0.0.1";
     let port = config.port();
@@ -27,6 +27,7 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(state.clone())
+            .service(response::api_index)
             .service(response::all_model)
             .service(response::all_layer)
             .service(response::all_neuron)
@@ -35,6 +36,7 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
             .service(response::neuron)
             .service(actix_files::Files::new("/js", "./frontend/js"))
             .service(actix_files::Files::new("/css", "./frontend/css"))
+            .service(response::base)
             .service(response::index_viz)
             .service(response::model_viz)
             .service(response::layer_viz)

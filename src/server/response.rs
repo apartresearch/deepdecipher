@@ -9,7 +9,7 @@ use tokio::fs;
 
 use crate::{
     data::{Database, ModelHandle, ServiceHandle},
-    server::State,
+    server::{self, State},
     Index,
 };
 
@@ -223,6 +223,25 @@ async fn all_response(
     Response::success(value)
 }
 
+async fn index_data(database: &Database) -> Result<serde_json::Value> {
+    let models = database.all_models().await?;
+    let mut model_data: Vec<_> = Vec::with_capacity(models.len());
+    for ref model_handle in models {
+        let model_value = server::metadata_value(model_handle).await?;
+        model_data.push(model_value);
+    }
+    Ok(json!({ "models": model_data }))
+}
+
+#[get("/api")]
+pub async fn api_index(state: web::Data<State>) -> impl Responder {
+    let database = state.database();
+    match index_data(database).await {
+        Ok(data) => Response::success(data),
+        Err(error) => Response::error(error, StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
 #[get("/api/{model_name}/{service}")]
 pub async fn model(
     state: web::Data<State>,
@@ -317,6 +336,11 @@ async fn viz_response(file: &str) -> Response {
         Ok(file) => Response::html(file),
         Err(error) => Response::error(error, StatusCode::INTERNAL_SERVER_ERROR),
     }
+}
+
+#[get("/")]
+async fn base() -> impl Responder {
+    viz_response("index").await
 }
 
 #[get("/viz")]

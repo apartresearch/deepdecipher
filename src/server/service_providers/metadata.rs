@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     data::{DataObjectHandle, Database, ModelHandle},
-    server::State,
+    server::{self, State},
 };
 
 use super::ServiceProviderTrait;
@@ -25,8 +25,7 @@ impl ServiceProviderTrait for Metadata {
         _query: &serde_json::Value,
         model: &ModelHandle,
     ) -> Result<serde_json::Value> {
-        let metadata = serde_json::to_value(model.metadata())?;
-        Ok(metadata)
+        server::metadata_value(model).await
     }
 
     async fn layer_page(
@@ -37,8 +36,7 @@ impl ServiceProviderTrait for Metadata {
         model: &ModelHandle,
         _layer_index: u32,
     ) -> Result<serde_json::Value> {
-        let metadata = serde_json::to_value(model.metadata())?;
-        Ok(metadata)
+        server::metadata_value(model).await
     }
 
     async fn neuron_page(
@@ -50,7 +48,6 @@ impl ServiceProviderTrait for Metadata {
         _layer_index: u32,
         _neuron_index: u32,
     ) -> Result<serde_json::Value> {
-        let metadata = serde_json::to_value(model.metadata())?;
-        Ok(metadata)
+        server::metadata_value(model).await
     }
 }

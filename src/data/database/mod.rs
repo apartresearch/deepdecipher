@@ -112,6 +112,31 @@ impl Database {
         ModelHandle::new(self.clone(), model_name.as_ref().to_owned()).await
     }
 
+    pub async fn all_models(&self) -> Result<Vec<ModelHandle>> {
+        const GET_ALL_MODELS: &str = r#"
+            SELECT name FROM model;
+        "#;
+
+        let model_names = self
+            .connection
+            .call(|connection| {
+                connection
+                    .prepare(GET_ALL_MODELS)?
+                    .query_map([], |row| row.get(0))?
+                    .collect::<std::result::Result<Vec<_>, _>>()
+            })
+            .await
+            .context("Failed to get all models.")?;
+        let mut models = Vec::with_capacity(model_names.len());
+        for model_name in model_names {
+            let model = ModelHandle::new(self.clone(), model_name)
+                .await?
+                .expect("The name must exist since it was just fetched from the database");
+            models.push(model);
+        }
+        Ok(models)
+    }
+
     pub async fn add_service(&self, service: Service) -> Result<ServiceHandle> {
         ServiceHandle::create(self.clone(), service).await
     }

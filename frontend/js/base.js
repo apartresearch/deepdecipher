@@ -1,11 +1,12 @@
-const [base_ext_ui, base_ext_api] = [
+const [baseExtUi, baseExtApi] = [
   "viz",
   "api",
 ];
 
-// Parse model_name, service_name, layer_index, and neuron_index from the URL
-const [base_url, viz, model_name, service_name, layer_index, neuron_index] =
-  location.pathname.split("/");
+// Parse model name, service name, layer index, and neuron index from the URL
+const [http, doubleSlash, url, viz, modelName, serviceName, layerIndex, neuronIndex] =
+  window.location.href.split("/");
+const baseUrl = [http, doubleSlash, url].join("/");
 
 const capitalizeWords = (str) => {
   return str
@@ -23,3 +24,13 @@ const generate_token_viz = (token, activation, color) => {
   div.setAttribute("data-tooltip", token + "\n" + activation);
   return div;
 };
+
+const getMetadata = async (modelName, callback) => {
+  const url = `${baseUrl}/${baseExtApi}/${modelName}/metadata`;
+  fetch(
+    url
+  ).then((response) => response.json()
+  ).then((data) => {
+    callback(data.data);
+  })
+}

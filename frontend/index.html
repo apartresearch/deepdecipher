@@ -5,91 +5,31 @@
   <title>DeepDecipher</title>
   <link rel="stylesheet" href="/css/style.css" />
   <script src="/js/base.js" type="application/javascript"></script>
-
-  <script>
-    async function fetchStates() {
-      showLoader();
-      try {
-        const searchField = document.getElementById("search");
-        const searchTerm = searchField.value;
-
-        fetch(
-          `${base_url}${base_ext_api}/solu-6l/neuron2graph-search?query=any:${searchTerm
-            .toString()
-            .toLowerCase()}`
-        )
-          .then((response) => response.json())
-          .then((data) => {
-            const results = data;
-            const resultsDiv = document.querySelector(".results");
-            resultsDiv.innerHTML = "";
-            if (results.length == 0) {
-              resultsDiv.innerHTML = "No results found";
-            } else {
-              results.forEach((result) => {
-                const resultLink = document.createElement("a");
-                resultLink.classList.add("result");
-                resultLink.href = `${base_url}${base_ext_ui}/solu-6l/all/${result.layer_index}/${result.neuron_index}`;
-                resultLink.target = "_blank";
-                resultLink.innerHTML = `${result.layer_index}:${result.neuron_index} ↗`;
-                resultsDiv.appendChild(resultLink);
-              });
-            }
-            hideLoader();
-          })
-          .catch((error) => console.error("Error:", error));
-      } catch (error) {
-        console.log(error.toString());
-      }
-    }
-    function enterKey(event) {
-      if (event.keyCode === 13) {
-        fetchStates();
-      }
-    }
-    function showLoader() {
-      document.getElementById("search-message").innerHTML =
-        "Loading... (can take up to 30 seconds)";
-      console.log("Loading search results");
-    }
-    function hideLoader() {
-      document.getElementById("search-message").innerHTML = `Found ${document.querySelectorAll(".result").length
-        } results`;
-      console.log("Finished loading search results");
-    }
-  </script>
 </head>
 
 <body>
   <div class="container">
     <h1>DeepDecipher front page</h1>
-    <div class="search-wrapper">
-      <p>
-        By searching for a token below, you'll receive a list of neurons that
-        activate to these tokens. Be aware that most tokens start with
-        <span class="code">" "</span> (e.g.
-        <span class="code">Transformers</span> would be
-        <span class="code">" Transformers"</span>) however, this searches over
-        a token database that is trimmed and lowercase (i.e.
-        <span class="code">" Transformers"</span> becomes
-        <span class="code">"transformers"</span>).
-      </p>
-      <input type="text" id="search" placeholder="Search..." onkeyup="enterKey(event)" />
-      <button onclick="fetchStates()">Search</button>
-      <div id="search-message">Search for a token</div>
-      <p>
-        All results are for the
-        <a href="https://huggingface.co/NeelNanda/SoLU_6L768W_C4_Code">
-          SoLU-6L model
-        </a>
-        in this demonstration.
-      </p>
-      <div class="results"></div>
-    </div>
+    <table border="1" class="dataframe">
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>Activation Function</th>
+          <th>Dataset</th>
+          <th>Layers</th>
+          <th>Neurons per Layer</th>
+          <th>Total Neurons</th>
+          <th>Total Parameters</th>
+          <th>Available Services</th>
+        </tr>
+      </thead>
+      <tbody id="model-table"></tbody>
+    </table>
     <div id="tooltip"></div>
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.2.0/d3.min.js"></script>
   <script src="/js/viz-standalone.js" type="application/javascript"></script>
+  <script src="/js/index.js" type="application/javascript"></script>
 </body>
 
 </html>
