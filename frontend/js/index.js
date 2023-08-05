@@ -7,7 +7,7 @@ const modelRow = (model) => {
         <td>${model.layer_size}</td>
         <td>${model.num_total_neurons}</td>
         <td>${model.num_total_parameters}</td>
-        <td>${model.available_services.join(", ")}</td>
+        <td>${model.available_services.filter((service) => service != 'metadata').join(", ")}</td>
     </tr>`
 }
 
