@@ -4,9 +4,9 @@ const modelRow = (model) => {
         <td>${model.activation_function}</td>
         <td>${model.dataset}</td>
         <td>${model.num_layers}</td>
-        <td>${model.layer_size}</td>
-        <td>${model.num_total_neurons}</td>
-        <td>${model.num_total_parameters}</td>
+        <td>${model.layer_size.toLocaleString("en-US")}</td>
+        <td>${model.num_total_neurons.toLocaleString("en-US")}</td>
+        <td>${model.num_total_parameters.toLocaleString("en-US")}</td>
         <td>${model.available_services.filter((service) => service != 'metadata').join(", ")}</td>
     </tr>`
 }
