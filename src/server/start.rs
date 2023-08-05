@@ -41,6 +41,7 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
             .service(response::model_viz)
             .service(response::layer_viz)
             .service(response::neuron_viz)
+            .service(response::favicon)
     })
     .bind((url, port))?
     .run()
