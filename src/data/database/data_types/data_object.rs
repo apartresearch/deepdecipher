@@ -10,6 +10,7 @@ use crate::data::{DataObjectHandle, ModelHandle};
 #[strum_discriminants(derive(EnumString, AsRefStr))]
 pub enum DataType {
     Neuroscope,
+    NeuronExplainer,
     Neuron2Graph,
     NeuronStore { similarity_threshold: f32 },
     Json,
@@ -26,6 +27,13 @@ impl DataType {
                     "Neuroscope data objects do not take type arguments."
                 );
                 Ok(Self::Neuroscope)
+            }
+            DataTypeDiscriminants::NeuronExplainer => {
+                ensure!(
+                    type_args.is_empty(),
+                    "NeuronExplainer data objects do not take type arguments."
+                );
+                Ok(Self::NeuronExplainer)
             }
             DataTypeDiscriminants::Neuron2Graph => {
                 ensure!(
@@ -59,6 +67,7 @@ impl DataType {
     pub fn args(&self) -> Vec<u8> {
         match self {
             Self::Neuroscope => Vec::new(),
+            Self::NeuronExplainer => Vec::new(),
             Self::Neuron2Graph => Vec::new(),
             Self::NeuronStore {
                 similarity_threshold,

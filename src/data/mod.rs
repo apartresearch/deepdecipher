@@ -1,7 +1,6 @@
 mod neuron_index;
 pub use neuron_index::NeuronIndex;
-mod neuron_viewer_object;
-pub use neuron_viewer_object::NeuronViewerObject;
+pub mod neuron_explainer_page;
 mod neuroscope;
 pub use neuroscope::{NeuroscopeLayerPage, NeuroscopeModelPage, NeuroscopeNeuronPage};
 mod neuron_store;
