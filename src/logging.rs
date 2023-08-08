@@ -72,7 +72,8 @@ where
                 record.args()
             )
         })
-        .filter_level(LevelFilter::Debug)
+        .filter_level(LevelFilter::Off)
+        .filter_module("deepdecipher", LevelFilter::Debug)
         .target(Target::Pipe(log_file_target))
         .build();
 
@@ -93,7 +94,8 @@ fn create_stdout_logger() -> Box<Logger> {
             style.set_bold(true);
             writeln!(buf, "[{}] {}", style.value(record.level()), record.args())
         })
-        .filter_level(LevelFilter::Info)
+        .filter_level(LevelFilter::Off)
+        .filter_module("deepdecipher", LevelFilter::Info)
         .target(Target::Stdout)
         .build();
 

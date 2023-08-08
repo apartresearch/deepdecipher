@@ -9,7 +9,7 @@ use crate::{
 };
 
 pub async fn start_server(config: ServerConfig) -> Result<()> {
-    logging::log_init(&config);
+    logging::log_init_config(&config);
 
     let database_path = config.database_path();
     let database = if database_path.exists() {

@@ -1,12 +1,12 @@
-use std::{panic, sync::Arc, time::Instant};
+use std::{panic, sync::Arc, time::{Instant, Duration}};
 
-use anyhow::{ensure, Context, Result};
+use anyhow::{bail, ensure, Result};
 use reqwest::Client;
 use tokio::{sync::Semaphore, task::JoinSet};
 
 use crate::{
     data::{
-        data_types::DataType, neuron_explainer_page::NeuronExplainerPage, ModelHandle, NeuronIndex,
+        data_types::DataType, neuron_explainer_page::NeuronExplainerPage, ModelHandle, NeuronIndex, DataObjectHandle,
     },
     util::Progress,
 };
@@ -15,6 +15,8 @@ const SMALL_NUM_LAYERS: u32 = 12;
 const SMALL_LAYER_SIZE: u32 = 3072;
 const XL_NUM_LAYERS: u32 = 48;
 const XL_LAYER_SIZE: u32 = 6400;
+
+const RETRY_LIMIT: u32 = 5;
 
 fn small_url(index: NeuronIndex) -> String {
     let NeuronIndex { layer, neuron } = index;
@@ -26,8 +28,15 @@ fn xl_url(index: NeuronIndex) -> String {
     format!("https://openaipublic.blob.core.windows.net/neuron-explainer/data/explanations/{layer}/{neuron}.jsonl")
 }
 
-pub async fn fetch_neuron(url: impl AsRef<str>) -> Result<NeuronExplainerPage> {
-    let client = Client::new();
+pub fn model_url(model_name: &str, index: NeuronIndex) -> Result<String> {
+    match model_name {
+        "gpt2-small" => Ok(small_url(index)),
+        "gpt2-xl" => Ok(xl_url(index)),
+        _ => bail!("Neuron explainer retrieval only available for models 'gpt2-small' and 'gpt2-xl'. Given model name: {model_name}"),
+    }
+}
+
+pub async fn fetch_neuron(client: &Client, url: impl AsRef<str>) -> Result<NeuronExplainerPage> {
     let res = client.get(url.as_ref()).send().await?;
     let page = res.json::<serde_json::Value>().await?;
 
@@ -35,35 +44,56 @@ pub async fn fetch_neuron(url: impl AsRef<str>) -> Result<NeuronExplainerPage> {
 }
 
 async fn fetch(
+    model_handle: &mut ModelHandle,
+    data_object: &DataObjectHandle,
     num_layers: u32,
     layer_size: u32,
     url: impl Fn(NeuronIndex) -> String,
-) -> Result<Vec<NeuronExplainerPage>> {
+) -> Result<()> {
     let mut join_set = JoinSet::new();
+    let client = Client::new();
 
     let semaphore = Arc::new(Semaphore::new(20));
 
     let mut progress = Progress::start((num_layers * layer_size) as u64, "Fetching data");
     progress.print();
     for index in NeuronIndex::iter(num_layers, layer_size) {
-        let url = url(index);
+        if model_handle.neuron_data(data_object, index.layer, index.neuron).await?.is_none() {
 
-        let semaphore = Arc::clone(&semaphore);
-        join_set.spawn(async move {
-            let permit = semaphore.acquire_owned().await.unwrap();
-            let result = fetch_neuron(url).await.with_context(|| {
-                format!("Failed to fetch neuron explainer data for neuron {index}.")
-            })?;
-            drop(permit);
-            Ok::<_, anyhow::Error>((index, result))
-        });
+            let url = url(index);
+
+            let semaphore = Arc::clone(&semaphore);
+            let client = client.clone();
+            join_set.spawn(async move {
+                let permit = semaphore.acquire_owned().await.unwrap();
+
+                let mut retries = 0;
+                let result = loop {
+                    match fetch_neuron(&client, &url).await {
+                        Ok(result) => break Some(result),
+                        Err(err) => {
+                            if retries == RETRY_LIMIT { 
+                                log::error!("Failed to fetch neuron explainer data for neuron {index} after {retries} retries. Error: {err}");
+                                break None;
+                            }
+                            log::error!(
+                                "Failed to fetch neuron explainer data for neuron {index}. Retrying...",
+                            );
+                            log::error!("Error: {err}");
+                            retries += 1;
+                            tokio::time::sleep(Duration::from_millis(5)).await;
+                        }
+                    }
+                };
+                drop(permit);
+                (index, result)
+            });
+        }
     }
 
-    let mut result = Vec::with_capacity((num_layers * layer_size) as usize);
-
     while let Some(join_result) = join_set.join_next().await {
-        let output = match join_result {
-            Ok(scrape_result) => scrape_result?,
+        let (NeuronIndex{layer, neuron}, page) = match join_result {
+            Ok(scrape_result) => scrape_result,
             Err(join_error) => {
                 let panic_object = join_error
                     .try_into_panic()
@@ -71,14 +101,17 @@ async fn fetch(
                 panic::resume_unwind(panic_object);
             }
         };
-        result.push(output);
+        if let Some(explanation) = page {
+            model_handle
+                .add_neuron_data(data_object, layer, neuron, explanation.to_binary()?)
+                .await?;
+        }
         progress.increment();
         progress.print();
     }
 
     println!("Data fetched.                                          ");
-    result.sort_by_key(|(index, _)| *index);
-    Ok(result.into_iter().map(|(_, data)| data).collect())
+    Ok(())
 }
 
 async fn fetch_to_database(
@@ -97,20 +130,15 @@ async fn fetch_to_database(
     let num_layers = model_handle.metadata().num_layers;
     let layer_size = model_handle.metadata().layer_size;
     let start = Instant::now();
-    let data = fetch(num_layers, layer_size, url).await?;
+    fetch(model_handle, 
+        &data_object, num_layers, layer_size, url).await?;
     let fetch_time = start.elapsed();
     println!("Fetched data in {:?}", fetch_time);
-    let start = Instant::now();
-    for (explanation, NeuronIndex { layer, neuron }) in data
-        .into_iter()
-        .zip(NeuronIndex::iter(num_layers, layer_size))
-    {
-        model_handle
-            .add_neuron_data(&data_object, layer, neuron, explanation.to_binary()?)
-            .await?;
+
+    
+    if !model_handle.has_data_object(&data_object).await? {
+        model_handle.add_data_object(&data_object).await?;
     }
-    let add_time = start.elapsed();
-    println!("Added data in {:?}", add_time);
 
     Ok(())
 }

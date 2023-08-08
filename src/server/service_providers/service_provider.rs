@@ -8,7 +8,8 @@ use strum::AsRefStr;
 
 use super::{
     json::Json, metadata::Metadata, neuron2graph::Neuron2Graph,
-    neuron2graph_search::Neuron2GraphSearch, neuroscope::Neuroscope,
+    neuron2graph_search::Neuron2GraphSearch, neuron_explainer::NeuronExplainer,
+    neuroscope::Neuroscope,
 };
 use crate::{
     data::{DataObjectHandle, Database, ModelHandle},
@@ -56,6 +57,7 @@ pub trait ServiceProviderTrait: Clone + Serialize + Deserialize<'static> + Send 
 pub enum ServiceProvider {
     Metadata,
     Neuroscope,
+    NeuronExplainer,
     Neuron2Graph,
     Neuron2GraphSearch,
     Json(Json),
@@ -76,6 +78,7 @@ impl ServiceProvider {
         to match self {
             ServiceProvider::Metadata => Metadata,
             ServiceProvider::Neuroscope => Neuroscope,
+            ServiceProvider::NeuronExplainer => NeuronExplainer,
             ServiceProvider::Neuron2Graph => Neuron2Graph,
             ServiceProvider::Neuron2GraphSearch => Neuron2GraphSearch,
             ServiceProvider::Json(json) => json,
