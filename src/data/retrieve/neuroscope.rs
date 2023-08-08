@@ -18,7 +18,7 @@ use tokio::{sync::Semaphore, task::JoinSet};
 
 const NEUROSCOPE_BASE_URL: &str = "https://neuroscope.io/";
 
-pub fn neuron_page_url(model: &str, neuron_index: NeuronIndex) -> String {
+fn neuron_page_url(model: &str, neuron_index: NeuronIndex) -> String {
     let NeuronIndex {
         layer: layer_index,
         neuron: neuron_index,
@@ -38,7 +38,7 @@ pub async fn scrape_neuron_page<S: AsRef<str>>(
     Ok(page)
 }
 
-pub async fn scrape_neuron_page_to_database(
+async fn scrape_neuron_page_to_database(
     mut model: ModelHandle,
     data_object: DataObjectHandle,
     neuron_index: NeuronIndex,
@@ -63,7 +63,7 @@ pub async fn scrape_neuron_page_to_database(
     Ok(activation_range)
 }
 
-pub async fn scrape_layer_to_database(
+async fn scrape_layer_to_database(
     model: &mut ModelHandle,
     data_object: &DataObjectHandle,
     layer_index: u32,
