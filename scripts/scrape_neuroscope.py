@@ -1,6 +1,7 @@
 from os import path
 import sys
 
+import deepdecipher
 from deepdecipher import Database, ServiceProvider, ModelMetadata
 
 if len(sys.argv) < 3:
@@ -10,6 +11,8 @@ if len(sys.argv) < 3:
 
 database_path = sys.argv[1]
 model_name = sys.argv[2]
+
+deepdecipher.log_init("logs")
 
 if path.isfile(database_path):
     database = Database.open(database_path)
