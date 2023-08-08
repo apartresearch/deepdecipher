@@ -20,6 +20,13 @@ impl PyServiceProvider {
     }
 
     #[staticmethod]
+    pub fn neuron_explainer() -> Self {
+        PyServiceProvider {
+            provider: ServiceProvider::NeuronExplainer,
+        }
+    }
+
+    #[staticmethod]
     pub fn neuron2graph() -> Self {
         PyServiceProvider {
             provider: ServiceProvider::Neuron2Graph,

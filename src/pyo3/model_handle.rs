@@ -60,6 +60,26 @@ impl PyModelHandle {
         Ok(())
     }
 
+    pub fn add_neuron_explainer_small(&mut self) -> PyResult<()> {
+        Runtime::new()
+            .context("Failed to start async runtime to add neuron explainer.")?
+            .block_on(async {
+                retrieve::neuron_explainer::retrieve_neuron_explainer_small(&mut self.model)
+                    .await
+            })?;
+        Ok(())
+    }
+
+    pub fn add_neuron_explainer_xl(&mut self) -> PyResult<()> {
+        Runtime::new()
+            .context("Failed to start async runtime to add neuron explainer.")?
+            .block_on(async {
+                retrieve::neuron_explainer::retrieve_neuron_explainer_xl(&mut self.model)
+                    .await
+            })?;
+        Ok(())
+    }
+
     pub fn add_json_data(
         &mut self,
         data_object: &PyDataObjectHandle,

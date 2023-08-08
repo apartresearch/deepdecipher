@@ -22,7 +22,7 @@ mod index;
 use index::PyIndex;
 use tokio::runtime::Runtime;
 
-use crate::cli::ServerConfig;
+use crate::{cli::ServerConfig, logging};
 
 #[pyfunction]
 fn setup_keyboard_interrupt() {
@@ -47,6 +47,11 @@ fn setup_keyboard_interrupt() {
 }
 
 #[pyfunction]
+fn log_init(log_path: Option<&str>) {
+    logging::log_init(log_path)
+}
+
+#[pyfunction]
 fn start_server(cli_arguments: Vec<OsString>) -> PyResult<()> {
     Runtime::new()
         .context("Failed to start async runtime to start server.")?
@@ -59,6 +64,7 @@ fn start_server(cli_arguments: Vec<OsString>) -> PyResult<()> {
 #[pymodule]
 fn deepdecipher(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(setup_keyboard_interrupt, m)?)?;
+    m.add_function(wrap_pyfunction!(log_init, m)?)?;
     m.add_function(wrap_pyfunction!(start_server, m)?)?;
     m.add_class::<PyDatabase>()?;
     m.add_class::<PyModelHandle>()?;

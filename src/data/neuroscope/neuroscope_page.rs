@@ -206,4 +206,12 @@ impl Text {
     pub fn max_activation(&self) -> f32 {
         self.max_activation
     }
+
+    pub fn tokens(&self) -> &[String] {
+        self.tokens.as_slice()
+    }
+
+    pub fn activations(&self) -> &[f32] {
+        self.activations.as_slice()
+    }
 }

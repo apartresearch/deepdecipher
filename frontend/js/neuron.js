@@ -42,16 +42,23 @@ if (serviceName == "all") {
 
       if (data["neuron2graph"] != null && data.neuron2graph["data"] != null && data.neuron2graph.data["similar"] != null) {
         const similar = data.neuron2graph.data.similar;
-        for (let i = 0; i < similar.length; i++) {
-          const href = `/${baseExtUi}/${modelName}/${serviceName}/${similar[i].layer}/${similar[i].neuron}`
-          const similar_neuron = document.createElement("div");
-          similar_neuron.classList.add("similar_neurons");
-          const similar_neuron_link = document.createElement("a");
-          similar_neuron_link.href = href;
-          similar_neuron_link.textContent = `${similar[i].layer}:${similar[i].neuron}`;
-          similar_neuron.appendChild(similar_neuron_link);
-          similar_neuron.innerHTML += `<span data-tooltip='The similarity score to\nthis neuron'>E${similar[i].similarity}</span>,`;
-          document.getElementById("similar").appendChild(similar_neuron);
+        if (similar.length > 0) {
+          for (let i = 0; i < similar.length; i++) {
+            const href = `/${baseExtUi}/${modelName}/${serviceName}/${similar[i].layer}/${similar[i].neuron}`
+            const similar_neuron = document.createElement("div");
+            similar_neuron.classList.add("similar_neurons");
+            const similar_neuron_link = document.createElement("a");
+            similar_neuron_link.href = href;
+            similar_neuron_link.textContent = `${similar[i].layer}:${similar[i].neuron}`;
+            similar_neuron.appendChild(similar_neuron_link);
+            similar_neuron.innerHTML += `<span data-tooltip='The similarity score to\nthis neuron'>E${similar[i].similarity}</span>,`;
+            document.getElementById("similar").appendChild(similar_neuron);
+          }
+        } else {
+          const no_similar = document.createElement("div");
+          no_similar.textContent =
+            "No similar neurons exist for this neuron.";
+          document.getElementById("similar").appendChild(no_similar);
         }
       } else {
         const not_available = document.createElement("div");
@@ -61,20 +68,30 @@ if (serviceName == "all") {
         document.getElementById("similar").appendChild(not_available);
       }
 
-      if (data["gpt-4"] != null && data["gpt-4"]["data"] != null) {
-        const gpt4_html = data["gpt-4"]["data"]
+      if (data["neuron-explainer"] != null && data["neuron-explainer"]["data"] != null) {
+        const neuronExplainerData = data["neuron-explainer"]["data"]
         // If GPT-4 data is available
-        const gpt4 = document.createElement("div");
-        gpt4.classList.add("gpt4");
-        gpt4.innerHTML = gpt4_html;
-        document.getElementById("gpt4").appendChild(gpt4);
+        const explanation = neuronExplainerData["explanation"]
+        const score = neuronExplainerData["score"]
+
+        const explanationElement = document.createElement("div");
+        explanationElement.textContent = `Explanation: ${explanation}`;
+        const scoreElement = document.createElement("div");
+        scoreElement.textContent = `Score: ${score}`;
+
+        const element = document.createElement("div");
+        element.classList.add("neuronExplainer");
+        element.appendChild(explanationElement);
+        element.appendChild(document.createElement("br"));
+        element.appendChild(scoreElement);
+        document.getElementById("neuronExplainer").appendChild(element);
       } else {
         // Write in a div with class not_available that the data is not available
         const not_available = document.createElement("div");
         not_available.classList.add("not_available");
         not_available.textContent =
           "The GPT-4 data for this neuron is not available.";
-        document.getElementById("gpt4").appendChild(not_available);
+        document.getElementById("neuronExplainer").appendChild(not_available);
       }
 
       // Add a header for the model name
