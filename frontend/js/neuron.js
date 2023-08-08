@@ -61,20 +61,30 @@ if (serviceName == "all") {
         document.getElementById("similar").appendChild(not_available);
       }
 
-      if (data["gpt-4"] != null && data["gpt-4"]["data"] != null) {
-        const gpt4_html = data["gpt-4"]["data"]
+      if (data["neuron_explainer"] != null && data["neuron_explainer"]["data"] != null) {
+        const neuronExplainerData = data["neuron_explainer"]["data"]
         // If GPT-4 data is available
-        const gpt4 = document.createElement("div");
-        gpt4.classList.add("gpt4");
-        gpt4.innerHTML = gpt4_html;
-        document.getElementById("gpt4").appendChild(gpt4);
+        const explanation = neuronExplainerData["explanation"]
+        const score = neuronExplainerData["score"]
+
+        const explanationElement = document.createElement("div");
+        explanationElement.textContent = `Explanation: ${explanation}`;
+        const scoreElement = document.createElement("div");
+        scoreElement.textContent = `Score: ${score}`;
+
+        const element = document.createElement("div");
+        element.classList.add("neuronExplainer");
+        element.appendChild(explanationElement);
+        element.appendChild(document.createElement("br"));
+        element.appendChild(scoreElement);
+        document.getElementById("neuronExplainer").appendChild(element);
       } else {
         // Write in a div with class not_available that the data is not available
         const not_available = document.createElement("div");
         not_available.classList.add("not_available");
         not_available.textContent =
           "The GPT-4 data for this neuron is not available.";
-        document.getElementById("gpt4").appendChild(not_available);
+        document.getElementById("neuronExplainer").appendChild(not_available);
       }
 
       // Add a header for the model name
