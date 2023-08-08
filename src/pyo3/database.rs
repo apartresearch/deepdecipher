@@ -3,7 +3,7 @@ use pyo3::prelude::*;
 use tokio::runtime::Runtime;
 
 use crate::{
-    data::{data_types::DataType, retrieve, Database},
+    data::{data_types::DataType, Database},
     server::Service,
 };
 
@@ -112,25 +112,6 @@ impl PyDatabase {
             .context("Failed to start async runtime to get service.")?
             .block_on(async { self.database.service(service_name).await })?
             .map(PyServiceHandle::new);
-        Ok(result)
-    }
-
-    fn scrape_neuroscope_model(&self, model_name: &str) -> PyResult<PyModelHandle> {
-        let result = Runtime::new()
-            .context("Failed to start async runtime to scrape neuroscope.")?
-            .block_on(async {
-                let model = if let Some(model) = self.database.model(model_name.to_owned()).await.with_context(|| format!("Failed to get model '{model_name}' from database."))? {
-                    model
-                } else {
-                    let metadata = retrieve::neuroscope::scrape_model_metadata(model_name).await.with_context(|| format!("Failed to scrape metadata for model '{model_name}' from Neuroscope."))?;
-                    self.database.add_model(metadata).await.context("Failed to add model to database.")?
-                };
-                println!("Scraping model '{model_name}' to database.");
-                retrieve::neuroscope::scrape_model_to_database(&self.database, &mut model.clone()).await.with_context(|| format!("Failed to scrape data for model '{model_name}' from Neuroscope."))?;
-                anyhow::Ok(model)
-            })
-            .with_context(|| format!("Failed to scrape neuroscope model '{model_name}'."))
-            .map(PyModelHandle::new)?;
         Ok(result)
     }
 }

@@ -32,6 +32,20 @@ impl PyModelHandle {
         Ok(())
     }
 
+    pub fn scrape_neuroscope_model(&mut self) -> PyResult<()> {
+        let model_name = self.model.name().to_owned();
+        Runtime::new()
+            .context("Failed to start async runtime to scrape neuroscope.")?
+            .block_on(async {
+                let model = &mut self.model;
+                println!("Scraping model '{model_name}' to database.");
+                retrieve::neuroscope::scrape_model_to_database(model).await.with_context(|| format!("Failed to scrape data for model '{model_name}' from Neuroscope."))?;
+                anyhow::Ok(model)
+            })
+            .with_context(|| format!("Failed to scrape neuroscope model '{model_name}'."))?;
+        Ok(())
+    }
+
     pub fn add_neuron_store(
         &mut self,
         neuron_store_path: &str,
