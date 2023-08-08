@@ -79,8 +79,8 @@ where
     Box::new(write_logger)
 }
 
-fn create_stderr_logger() -> Box<Logger> {
-    let stderr_logger = env_logger::builder()
+fn create_stdout_logger() -> Box<Logger> {
+    let stdout_logger = env_logger::builder()
         .format(|buf, record| {
             let mut style = buf.style();
             match record.level() {
@@ -97,15 +97,15 @@ fn create_stderr_logger() -> Box<Logger> {
         .target(Target::Stdout)
         .build();
 
-    Box::new(stderr_logger)
+    Box::new(stdout_logger)
 }
 
-pub fn log_init(config: &cli::ServerConfig) {
-    // Log to stderr.
-    let mut loggers: Vec<Box<dyn Log + 'static>> = vec![create_stderr_logger()];
+pub fn log_init(log_path: Option<impl AsRef<Path>>) {
+    // Log to stdout.
+    let mut loggers: Vec<Box<dyn Log + 'static>> = vec![create_stdout_logger()];
 
     // Log to file.
-    if let Some(log_path) = config.log_path() {
+    if let Some(log_path) = log_path {
         loggers.push(create_write_logger(log_path));
     }
 
@@ -114,4 +114,8 @@ pub fn log_init(config: &cli::ServerConfig) {
 
     // Log panics.
     log_panics::init();
+}
+
+pub fn log_init_config(config: &cli::ServerConfig) {
+    log_init(config.log_path());
 }
