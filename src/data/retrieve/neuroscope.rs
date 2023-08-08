@@ -6,7 +6,6 @@ use std::{
 
 use crate::data::{
     data_types::DataType,
-    database::Database,
     neuroscope::{NeuroscopeLayerPage, NeuroscopeModelPage},
     DataObjectHandle, Metadata, ModelHandle, NeuronIndex, NeuroscopeNeuronPage,
 };
@@ -177,7 +176,8 @@ pub async fn scrape_model_metadata<S: AsRef<str>>(model: S) -> Result<Metadata> 
     })
 }
 
-pub async fn scrape_model_to_database(database: &Database, model: &mut ModelHandle) -> Result<()> {
+pub async fn scrape_model_to_database(model: &mut ModelHandle) -> Result<()> {
+    let database = model.database();
     let data_object = if let Some(data_object) = database.data_object("neuroscope").await? {
         data_object
     } else {

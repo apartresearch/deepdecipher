@@ -1,7 +1,7 @@
 from os import path
 import sys
 
-from deepdecipher import Database, ServiceProvider
+from deepdecipher import Database, ServiceProvider, ModelMetadata
 
 if len(sys.argv) < 3:
     raise RuntimeError(
@@ -17,9 +17,11 @@ else:
     database = Database.initialize(database_path)
 
 model = database.model(model_name)
-if model is not None:
-    model.delete()
-database.scrape_neuroscope_model(model_name)
+if model is None:
+    print("Adding neuroscope model.")
+    metadata = ModelMetadata.from_neuroscope(model_name)
+    model = database.add_model(metadata)
+model.scrape_neuroscope_model()
 
 service = database.service("neuroscope")
 if service is None:

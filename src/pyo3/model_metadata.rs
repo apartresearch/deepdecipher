@@ -1,6 +1,8 @@
+use anyhow::Context;
 use pyo3::prelude::*;
+use tokio::runtime::Runtime;
 
-use crate::data::Metadata;
+use crate::data::{retrieve, Metadata};
 
 #[pyclass(name = "ModelMetadata")]
 pub struct PyModelMetadata {
@@ -29,6 +31,22 @@ impl PyModelMetadata {
                 dataset,
             },
         }
+    }
+
+    #[staticmethod]
+    fn from_neuroscope(model_name: &str) -> PyResult<Self> {
+        let metadata = Runtime::new()
+            .context("Failed to start async runtime to scrape metadata from neuroscope.")?
+            .block_on(async {
+                retrieve::neuroscope::scrape_model_metadata(model_name)
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "Failed to scrape metadata for model '{model_name}' from Neuroscope."
+                        )
+                    })
+            })?;
+        Ok(Self { metadata })
     }
 
     #[getter]
