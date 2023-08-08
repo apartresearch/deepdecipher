@@ -88,6 +88,8 @@ async fn fetch(
                 drop(permit);
                 (index, result)
             });
+        } else {
+            progress.increment();
         }
     }
 

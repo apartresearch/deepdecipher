@@ -40,13 +40,13 @@ impl Progress {
             "NaN".to_string()
         };
         format!(
-            "{}: {:.2}% ({}/{}) Est. time remaining: {}",
+            "{}: {:.2}% ({}/{}) Est. time remaining: {}                                  ",
             self.message, percent, self.progress, self.total, time_remaining
         )
     }
 
     pub fn print(&self) {
-        print!("\r{}", self.message());
+        print!("{}\r", self.message());
         io::stdout().flush().unwrap();
     }
 }
