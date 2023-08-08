@@ -54,13 +54,14 @@ pub trait ServiceProviderTrait: Clone + Serialize + Deserialize<'static> + Send 
 }
 
 #[derive(Clone, Serialize, Deserialize, AsRefStr)]
+#[repr(u16)]
 pub enum ServiceProvider {
-    Metadata,
-    Neuroscope,
-    NeuronExplainer,
-    Neuron2Graph,
-    Neuron2GraphSearch,
-    Json(Json),
+    Metadata = 0,
+    Neuroscope = 1,
+    NeuronExplainer = 2,
+    Neuron2Graph = 3,
+    Neuron2GraphSearch = 4,
+    Json(Json) = 5,
 }
 
 impl ServiceProvider {
