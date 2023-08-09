@@ -290,7 +290,7 @@ pub async fn neuron(
 }
 
 #[get("/api/{model_name}/all")]
-async fn all_model(
+pub async fn all_model(
     state: web::Data<State>,
     indices: web::Path<String>,
     query: web::Query<serde_json::Value>,
@@ -301,7 +301,7 @@ async fn all_model(
 }
 
 #[get("/api/{model_name}/all/{layer_index}")]
-async fn all_layer(
+pub async fn all_layer(
     state: web::Data<State>,
     indices: web::Path<(String, u32)>,
     query: web::Query<serde_json::Value>,
@@ -314,7 +314,7 @@ async fn all_layer(
 }
 
 #[get("/api/{model_name}/all/{layer_index}/{neuron_index}")]
-async fn all_neuron(
+pub async fn all_neuron(
     state: web::Data<State>,
     indices: web::Path<(String, u32, u32)>,
     query: web::Query<serde_json::Value>,
@@ -339,32 +339,32 @@ async fn viz_response(file: &str) -> Response {
 }
 
 #[get("/")]
-async fn base() -> impl Responder {
+pub async fn base() -> impl Responder {
     viz_response("index").await
 }
 
 #[get("/viz")]
-async fn index_viz() -> impl Responder {
+pub async fn index_viz() -> impl Responder {
     viz_response("index").await
 }
 
 #[get("/viz/{model_name}/{service}")]
-async fn model_viz() -> impl Responder {
+pub async fn model_viz() -> impl Responder {
     viz_response("model").await
 }
 
 #[get("/viz/{model_name}/{service}/{layer_index}")]
-async fn layer_viz() -> impl Responder {
+pub async fn layer_viz() -> impl Responder {
     viz_response("layer").await
 }
 
 #[get("/viz/{model_name}/{service}/{layer_index}/{neuron_index}")]
-async fn neuron_viz() -> impl Responder {
+pub async fn neuron_viz() -> impl Responder {
     viz_response("neuron").await
 }
 
 #[get("/favicon.ico")]
-async fn favicon() -> impl actix_web::Responder {
+pub async fn favicon() -> impl actix_web::Responder {
     let favicon: Vec<u8> = include_bytes!("../../media/favicon.ico").to_vec();
     HttpResponse::Ok()
         .content_type("image/x-icon")
