@@ -1,11 +1,15 @@
 use actix_web::{web, App, HttpServer};
 use anyhow::{bail, Result};
 
+use utoipa_rapidoc::RapiDoc;
+use utoipa_redoc::{Redoc, Servable};
+use utoipa_swagger_ui::SwaggerUi;
+
 use crate::{
     cli::ServerConfig,
     data::Database,
     logging,
-    server::{response, State},
+    server::{self, response, State},
 };
 
 pub async fn start_server(config: ServerConfig) -> Result<()> {
@@ -24,9 +28,16 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
     log::info!("Serving DeepDecipher on http://{url}:{port}/");
     let state = web::Data::new(State { database });
 
+    let api_doc = server::api_doc();
+    //let api_doc: utoipa::openapi::OpenApi =
+    // serde_json::from_str(&fs::read_to_string("api.json").unwrap()).unwrap();
+
     HttpServer::new(move || {
         App::new()
             .app_data(state.clone())
+            .service(SwaggerUi::new("/swagger-ui/{_:.*}").url("/doc/openapi.json", api_doc.clone()))
+            .service(RapiDoc::new("/doc/openapi.json").path("/rapidoc"))
+            .service(Redoc::with_url("/redoc", api_doc.clone()))
             .service(response::api_index)
             .service(response::all_model)
             .service(response::all_layer)

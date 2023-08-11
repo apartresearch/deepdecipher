@@ -8,7 +8,9 @@ mod service_providers;
 pub use service_providers::ServiceProvider;
 mod start;
 pub use start::start_server;
-mod response;
+mod api_doc;
+pub mod response;
+pub use api_doc::api_doc;
 
 pub struct State {
     database: Database,

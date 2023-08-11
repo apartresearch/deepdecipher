@@ -233,6 +233,12 @@ async fn index_data(database: &Database) -> Result<serde_json::Value> {
     Ok(json!({ "models": model_data }))
 }
 
+#[utoipa::path(
+    responses(
+        (status = 200, description = "Successfully retrieved the index data.", body = String, content_type = "application/json"),
+        (status = "5XX", description = "Failed to retrieve the index data.", body = String) 
+    )
+)]
 #[get("/api")]
 pub async fn api_index(state: web::Data<State>) -> impl Responder {
     let database = state.database();
@@ -242,7 +248,20 @@ pub async fn api_index(state: web::Data<State>) -> impl Responder {
     }
 }
 
-#[get("/api/{model_name}/{service}")]
+#[utoipa::path(
+    responses(
+        (status = 200, description = "Successfully retrieved data for the specified model and service.", content(
+            ("application/json" = NeuroscopeModelPage),
+            ("application/json" = String)
+        )),
+        (status = "5XX", description = "Failed to retrieve data for the specified model and service.", body = String) 
+    ),
+    params(
+        ("model_name" = String, Path, description = "The name of the model to fetch data for."),
+        ("service_name" = String, Path, description = "The name of the service to fetch data for.")
+    )
+)]
+#[get("/api/{model_name}/{service_name}")]
 pub async fn model(
     state: web::Data<State>,
     indices: web::Path<(String, String)>,
@@ -338,6 +357,12 @@ async fn viz_response(file: &str) -> Response {
     }
 }
 
+#[utoipa::path(
+    responses(
+        (status = 200, description = "Successfully retrieved the index frontend file.", body = String, content_type = "text/html"),
+        (status = "5XX", description = "Failed to retrieve the index frontend file.", body = String) 
+    )
+)]
 #[get("/")]
 pub async fn base() -> impl Responder {
     viz_response("index").await
