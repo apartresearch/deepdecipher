@@ -73,8 +73,6 @@ tokio-rusqlite = "0.4.0"
 snap = "1.1.0"
 zstd = "0.12.3"
 utoipa = { version = "3.4.4", features = ["actix_extras"] }
-utoipa-swagger-ui = { version = "3.1.5", features = ["actix-web"] }
-utoipa-rapidoc = { version = "0.1.0", features = ["actix-web"] }
 utoipa-redoc = { version = "0.1.0", features = ["actix-web"] }
 
 [features]

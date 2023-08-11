@@ -13,12 +13,22 @@ pub mod response;
 pub use api_doc::api_doc;
 
 pub struct State {
+    api_doc: utoipa::openapi::OpenApi,
     database: Database,
 }
 
 impl State {
+    pub fn new(database: Database) -> Result<Self> {
+        let api_doc = api_doc();
+        Ok(Self { api_doc, database })
+    }
+
     pub fn database(&self) -> &Database {
         &self.database
+    }
+
+    pub fn api_doc(&self) -> &utoipa::openapi::OpenApi {
+        &self.api_doc
     }
 }
 

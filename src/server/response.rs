@@ -426,6 +426,22 @@ pub async fn all_neuron(
     .await
 }
 
+/// Gets the API documentation.
+#[utoipa::path(
+    operation_id = "api_doc",
+    responses(
+        (status = 200, description = "Successfully retrieved API documentation.", content(
+            ("application/json" = String)
+        )),
+        (status = "5XX", description = "Failed to retrieve API documentation.", body = String) 
+    )
+)]
+#[get("/doc/openapi.json")]
+pub async fn api_doc(state: web::Data<State>) -> impl Responder {
+    log::debug!("Sending API documentation.");
+    Response::success(serde_json::to_value(state.api_doc()).unwrap()) // This should always succeed.
+}
+
 async fn viz_response(file: &str) -> Response {
     log::debug!("Sending viz file '{file}.html'.");
     match fs::read_to_string(format!("frontend/{file}.html")).await {

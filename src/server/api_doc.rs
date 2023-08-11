@@ -9,6 +9,7 @@ use utoipa::OpenApi;
     super::response::all_model,
     super::response::all_layer,
     super::response::all_neuron,
+    super::response::api_doc,
 ))]
 pub struct ApiDoc;
 
