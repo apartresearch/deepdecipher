@@ -20,7 +20,7 @@ if (serviceName == "all") {
   fetch(
     `${baseUrl}/${baseExtApi}/${modelName}/${serviceName}/${layerIndex}/${neuronIndex}`
   )
-    .then((response) => { console.log("response", response); return response.json(); })
+    .then((response) => response.json())
     .then((data) => {
       // If Neuron2Graph data is available
       if (data["neuron2graph"] != null && data.neuron2graph["data"] != null) {
