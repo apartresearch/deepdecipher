@@ -53,7 +53,6 @@ impl Responder for Response {
 
     fn respond_to(self, req: &actix_web::HttpRequest) -> HttpResponse<Self::Body> {
         HttpResponse::build(self.status)
-            .append_header(("Access-Control-Allow-Origin", "*"))
             .content_type(self.content_type)
             .body(self.body)
             .respond_to(req)
