@@ -1,6 +1,8 @@
 use actix_web::{web, App, HttpServer};
 use anyhow::{bail, Result};
 
+use utoipa_redoc::{Redoc, Servable};
+
 use crate::{
     cli::ServerConfig,
     data::Database,
@@ -22,11 +24,21 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
     let url = "127.0.0.1";
     let port = config.port();
     log::info!("Serving DeepDecipher on http://{url}:{port}/");
-    let state = web::Data::new(State { database });
+    let state = web::Data::new(State::new(database)?);
 
     HttpServer::new(move || {
         App::new()
             .app_data(state.clone())
+            .service(Redoc::with_url_and_config(
+                "/doc",
+                state.api_doc().clone(),
+                || {
+                    serde_json::from_str::<serde_json::Value>(include_str!(
+                        "../../redoc_config.json"
+                    ))
+                    .unwrap()
+                },
+            ))
             .service(response::api_index)
             .service(response::all_model)
             .service(response::all_layer)
@@ -34,6 +46,7 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
             .service(response::model)
             .service(response::layer)
             .service(response::neuron)
+            .service(response::api_doc)
             .service(actix_files::Files::new("/js", "./frontend/js"))
             .service(actix_files::Files::new("/css", "./frontend/css"))
             .service(response::base)

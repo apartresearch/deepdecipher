@@ -5,6 +5,7 @@ use itertools::Itertools;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use snap::raw::{Decoder, Encoder};
+use utoipa::ToSchema;
 
 use crate::data::NeuronIndex;
 
@@ -28,7 +29,7 @@ where
     })
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct NeuroscopeNeuronPage {
     neuron_index: NeuronIndex,
     texts: Vec<Text>,
@@ -112,12 +113,13 @@ impl NeuroscopeNeuronPage {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Text {
     min_range: f32,
     max_range: f32,
     min_activation: f32,
     max_activation: f32,
+    /// The index of the data sample in the training data.
     data_index: u64,
     max_activating_token_index: u32,
     tokens: Vec<String>,

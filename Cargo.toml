@@ -72,6 +72,8 @@ strum = { version = "0.25.0", features = ["derive"] }
 tokio-rusqlite = "0.4.0"
 snap = "1.1.0"
 zstd = "0.12.3"
+utoipa = { version = "3.4.4", features = ["actix_extras"] }
+utoipa-redoc = { version = "0.1.0", features = ["actix-web"] }
 
 [features]
 python = ["dep:pyo3", "dep:numpy", "dep:ctrlc"]

@@ -1,10 +1,11 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use snap::raw::{Decoder, Encoder};
+use utoipa::ToSchema;
 
 use crate::data::NeuronIndex;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct NeuroscopeModelPage {
     important_neurons: Vec<(NeuronIndex, f32)>,
 }

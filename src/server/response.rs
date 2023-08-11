@@ -233,6 +233,14 @@ async fn index_data(database: &Database) -> Result<serde_json::Value> {
     Ok(json!({ "models": model_data }))
 }
 
+/// Gets an index over available models.
+#[utoipa::path(
+    operation_id = "index",
+    responses(
+        (status = 200, description = "Successfully retrieved the index data.", body = String, content_type = "application/json"),
+        (status = "5XX", description = "Failed to retrieve the index data.", body = String) 
+    )
+)]
 #[get("/api")]
 pub async fn api_index(state: web::Data<State>) -> impl Responder {
     let database = state.database();
@@ -242,7 +250,22 @@ pub async fn api_index(state: web::Data<State>) -> impl Responder {
     }
 }
 
-#[get("/api/{model_name}/{service}")]
+/// Gets the data for the specified model and service.
+#[utoipa::path(
+    operation_id = "model_service",
+    responses(
+        (status = 200, description = "Successfully retrieved data for the specified model and service.", content(
+            ("application/json" = NeuroscopeModelPage),
+            ("application/json" = String)
+        )),
+        (status = "5XX", description = "Failed to retrieve data for the specified model and service.", body = String) 
+    ),
+    params(
+        ("model_name" = String, Path, description = "The name of the model to fetch data for."),
+        ("service_name" = String, Path, description = "The name of the service to fetch data for.")
+    )
+)]
+#[get("/api/{model_name}/{service_name}")]
 pub async fn model(
     state: web::Data<State>,
     indices: web::Path<(String, String)>,
@@ -253,6 +276,21 @@ pub async fn model(
     response(state, query.deref(), model_name, service_name, Index::Model).await
 }
 
+/// Gets the data for the specified layer and service.
+#[utoipa::path(
+    operation_id = "layer_service",
+    responses(
+        (status = 200, description = "Successfully retrieved data for the specified layer and service.", content(
+            ("application/json" = String)
+        )),
+        (status = "5XX", description = "Failed to retrieve data for the specified layer and service.", body = String) 
+    ),
+    params(
+        ("model_name" = String, Path, description = "The name of the model to fetch data for."),
+        ("service_name" = String, Path, description = "The name of the service to fetch data for."),
+        ("layer_index" = u32, Path, description = "The index of the layer to fetch data for.")
+    )
+)]
 #[get("/api/{model_name}/{service}/{layer_index}")]
 pub async fn layer(
     state: web::Data<State>,
@@ -271,6 +309,22 @@ pub async fn layer(
     .await
 }
 
+/// Gets the data for the specified model and service.
+#[utoipa::path(
+    operation_id = "neuron_service",
+    responses(
+        (status = 200, description = "Successfully retrieved data for the specified neuron and service.", content(
+            ("application/json" = String)
+        )),
+        (status = "5XX", description = "Failed to retrieve data for the specified neuron and service.", body = String) 
+    ),
+    params(
+        ("model_name" = String, Path, description = "The name of the model to fetch data for."),
+        ("service_name" = String, Path, description = "The name of the service to fetch data for."),
+        ("layer_index" = u32, Path, description = "The index of the layer to fetch data for."),
+        ("neuron_index" = u32, Path, description = "The index of the neuron to fetch data for.")
+    )
+)]
 #[get("/api/{model_name}/{service}/{layer_index}/{neuron_index}")]
 pub async fn neuron(
     state: web::Data<State>,
@@ -289,8 +343,21 @@ pub async fn neuron(
     .await
 }
 
+/// Gets the data for all services for the specified model.
+#[utoipa::path(
+    operation_id = "model_all",
+    responses(
+        (status = 200, description = "Successfully retrieved data for all services for the specified model.", content(
+            ("application/json" = String)
+        )),
+        (status = "5XX", description = "Failed to retrieve data for all services for the specified model.", body = String) 
+    ),
+    params(
+        ("model_name" = String, Path, description = "The name of the model to fetch data for.")
+    )
+)]
 #[get("/api/{model_name}/all")]
-async fn all_model(
+pub async fn all_model(
     state: web::Data<State>,
     indices: web::Path<String>,
     query: web::Query<serde_json::Value>,
@@ -300,8 +367,22 @@ async fn all_model(
     all_response(state, query, model_name, Index::Model).await
 }
 
+/// Gets the data for all services for the specified layer.
+#[utoipa::path(
+    operation_id = "layer_all",
+    responses(
+        (status = 200, description = "Successfully retrieved data for all services for the specified layer.", content(
+            ("application/json" = String)
+        )),
+        (status = "5XX", description = "Failed to retrieve data for all services for the specified layer.", body = String) 
+    ),
+    params(
+        ("model_name" = String, Path, description = "The name of the model to fetch data for."),
+        ("layer_index" = u32, Path, description = "The index of the layer to fetch data for.")
+    )
+)]
 #[get("/api/{model_name}/all/{layer_index}")]
-async fn all_layer(
+pub async fn all_layer(
     state: web::Data<State>,
     indices: web::Path<(String, u32)>,
     query: web::Query<serde_json::Value>,
@@ -313,8 +394,23 @@ async fn all_layer(
     all_response(state, query, model_name, Index::Layer(layer_index)).await
 }
 
+/// Gets the data for all services for the specified neuron.
+#[utoipa::path(
+    operation_id = "neuron_all",
+    responses(
+        (status = 200, description = "Successfully retrieved data for all services for the specified neuron.", content(
+            ("application/json" = String)
+        )),
+        (status = "5XX", description = "Failed to retrieve data for all services for the specified neuron.", body = String) 
+    ),
+    params(
+        ("model_name" = String, Path, description = "The name of the model to fetch data for."),
+        ("layer_index" = u32, Path, description = "The index of the layer to fetch data for."),
+        ("neuron_index" = u32, Path, description = "The index of the neuron to fetch data for.")
+    )
+)]
 #[get("/api/{model_name}/all/{layer_index}/{neuron_index}")]
-async fn all_neuron(
+pub async fn all_neuron(
     state: web::Data<State>,
     indices: web::Path<(String, u32, u32)>,
     query: web::Query<serde_json::Value>,
@@ -330,6 +426,22 @@ async fn all_neuron(
     .await
 }
 
+/// Gets the API documentation in JSON format.
+#[utoipa::path(
+    operation_id = "api_doc",
+    responses(
+        (status = 200, description = "Successfully retrieved API documentation.", content(
+            ("application/json" = String)
+        )),
+        (status = "5XX", description = "Failed to retrieve API documentation.", body = String) 
+    )
+)]
+#[get("/doc/openapi.json")]
+pub async fn api_doc(state: web::Data<State>) -> impl Responder {
+    log::debug!("Sending API documentation.");
+    Response::success(serde_json::to_value(state.api_doc()).unwrap()) // This should always succeed.
+}
+
 async fn viz_response(file: &str) -> Response {
     log::debug!("Sending viz file '{file}.html'.");
     match fs::read_to_string(format!("frontend/{file}.html")).await {
@@ -339,32 +451,32 @@ async fn viz_response(file: &str) -> Response {
 }
 
 #[get("/")]
-async fn base() -> impl Responder {
+pub async fn base() -> impl Responder {
     viz_response("index").await
 }
 
 #[get("/viz")]
-async fn index_viz() -> impl Responder {
+pub async fn index_viz() -> impl Responder {
     viz_response("index").await
 }
 
 #[get("/viz/{model_name}/{service}")]
-async fn model_viz() -> impl Responder {
+pub async fn model_viz() -> impl Responder {
     viz_response("model").await
 }
 
 #[get("/viz/{model_name}/{service}/{layer_index}")]
-async fn layer_viz() -> impl Responder {
+pub async fn layer_viz() -> impl Responder {
     viz_response("layer").await
 }
 
 #[get("/viz/{model_name}/{service}/{layer_index}/{neuron_index}")]
-async fn neuron_viz() -> impl Responder {
+pub async fn neuron_viz() -> impl Responder {
     viz_response("neuron").await
 }
 
 #[get("/favicon.ico")]
-async fn favicon() -> impl actix_web::Responder {
+pub async fn favicon() -> impl actix_web::Responder {
     let favicon: Vec<u8> = include_bytes!("../../media/favicon.ico").to_vec();
     HttpResponse::Ok()
         .content_type("image/x-icon")

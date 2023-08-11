@@ -3,8 +3,11 @@ use std::{fmt::Display, str::FromStr};
 use anyhow::{Context, Result};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, ToSchema,
+)]
 pub struct NeuronIndex {
     pub layer: u32,
     pub neuron: u32,
