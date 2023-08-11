@@ -426,7 +426,7 @@ pub async fn all_neuron(
     .await
 }
 
-/// Gets the API documentation.
+/// Gets the API documentation in JSON format.
 #[utoipa::path(
     operation_id = "api_doc",
     responses(

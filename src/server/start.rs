@@ -29,7 +29,16 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(state.clone())
-            .service(Redoc::with_url("/doc", state.api_doc().clone()))
+            .service(Redoc::with_url_and_config(
+                "/doc",
+                state.api_doc().clone(),
+                || {
+                    serde_json::from_str::<serde_json::Value>(include_str!(
+                        "../../redoc_config.json"
+                    ))
+                    .unwrap()
+                },
+            ))
             .service(response::api_index)
             .service(response::all_model)
             .service(response::all_layer)
