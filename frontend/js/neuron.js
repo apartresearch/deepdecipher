@@ -14,7 +14,7 @@ document.addEventListener("mousemove", (e) => {
   }
 });
 
-function renderMeta(document, data) {
+function renderMeta(document, data, modelName, serviceName, layerIndex, neuronIndex) {
   // Add a header for the model name
   const header = document.createElement("div");
   header.id = "header";
@@ -35,25 +35,28 @@ function renderMeta(document, data) {
   document.getElementById("meta-information").appendChild(meta_info);
 
   const surroundingNeurons = document.createElement("tr");
-  const [layerIndex_n, neuronIndex_n, last_layer, last_neuron] = [
-    parseInt(layerIndex),
-    parseInt(neuronIndex),
+  const [lastLayer, lastNeuron] = [
     data.num_layers - 1,
     data.layer_size - 1,
   ];
-  const model_url = `${baseUrl}/${baseExtUi}/${modelName}/${serviceName}`;
-  const layer_url = `${baseUrl}/${baseExtUi}/${modelName}/${serviceName}/${layerIndex_n}`;
-  const prev_url = ((layerIndex_n == 0) && (neuronIndex_n == 0))
-    ? alert("This is the first neuron in the model.")
-    : `${baseUrl}/${baseExtUi}/${modelName}/${serviceName}/${neuronIndex_n != 0 ? layerIndex_n : layerIndex_n - 1
-    }/${neuronIndex_n != 0 ? neuronIndex_n - 1 : last_neuron}`;
-  const next_url = (layerIndex_n == last_layer) & (neuronIndex_n == last_neuron)
-    ? alert("This is the last neuron in the model.")
-    : `${baseUrl}/${baseExtUi}/${modelName}/${serviceName}/${neuronIndex_n != last_neuron
-      ? layerIndex_n
-      : layerIndex_n + 1
-    }/${neuronIndex_n != last_neuron ? neuronIndex_n + 1 : 0}`;
-  surroundingNeurons.innerHTML = `<td class='meta-data first' data-tooltip='Visit the current model page'><a href='${model_url}'>Model</a></td><td class='meta-data' data-tooltip='Visit the current layer page'><a href='${layer_url}'>Layer</a></td><td class='meta-data' data-tooltip='Visit the previous neuron page'><a href='${prev_url}'>Previous</a></td><td class='meta-data' data-tooltip='Visit the next neuron page'><a href='${next_url}'>Next</a></td>`;
+  const modelUrl = `${baseUrl}/${baseExtUi}/${modelName}/${serviceName}`;
+  const layerUrl = `${modelUrl}/${layerIndex}`;
+  const prevUrl = ((layerIndex == 0) && (neuronIndex == 0))
+    ? `${modelUrl}/${lastLayer}/${lastNeuron}`
+    : `${modelUrl}/${neuronIndex != 0 ? layerIndex : layerIndex - 1
+    }/${neuronIndex != 0 ? neuronIndex - 1 : lastNeuron}`;
+  const nextUrl = (layerIndex == lastLayer) & (neuronIndex == lastNeuron)
+    ? `${modelUrl}/0/0`
+    : `${modelUrl}/${neuronIndex != lastNeuron
+      ? layerIndex
+      : layerIndex + 1
+    }/${neuronIndex != lastNeuron ? neuronIndex + 1 : 0}`;
+  surroundingNeurons.innerHTML = `
+    <td class='meta-data first' data-tooltip='Visit the current model page'><a href='${modelUrl}'>Model</a></td>
+    <td class='meta-data' data-tooltip='Visit the current layer page'><a href='${layerUrl}'>Layer</a></td>
+    <td class='meta-data' data-tooltip='Visit the previous neuron page'><a href='${prevUrl}'>Previous</a></td>
+    <td class='meta-data' data-tooltip='Visit the next neuron page'><a href='${nextUrl}'>Next</a></td>
+  `;
   document
     .getElementById("meta-information")
     .appendChild(surroundingNeurons);
@@ -178,7 +181,7 @@ function renderNeuroscope(document, data) {
       document
         .getElementById("token_string_" + j)
         .appendChild(
-          generate_token_viz(token, activation, colorScale(activation))
+          generateTokenViz(token, activation, colorScale(activation))
         );
     });
 
@@ -194,7 +197,7 @@ function renderNeuroscope(document, data) {
     // Add each token to the full tokens section
     tokens.forEach((token, i) => {
       content.appendChild(
-        generate_token_viz(
+        generateTokenViz(
           token,
           activations[i],
           colorScale(activations[i])
@@ -221,12 +224,18 @@ if (serviceName == "neuron2graph") {
   fetch(`${baseUrl}/${baseExtApi}/${modelName}/${serviceName}/${layerIndex}/${neuronIndex}`).then(async (response) => {
     if (response.ok) {
       const data = await response.json();
-      renderMeta(document, data.metadata);
-      renderNeuron2Graph(document, data.data);
+      renderMeta(document, data.metadata, modelName, serviceName, layerIndex, neuronIndex);
+      if (data.data != null)
+        renderNeuron2Graph(document, data.data);
+      else if (data["missing_data_objects"] != null)
+        notAvailable(document, "n2g", "Neuron2Graph");
+      else
+        console.error("Unknown error: ", data);
     } else {
+      const error = await response.text();
       const errorElement = document.createElement("div");
       errorElement.classList.add("not_available");
-      errorElement.textContent = "Error: " + response.body;
+      errorElement.textContent = "Error: " + error;
       document.getElementById("n2g").appendChild(errorElement);
     }
   }
@@ -239,7 +248,7 @@ if (serviceName == "neuron2graph") {
     .then((response) => response.json())
     .then((data) => {
 
-      renderMeta(document, data.metadata.data);
+      renderMeta(document, data.metadata.data, modelName, serviceName, layerIndex, neuronIndex);
 
       if (data["neuron2graph"] != null && data.neuron2graph["data"] != null) {
         renderNeuron2Graph(document, data.neuron2graph.data);

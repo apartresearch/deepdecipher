@@ -4,8 +4,9 @@ const [baseExtUi, baseExtApi] = [
 ];
 
 // Parse model name, service name, layer index, and neuron index from the URL
-const [http, doubleSlash, url, viz, modelName, serviceName, layerIndex, neuronIndex] =
+const [http, doubleSlash, url, viz, modelName, serviceName, layerIndexString, neuronIndexString] =
   window.location.href.split("/");
+const [layerIndex, neuronIndex] = [layerIndexString, neuronIndexString].map((s) => parseInt(s));
 const baseUrl = [http, doubleSlash, url].join("/");
 
 const capitalizeWords = (str) => {
@@ -16,7 +17,7 @@ const capitalizeWords = (str) => {
     .join(" ");
 };
 
-const generate_token_viz = (token, activation, color) => {
+const generateTokenViz = (token, activation, color) => {
   const div = document.createElement("span");
   div.className = "token";
   div.style.backgroundColor = color;
