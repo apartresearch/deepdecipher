@@ -95,6 +95,24 @@ async fn preprocess_model(
     }
 }
 
+async fn service_value(
+    state: &State,
+    query: &serde_json::Value,
+    model_handle: &ModelHandle,
+    service_handle: &ServiceHandle,
+    page_index: Index,
+) -> Result<serde_json::Value> {
+    let missing_data_objects = model_handle.missing_data_objects(service_handle).await?;
+    let service = service_handle.service().await?;
+
+    if missing_data_objects.is_empty() {
+        let page = service_page(state, query, model_handle, &service, page_index).await?;
+        Ok(json!({ "data": page }))
+    } else {
+        Ok(json!({ "missing_data_objects": missing_data_objects }))
+    }
+}
+
 async fn response(
     state: web::Data<State>,
     query: &serde_json::Value,
@@ -137,48 +155,23 @@ async fn response(
     let service_json = if service.is_metadata() {
         metadata_json
     } else {
-        let missing_data_objects = match model_handle.missing_data_objects(&service_handle).await {
-            Ok(missing_data_objects) => missing_data_objects,
-            Err(error) => return Response::error(error, StatusCode::INTERNAL_SERVER_ERROR),
-        };
         let metadata_json = metadata_json.unwrap_or(serde_json::Value::Null);
-        if missing_data_objects.is_empty() {
-            let service_json =
-                service_page(state.as_ref(), query, &model_handle, &service, page_index).await;
-            service_json.map(|service_json| {
-                json!({
-                    "metadata": metadata_json,
-                    "data": service_json
-                })
-            })
-        } else {
-            return Response::error(
-                anyhow!("Service '{service_name}' unavailable for model '{model_name}' due to missing data objects: {missing_data_objects:?}"),
-                StatusCode::NOT_FOUND,
-            );
-        }
+        service_value(
+            state.as_ref(),
+            query,
+            &model_handle,
+            &service_handle,
+            page_index,
+        )
+        .await
+        .map(|mut service_json| {
+            service_json["metadata"] = metadata_json;
+            service_json
+        })
     };
     match service_json {
         Ok(page) => Response::success(page),
         Err(error) => Response::error(error, StatusCode::INTERNAL_SERVER_ERROR),
-    }
-}
-
-async fn service_value(
-    state: &State,
-    query: &serde_json::Value,
-    model_handle: &ModelHandle,
-    service_handle: &ServiceHandle,
-    page_index: Index,
-) -> Result<serde_json::Value> {
-    let missing_data_objects = model_handle.missing_data_objects(service_handle).await?;
-    let service = service_handle.service().await?;
-
-    if missing_data_objects.is_empty() {
-        let page = service_page(state, query, model_handle, &service, page_index).await?;
-        Ok(json!({ "data": page }))
-    } else {
-        Ok(json!({ "missing_data_objects": missing_data_objects }))
     }
 }
 
