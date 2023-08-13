@@ -21,7 +21,6 @@ else:
 
 model = database.model(model_name)
 if model is None:
-    print("Adding neuroscope model.")
     metadata = ModelMetadata.from_neuroscope(model_name)
     model = database.add_model(metadata)
 model.scrape_neuroscope_model()

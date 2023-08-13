@@ -16,9 +16,10 @@ if path.isfile(database_path):
 else:
     database = Database.initialize(database_path)
 
-model = database.model("solu-6l")
+model_name = "solu-6l-pile"
+model = database.model(model_name)
 if model is None:
-    model_metadata = ModelMetadata("solu-6l", 6, 3072, "solu", 42467328, "The Pile")
+    model_metadata = ModelMetadata.from_neuroscope(model_name)
     model = database.add_model(model_metadata)
 assert model is not None
 
