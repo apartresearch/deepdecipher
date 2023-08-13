@@ -1,6 +1,6 @@
 const modelRow = (model) => {
     return `<tr>
-        <td><a href="${base_url}/viz/${model.name}/all">${model.name}</a></td>
+        <td><a href="${baseUrl}/viz/${model.name}/all">${model.name}</a></td>
         <td>${model.activation_function}</td>
         <td>${model.dataset}</td>
         <td>${model.num_layers}</td>
