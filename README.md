@@ -2,7 +2,9 @@
 
 🦠 Official repository and open-source website for DeepDecipher By Albert Garde, Esben Kran, Alex Foote and Fazl Barez - The associated paper is under review. 
 
-Contributers, see [below](#contributor-setup) for a setup guide. See [the data available](#data-available-per-neuron) through the official API (TBD).
+Website available [here](deepdecipher.org).
+Contributers, see [below](#contributor-setup) for a setup guide.
+See [the data available](#data-available-per-neuron) through the [official API](deepdecipher.org/doc).
 
 **DeepDecipher** is a package that exposes methods to generate information from arbitrary [HookedTransformer classes](https://github.com/neelnanda-io/TransformerLens/blob/3cd943628b5c415585c8ef100f65989f6adc7f75/transformer_lens/HookedTransformer.py#L48), scrape existing databases of information about neurons within the field of mechanistic interpretability, search over neuron stores generated from [the Neuron2Graph package](https://github.com/apartresearch/neuron2graph), and set up a server with an API and a server with a UI that interfaces with the API.
 
