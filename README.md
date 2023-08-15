@@ -21,7 +21,7 @@ See the neuron information UI pages in action here:
 - [x] The DeepDecipher Python package to dynamically load neuron information from any available existing APIs, such as [neuroscope.io](https://neuroscope.io) and the [OpenAI Neuron Explainer](https://openaipublic.blob.core.windows.net/neuron-explainer/neuron-viewer/index.html) [API](https://github.com/openai/automated-interpretability).
 - [x] The DeepDecipher Python package also provides functionality to compile data folders from any setup script and serve it as a data-efficient API on a server. This includes a simple setup to use raw JSON.
 - [x] The DeepDecipher API is an extensible and active API to [relevant variables for single-neuron analysis](#data-available-per-neuron)
-- [ ] The API has access to relevant layer- and model-size information, such as layer neurons sorted by how interesting they are
+- [x] The API has access to relevant layer- and model-size information, such as layer neurons sorted by how interesting they are
 - [x] The DeepDecipher front-end is an application to navigate the neurons in the style of neuroscope [(Nanda, 2022)](neuroscope.io)
 - [x] We implement a search that reveal interesting examples of behavior
 
