@@ -91,11 +91,11 @@ async fn scrape_layer_to_database(
                         Ok(result) => break result,
                         Err(err) => {
                             if retries == RETRY_LIMIT { 
-                                log::error!("Failed to fetch neuron explainer data for neuron {neuron_index} after {retries} retries. Error: {err}");
+                                log::error!("Failed to fetch neuroscope page for neuron {neuron_index} after {retries} retries. Error: {err}");
                                 return Err(err);
                             }
                             log::error!(
-                                "Failed to fetch neuron explainer data for neuron {neuron_index}. Retrying...",
+                                "Failed to fetch neuroscope page for neuron {neuron_index}. Retrying...",
                             );
                             log::error!("Error: {err}");
                             retries += 1;
