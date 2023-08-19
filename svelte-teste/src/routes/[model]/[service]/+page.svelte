@@ -32,6 +32,7 @@
 </script>
 
 <h1>DeepDecipher model page</h1>
+<h2>{modelName}</h2>
 {#if hasN2GSearch}
 	<div id="search-wrapper">
 		<p>
@@ -44,8 +45,10 @@
 			<span class="code">" Transformers"</span> becomes
 			<span class="code">"transformers"</span>).
 		</p>
-		<input type="text" value={searchTerm} placeholder="Search..." />
-		<button on:click={n2gSearch}>Search</button>
+		<form on:submit|preventDefault={n2gSearch}>
+			<input type="text" value={searchTerm} placeholder="Search..." />
+			<button>Search</button>
+		</form>
 		<div>{searchMessage}</div>
 		{#if searchResults !== undefined}
 			<SearchResults baseUrlExtUi={BASE_VIZ_API} {modelName} {searchResults} />
