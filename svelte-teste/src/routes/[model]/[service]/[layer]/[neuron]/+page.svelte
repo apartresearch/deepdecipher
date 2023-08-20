@@ -4,6 +4,8 @@
 	import Neuron2Graph from './Neuron2Graph.svelte';
 	import type { Data } from './data';
 	import SimilarNeurons from './SimilarNeurons.svelte';
+	import Gpt4Explanation from './Gpt4Explanation.svelte';
+	import NotAvailable from './NotAvailable.svelte';
 
 	export let data: Data;
 
@@ -40,8 +42,10 @@
 		nextUrl = `${modelUrl}/0/0`;
 	}
 
+	const neuron2graphData = services['neuron2graph'];
 	const neuron2graph = services['neuron2graph'].data.graph;
 	const similarNeurons = services['neuron2graph'].data.similar;
+	const gpt4Data = services['neuron-explainer'];
 </script>
 
 <div class="container">
@@ -74,14 +78,22 @@
 	</div>
 	<div>
 		<h2 class="section-header">Similar neurons</h2>
-		<SimilarNeurons {similarNeurons} {modelName} {serviceName} />
+		{#if 'data' in neuron2graphData}
+			<SimilarNeurons similarNeurons={neuron2graphData.data.similar} {modelName} {serviceName} />
+		{:else}
+			<NotAvailable message="Similar neurons" />
+		{/if}
 	</div>
 	<div id="n2g">
 		<h2 class="section-header">
 			Neuron semantic graph
 			<a href="https://n2g.apartresearch.com">Read what this is</a>
 		</h2>
-		<Neuron2Graph graphString={neuron2graph} />
+		{#if 'data' in neuron2graphData}
+			<Neuron2Graph graphString={neuron2graphData.data.graph} />
+		{:else}
+			<NotAvailable message="Neuron semantic graph" />
+		{/if}
 	</div>
 	<div id="neuronExplainer">
 		<h2 class="section-header">
@@ -90,6 +102,11 @@
 				>Read what this is</a
 			>
 		</h2>
+		{#if 'data' in gpt4Data}
+			<Gpt4Explanation gpt4ExplanationData={gpt4Data.data} />
+		{:else}
+			<NotAvailable message="Neuron explanation by GPT-4" />
+		{/if}
 	</div>
 	<div id="neuroscope">
 		<h2 class="section-header">Max activating dataset examples for this neuron</h2>
