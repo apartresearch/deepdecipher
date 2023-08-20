@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { BASE_VIZ_API } from '../../../../../base';
-
 	export let gpt4ExplanationData: { explanation: string; score: number };
 </script>
 
