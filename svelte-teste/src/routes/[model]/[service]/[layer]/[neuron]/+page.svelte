@@ -3,6 +3,7 @@
 	import { BASE_API_URL, BASE_EXT_API, BASE_VIZ_API } from '../../../../../base';
 	import Neuron2Graph from './Neuron2Graph.svelte';
 	import type { Data } from './data';
+	import SimilarNeurons from './SimilarNeurons.svelte';
 
 	export let data: Data;
 
@@ -40,6 +41,7 @@
 	}
 
 	const neuron2graph = services['neuron2graph'].data.graph;
+	const similarNeurons = services['neuron2graph'].data.similar;
 </script>
 
 <div class="container">
@@ -72,7 +74,7 @@
 	</div>
 	<div>
 		<h2 class="section-header">Similar neurons</h2>
-		<div id="similar" />
+		<SimilarNeurons {similarNeurons} {modelName} {serviceName} />
 	</div>
 	<div id="n2g">
 		<h2 class="section-header">
