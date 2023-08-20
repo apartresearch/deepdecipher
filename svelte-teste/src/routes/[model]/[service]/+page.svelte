@@ -15,7 +15,7 @@
 	if (typeof data.modelMetadata === 'string') {
 		throw error(500, `Model metadata couldn't be loaded. Error: ${data.modelMetadata}`);
 	}
-	let hasN2GSearch: boolean = data.modelMetadata.available_services.includes('neuron2graph-search');
+	let hasN2GSearch: boolean = data.modelMetadata.availableServices.includes('neuron2graph-search');
 
 	async function n2gSearch() {
 		console.log(searchTerm);

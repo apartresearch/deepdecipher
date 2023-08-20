@@ -1,13 +1,14 @@
 <script>
+	import { error } from '@sveltejs/kit';
+	import { BASE_API_URL, BASE_EXT_API } from '../base';
+	import { getModels } from '../modelMetadata';
+
 	async function models() {
-		const response = await fetch('http://localhost:8080/api');
-		if (response.ok) {
-			const data = await response.json();
-			return data['models'];
-		} else {
-			const text = await response.text();
-			throw new Error(text);
+		const models = await getModels();
+		if (typeof models == 'string') {
+			throw error(500, models);
 		}
+		return models;
 	}
 </script>
 
@@ -44,14 +45,14 @@
 		{:then models}
 			{#each models as model}
 				<tr>
-					<td><a href="/{model['name']}/all">{model['name']}</a></td>
-					<td>{model['activation_function']}</td>
-					<td>{model['dataset']}</td>
-					<td>{model['num_layers']}</td>
-					<td>{model['layer_size'].toLocaleString('en-US')}</td>
-					<td>{model['num_total_neurons'].toLocaleString('en-US')}</td>
-					<td>{model['num_total_parameters'].toLocaleString('en-US')}</td>
-					<td>{model['available_services']}</td>
+					<td><a href="/{model.name}/all">{model.name}</a></td>
+					<td>{model.activationFunction}</td>
+					<td>{model.dataset}</td>
+					<td>{model.numLayers}</td>
+					<td>{model.layerSize.toLocaleString('en-US')}</td>
+					<td>{model.numTotalNeurons.toLocaleString('en-US')}</td>
+					<td>{model.numTotlalParameters.toLocaleString('en-US')}</td>
+					<td>{model.availableServices}</td>
 				</tr>
 			{/each}
 		{:catch error}
