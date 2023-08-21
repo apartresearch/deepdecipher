@@ -1,7 +1,7 @@
 <script lang="ts">
 	import SearchResults from './SearchResults.svelte';
-	import { search } from '../../../../n2g_search';
-	import { BASE_VIZ_API } from '../../../../base';
+	import { search } from '$lib/n2g_search';
+	import { BASE_VIZ_API } from '$lib/base';
 	import type { Data } from './data';
 	import { error } from '@sveltejs/kit';
 

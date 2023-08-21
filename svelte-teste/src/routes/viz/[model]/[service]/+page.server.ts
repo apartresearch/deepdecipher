@@ -1,4 +1,4 @@
-import { getModelMetadata } from '../../../../modelMetadata';
+import { getModelMetadata } from '$lib/modelMetadata';
 import type { Data } from './data';
 
 export async function load({ params }: { params: { model: string, service: string } }) {

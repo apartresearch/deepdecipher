@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
-import { BASE_API_URL, BASE_EXT_API } from '../../../../../../base';
-import { getModelMetadata, modelMetadataFromJson } from '../../../../../../modelMetadata';
+import { BASE_API_URL, BASE_EXT_API } from '$lib/base';
+import { getModelMetadata, modelMetadataFromJson } from '$lib/modelMetadata';
 import type { Data } from './data';
 
 export async function load({ params }: { params: { model: string, service: string, layer: number, neuron: number } }) {
