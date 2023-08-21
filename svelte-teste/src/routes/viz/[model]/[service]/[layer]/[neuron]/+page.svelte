@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { error } from '@sveltejs/kit';
-	import { BASE_API_URL, BASE_EXT_API, BASE_VIZ_API } from '../../../../../base';
+	import { BASE_API_URL, BASE_EXT_API, BASE_VIZ_API } from '../../../../../../base';
 	import Neuron2Graph from './Neuron2Graph.svelte';
 	import type { Data } from './data';
 	import SimilarNeurons from './SimilarNeurons.svelte';

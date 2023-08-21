@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { BASE_VIZ_API } from '../../../../../base';
+	import { BASE_VIZ_API } from '../../../../../../base';
 
 	export let similarNeurons: any[];
 	export let modelName: string;

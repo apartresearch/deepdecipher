@@ -1,4 +1,4 @@
-import type { ModelMetadata } from "../../../modelMetadata";
+import type { ModelMetadata } from "../../../../modelMetadata";
 
 export type Data = {
     modelName: string;

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { error } from '@sveltejs/kit';
-	import { BASE_VIZ_API } from '../../../../../base';
+	import { BASE_VIZ_API } from '../../../../../../base';
 	import TokenViz from './TokenViz.svelte';
 	import type { Text } from './neuroscope';
 	import * as d3 from 'd3-scale';
