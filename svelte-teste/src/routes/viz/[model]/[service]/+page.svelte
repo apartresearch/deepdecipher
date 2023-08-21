@@ -36,6 +36,7 @@
 <h1>DeepDecipher model page</h1>
 <NeuronChooser {modelMetadata} {serviceName} />
 {#if hasN2GSearch}
+	<h2>Neuron2Graph search</h2>
 	<div id="search-wrapper">
 		<p>
 			By searching for a token below, you'll receive a list of neurons that activate to these

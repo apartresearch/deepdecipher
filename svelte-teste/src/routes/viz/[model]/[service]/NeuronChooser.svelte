@@ -12,9 +12,18 @@
 	let navNeuronIndex: number = 0;
 
 	$: targetUrl = `/${VIZ_EXT}/${name}/${serviceName}/${navLayerIndex}/${navNeuronIndex}`;
+
+	let navigating: boolean = false;
+
+	console.log(navigating);
+
+	function goToNeuron() {
+		navigating = true;
+		goto(targetUrl);
+	}
 </script>
 
-<form on:submit|preventDefault={() => goto(targetUrl)}>
+<form on:submit|preventDefault={goToNeuron}>
 	<table>
 		<tr><th>Model</th><th>Layer</th><th>Neuron</th></tr>
 		<tr
@@ -34,7 +43,10 @@
 					max={layerSize - 1}
 					placeholder="Neuron index..."
 				/></td
-			><td><button>Go!</button></td></tr
+			><td
+				><button>Go!</button>
+				{#if navigating}Loading...{/if}</td
+			></tr
 		>
 	</table>
 </form>
