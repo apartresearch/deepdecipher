@@ -83,4 +83,8 @@ impl PyModelMetadata {
     fn dataset(&self) -> String {
         self.metadata.dataset.clone()
     }
+
+    fn __repr__(&self) -> String {
+        format!("{:?}", self.metadata)
+    }
 }
