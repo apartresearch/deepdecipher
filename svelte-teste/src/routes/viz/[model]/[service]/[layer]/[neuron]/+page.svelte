@@ -83,7 +83,7 @@
 		{#if 'data' in neuron2graphData}
 			<SimilarNeurons similarNeurons={neuron2graphData.data.similar} {modelName} {serviceName} />
 		{:else}
-			<NotAvailable message="Similar neurons" />
+			<div class="not-available">Similar neurons are not available for this neuron.</div>
 		{/if}
 	</div>
 	<div id="n2g">
@@ -94,7 +94,7 @@
 		{#if 'data' in neuron2graphData}
 			<Neuron2Graph graphString={neuron2graphData.data.graph} />
 		{:else}
-			<NotAvailable message="Neuron semantic graph" />
+			<div class="not-available">Neuron semantic graph is not available for this neuron.</div>
 		{/if}
 	</div>
 	<div id="neuronExplainer">
@@ -107,7 +107,7 @@
 		{#if 'data' in gpt4Data}
 			<Gpt4Explanation gpt4ExplanationData={gpt4Data.data} />
 		{:else}
-			<NotAvailable message="Neuron explanation by GPT-4" />
+			<div class="not-available">Neuron explanation by GPT-4 is not available for this neuron.</div>
 		{/if}
 	</div>
 	<div id="neuroscope">
@@ -116,7 +116,7 @@
 		{#if 'data' in neuroscope}
 			<Neuroscope texts={neuroscope.data.texts} />
 		{:else}
-			<NotAvailable message="Neuroscope data" />
+			<div class="not-available">Neuroscope data is not available for this neuron.</div>
 		{/if}
 	</div>
 	<div id="tooltip" />

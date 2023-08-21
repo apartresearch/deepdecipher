@@ -55,9 +55,7 @@
 		{/if}
 	</div>
 {:else}
-	<div id="no-search-message" class="not_available">
-		Neuron to Graph search is not available for this model.
-	</div>
+	<div class="not-available">Neuron to Graph search is not available for this model.</div>
 {/if}
 
 <style>

@@ -2,12 +2,12 @@
 	export let message: string;
 </script>
 
-<div class="not_available">
+<div class="not-available">
 	{message} is not available for this neuron.
 </div>
 
 <style>
-	.not_available {
+	.not-available {
 		background-color: rgba(255, 0, 0, 0.1);
 		border: 1px dashed rgba(255, 0, 0, 0.5);
 		color: rgba(255, 0, 0, 0.8);

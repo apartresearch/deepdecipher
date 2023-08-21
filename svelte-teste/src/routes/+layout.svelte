@@ -36,4 +36,13 @@
 		border: 1px solid rgba(34, 0, 0, 0.1);
 		font-family: 'IBM Plex Mono', monospace;
 	}
+
+	:global(.not-available) {
+		background-color: rgba(255, 0, 0, 0.1);
+		border: 1px dashed rgba(255, 0, 0, 0.5);
+		color: rgba(255, 0, 0, 0.8);
+		border-radius: 0.5em;
+		padding: 0.4em 1em;
+		display: inline-block;
+	}
 </style>

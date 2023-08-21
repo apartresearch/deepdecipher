@@ -1,7 +1,7 @@
 <script>
 	import { error } from '@sveltejs/kit';
-	import { BASE_API_URL, BASE_EXT_API } from '../lib/base';
-	import { getModels } from '../modelMetadata';
+	import { BASE_API_URL, BASE_EXT_API } from '$lib/base';
+	import { getModels } from '$lib/modelMetadata';
 
 	async function models() {
 		const models = await getModels();
