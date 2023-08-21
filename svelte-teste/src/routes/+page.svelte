@@ -1,6 +1,7 @@
 <script>
 	import { error } from '@sveltejs/kit';
 	import { getModels } from '$lib/modelMetadata';
+	import { VIZ_EXT } from '$lib/base';
 
 	async function models() {
 		const models = await getModels();
@@ -43,7 +44,7 @@
 	{:then models}
 		{#each models as model}
 			<tr>
-				<td><a href="/{model.name}/all">{model.name}</a></td>
+				<td><a href="/{VIZ_EXT}/{model.name}/all">{model.name}</a></td>
 				<td>{model.activationFunction}</td>
 				<td>{model.dataset}</td>
 				<td>{model.numLayers}</td>

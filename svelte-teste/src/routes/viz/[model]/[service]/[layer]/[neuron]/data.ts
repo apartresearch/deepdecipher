@@ -7,4 +7,8 @@ export type Data = {
     neuronIndex: number;
     services: Record<string, any>;
     modelMetadata: ModelMetadata | string;
+    modelUrl: string;
+    layerUrl: string;
+    prevUrl: string;
+    nextUrl: string;
 }

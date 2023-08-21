@@ -1,8 +1,8 @@
-import { BASE_API_URL, BASE_EXT_API } from "./base";
+import { BASE_URL, API_EXT } from "./base";
 
 export async function search(modelName: string, searchTerm: string, loaderCallback: (message: string) => void | null): Promise<Record<string, any> | string> {
     showLoader(loaderCallback);
-    const url = `${BASE_API_URL}/${BASE_EXT_API}/${modelName}/neuron2graph-search?query=any:${searchTerm
+    const url = `${BASE_URL}/${API_EXT}/${modelName}/neuron2graph-search?query=any:${searchTerm
         .toString()
         .toLowerCase()}`;
     let response = await fetch(

@@ -1,4 +1,4 @@
-import { BASE_API_URL, BASE_EXT_API } from "./base";
+import { BASE_URL, API_EXT } from "./base";
 
 export type ModelMetadata = {
     name: string;
@@ -25,7 +25,7 @@ export function modelMetadataFromJson(json: any): ModelMetadata {
 }
 
 export async function getModelMetadata(modelName: string): Promise<ModelMetadata | string> {
-    const url = `${BASE_API_URL}/${BASE_EXT_API}/${modelName}/metadata`;
+    const url = `${BASE_URL}/${API_EXT}/${modelName}/metadata`;
     const response = await fetch(
         url
     );
@@ -37,7 +37,7 @@ export async function getModelMetadata(modelName: string): Promise<ModelMetadata
 }
 
 export async function getModels(): Promise<ModelMetadata[] | string> {
-    const url = `${BASE_API_URL}/${BASE_EXT_API}`;
+    const url = `${BASE_URL}/${API_EXT}`;
     const response = await fetch(
         url
     );

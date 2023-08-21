@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { error } from '@sveltejs/kit';
-	import { BASE_VIZ_API } from '$lib/base';
+	import { VIZ_EXT } from '$lib/base';
 	import Neuron2Graph from './Neuron2Graph.svelte';
 	import type { Data } from './data';
 	import SimilarNeurons from './SimilarNeurons.svelte';
@@ -9,42 +9,22 @@
 
 	export let data: Data;
 
-	let { modelName, serviceName, layerIndex, neuronIndex, modelMetadata, services } = data;
-	if (typeof modelMetadata == 'string')
-		throw error(500, `Model metadata couldn't be loaded. Error: ${modelMetadata}`);
-	if (layerIndex >= modelMetadata.numLayers || layerIndex < 0)
-		throw error(
-			404,
-			`Layer index ${layerIndex} is out of bounds. Model has ${modelMetadata.numLayers} layers.`
-		);
-	if (neuronIndex >= modelMetadata.layerSize || neuronIndex < 0)
-		throw error(
-			404,
-			`Neuron index ${neuronIndex} is out of bounds. Layer has ${modelMetadata.layerSize} neurons.`
-		);
-	const modelUrl = `/${BASE_VIZ_API}/${modelName}/${serviceName}`;
-	const layerUrl = `${modelUrl}/${layerIndex}`;
-	let prevUrl = '';
-	if (neuronIndex > 0) {
-		prevUrl = `${layerUrl}/${neuronIndex - 1}`;
-	} else if (layerIndex > 0) {
-		prevUrl = `${modelUrl}/${layerIndex - 1}/${modelMetadata.layerSize - 1}`;
-	} else {
-		prevUrl = `${modelUrl}/${modelMetadata.numLayers - 1}/${modelMetadata.layerSize - 1}`;
-	}
+	$: ({
+		modelName,
+		serviceName,
+		layerIndex,
+		neuronIndex,
+		modelMetadata,
+		services,
+		modelUrl,
+		layerUrl,
+		prevUrl,
+		nextUrl
+	} = data);
 
-	let nextUrl = '';
-	if (neuronIndex < modelMetadata.layerSize - 1) {
-		nextUrl = `${layerUrl}/${neuronIndex + 1}`;
-	} else if (layerIndex < modelMetadata.numLayers - 1) {
-		nextUrl = `${modelUrl}/${layerIndex + 1}/0`;
-	} else {
-		nextUrl = `${modelUrl}/0/0`;
-	}
-
-	const neuron2graphData = services['neuron2graph'];
-	const gpt4Data = services['neuron-explainer'];
-	const neuroscope = services['neuroscope'];
+	$: neuron2graphData = services['neuron2graph'];
+	$: gpt4Data = services['neuron-explainer'];
+	$: neuroscope = services['neuroscope'];
 </script>
 
 <div class="container">

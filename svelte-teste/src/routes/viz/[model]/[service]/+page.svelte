@@ -1,7 +1,7 @@
 <script lang="ts">
 	import SearchResults from './SearchResults.svelte';
 	import { search } from '$lib/n2g_search';
-	import { BASE_VIZ_API } from '$lib/base';
+	import { VIZ_EXT } from '$lib/base';
 	import type { Data } from './data';
 	import { error } from '@sveltejs/kit';
 
@@ -51,7 +51,7 @@
 		</form>
 		<div id="search-message">{searchMessage}</div>
 		{#if searchResults !== undefined}
-			<SearchResults baseUrlExtUi={BASE_VIZ_API} {modelName} {searchResults} />
+			<SearchResults baseUrlExtUi={VIZ_EXT} {modelName} {searchResults} />
 		{/if}
 	</div>
 {:else}

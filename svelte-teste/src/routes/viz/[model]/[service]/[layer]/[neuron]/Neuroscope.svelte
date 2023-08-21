@@ -33,17 +33,10 @@
 		});
 	}
 
-	function toggle_all_tokens(this: HTMLElement) {
-		var content = this.nextElementSibling as HTMLElement | null;
-		if (!content) {
-			console.error("Couldn't find content element for collapsible button.");
-			return;
-		}
-		if (content.style.maxHeight) {
-			content.style.removeProperty('maxHeight');
-		} else {
-			content.style.maxHeight = content.scrollHeight + 'px';
-		}
+	let collapsed: boolean[] = new Array(texts.length).fill(true);
+
+	function toggle_all_tokens(index: number) {
+		collapsed[index] = !collapsed[index];
 	}
 </script>
 
@@ -56,19 +49,21 @@
 				of the text of length {text.tokens.length}.</span
 			>
 		</h2>
-		<div class="token_string">
+		<div class="token-string">
 			{#each tokens(text, true) as { token, activation, color }}
 				<TokenViz {token} {activation} {color} />
 			{/each}
 		</div>
-		<button class="collapsible" on:click={toggle_all_tokens}> 💬 Show all tokens in sample </button>
-		<div class="content">
-			<div class="token_string">
+		<button class="collapsible" on:click={() => toggle_all_tokens(index)}>
+			💬 Show all tokens in sample
+		</button>
+		{#if !collapsed[index]}
+			<div class="token-string">
 				{#each tokens(text, false) as { token, activation, color }}
 					<TokenViz {token} {activation} {color} />
 				{/each}
 			</div>
-		</div>
+		{/if}
 	{/each}
 </div>
 
@@ -91,7 +86,7 @@
 		background-color: #f1f1f1;
 	}
 
-	.token_string {
+	.token-string {
 		border: 1px solid grey;
 		padding: 0.5em;
 		background-color: #f1f1f1;
@@ -107,14 +102,5 @@
 		border: 1px solid grey;
 		border-top: none;
 		border-bottom: none;
-	}
-
-	.content {
-		padding: 0 18px;
-		max-height: 0;
-		overflow: hidden;
-		transition: max-height 0.2s ease-out;
-		background-color: #f1f1f1;
-		border: 1px solid grey;
 	}
 </style>

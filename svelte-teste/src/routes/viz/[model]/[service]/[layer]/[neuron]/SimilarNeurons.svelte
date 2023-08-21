@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { BASE_VIZ_API } from '../../../../../../lib/base';
+	import { VIZ_EXT } from '../../../../../../lib/base';
 
 	export let similarNeurons: any[];
 	export let modelName: string;
@@ -10,9 +10,8 @@
 	{#if similarNeurons.length > 0}
 		{#each similarNeurons as { layer, neuron, similarity }}
 			<div class="similar_neurons">
-				<a href="/{BASE_VIZ_API}/{modelName}/{serviceName}/{layer}/{neuron}">
-					{layer}:{neuron}</a
-				><span data-tooltip="The similarity between the current neuron and the similar neuron."
+				<a href="/{VIZ_EXT}/{modelName}/{serviceName}/{layer}/{neuron}"> {layer}:{neuron}</a><span
+					data-tooltip="The similarity between the current neuron and the similar neuron."
 					>E{similarity}</span
 				>,
 			</div>
