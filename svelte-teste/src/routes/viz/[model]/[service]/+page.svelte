@@ -22,8 +22,6 @@
 	$: hasN2GSearch = modelMetadata.availableServices.includes('neuron2graph-search');
 
 	async function n2gSearch() {
-		console.log(searchTerm);
-
 		const searchResult = await search(modelName, searchTerm, (message) => {
 			searchMessage = message;
 		});

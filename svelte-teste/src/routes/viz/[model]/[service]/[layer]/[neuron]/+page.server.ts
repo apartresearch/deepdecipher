@@ -13,7 +13,6 @@ export async function load({ params }: { params: { model: string, service: strin
     }
     const json = await response.json();
     let metadata = modelMetadataFromJson(json.metadata.data);
-    console.log(metadata);
     let layerIndex = parseInt(params.layer);
     let neuronIndex = parseInt(params.neuron);
 
