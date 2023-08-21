@@ -4,18 +4,22 @@
 	import { VIZ_EXT } from '$lib/base';
 	import type { Data } from './data';
 	import { error } from '@sveltejs/kit';
+	import NeuronChooser from './NeuronChooser.svelte';
+	import type { ModelMetadata } from '$lib/modelMetadata';
 
 	export let data: Data;
 	export let searchTerm: string = '';
 	export let searchMessage: string = '';
 	export let searchResults: any = undefined;
 
-	let modelName = data.modelName;
+	$: modelName = data.modelName;
+	$: serviceName = data.serviceName;
 
 	if (typeof data.modelMetadata === 'string') {
 		throw error(500, `Model metadata couldn't be loaded. Error: ${data.modelMetadata}`);
 	}
-	let hasN2GSearch: boolean = data.modelMetadata.availableServices.includes('neuron2graph-search');
+	$: modelMetadata = data.modelMetadata as ModelMetadata;
+	$: hasN2GSearch = modelMetadata.availableServices.includes('neuron2graph-search');
 
 	async function n2gSearch() {
 		console.log(searchTerm);
@@ -32,7 +36,7 @@
 </script>
 
 <h1>DeepDecipher model page</h1>
-<h2>{modelName}</h2>
+<NeuronChooser {modelMetadata} {serviceName} />
 {#if hasN2GSearch}
 	<div id="search-wrapper">
 		<p>

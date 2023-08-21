@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { VIZ_EXT } from '../../../../../../lib/base';
+	import { VIZ_EXT } from '$lib/base';
 
 	export let similarNeurons: any[];
 	export let modelName: string;
