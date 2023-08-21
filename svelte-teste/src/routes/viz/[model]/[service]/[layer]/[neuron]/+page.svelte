@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { error } from '@sveltejs/kit';
-	import { BASE_API_URL, BASE_EXT_API, BASE_VIZ_API } from '$lib/base';
+	import { BASE_VIZ_API } from '$lib/base';
 	import Neuron2Graph from './Neuron2Graph.svelte';
 	import type { Data } from './data';
 	import SimilarNeurons from './SimilarNeurons.svelte';
 	import Gpt4Explanation from './Gpt4Explanation.svelte';
-	import NotAvailable from './NotAvailable.svelte';
 	import Neuroscope from './Neuroscope.svelte';
 
 	export let data: Data;
@@ -44,8 +43,6 @@
 	}
 
 	const neuron2graphData = services['neuron2graph'];
-	const neuron2graph = services['neuron2graph'].data.graph;
-	const similarNeurons = services['neuron2graph'].data.similar;
 	const gpt4Data = services['neuron-explainer'];
 	const neuroscope = services['neuroscope'];
 </script>
