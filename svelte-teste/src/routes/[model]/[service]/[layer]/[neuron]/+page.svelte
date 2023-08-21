@@ -6,6 +6,7 @@
 	import SimilarNeurons from './SimilarNeurons.svelte';
 	import Gpt4Explanation from './Gpt4Explanation.svelte';
 	import NotAvailable from './NotAvailable.svelte';
+	import Neuroscope from './Neuroscope.svelte';
 
 	export let data: Data;
 
@@ -46,6 +47,7 @@
 	const neuron2graph = services['neuron2graph'].data.graph;
 	const similarNeurons = services['neuron2graph'].data.similar;
 	const gpt4Data = services['neuron-explainer'];
+	const neuroscope = services['neuroscope'];
 </script>
 
 <div class="container">
@@ -110,7 +112,22 @@
 	</div>
 	<div id="neuroscope">
 		<h2 class="section-header">Max activating dataset examples for this neuron</h2>
-		<div id="visualization" />
+
+		{#if 'data' in neuroscope}
+			<Neuroscope texts={neuroscope.data.texts} />
+		{:else}
+			<NotAvailable message="Neuroscope data" />
+		{/if}
 	</div>
 	<div id="tooltip" />
 </div>
+
+<style>
+	.section-header {
+		margin: 0.5em 0;
+		padding: 0;
+		font-size: 1.2em;
+		line-height: 1em;
+		white-space: wrap;
+	}
+</style>

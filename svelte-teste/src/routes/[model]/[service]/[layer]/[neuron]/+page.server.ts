@@ -5,7 +5,6 @@ import type { Data } from './data';
 
 export async function load({ params }: { params: { model: string, service: string, layer: number, neuron: number } }) {
     const url = `${BASE_API_URL}/${BASE_EXT_API}/${params.model}/all/${params.layer}/${params.neuron}`;
-    console.log("url: " + url)
     const response = await fetch(
         url
     );

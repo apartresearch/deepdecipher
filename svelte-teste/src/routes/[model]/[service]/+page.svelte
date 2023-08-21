@@ -39,7 +39,7 @@
 			By searching for a token below, you'll receive a list of neurons that activate to these
 			tokens. Be aware that most tokens start with
 			<span class="code">" "</span> (e.g.
-			<span class="code">Transformers</span> would be
+			<span class="code">"Transformers"</span> would be
 			<span class="code">" Transformers"</span>) however, this searches over a token database that
 			is trimmed and lowercase (i.e.
 			<span class="code">" Transformers"</span> becomes
@@ -49,7 +49,7 @@
 			<input type="text" value={searchTerm} placeholder="Search..." />
 			<button>Search</button>
 		</form>
-		<div>{searchMessage}</div>
+		<div id="search-message">{searchMessage}</div>
 		{#if searchResults !== undefined}
 			<SearchResults baseUrlExtUi={BASE_VIZ_API} {modelName} {searchResults} />
 		{/if}
@@ -59,3 +59,11 @@
 		Neuron to Graph search is not available for this model.
 	</div>
 {/if}
+
+<style>
+	#search-message {
+		margin: 0.5em 0;
+		font-size: 0.8em;
+		color: rgba(0, 0, 0, 0.5);
+	}
+</style>
