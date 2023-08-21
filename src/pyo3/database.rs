@@ -56,6 +56,18 @@ impl PyDatabase {
         Ok(result)
     }
 
+    fn models(&self) -> PyResult<Vec<PyModelHandle>> {
+        let result = Runtime::new()
+            .context("Failed to start async runtime to get models.")?
+            .block_on(async {
+                self.database
+                    .all_models()
+                    .await
+                    .map(|models| models.into_iter().map(PyModelHandle::new).collect())
+            })?;
+        Ok(result)
+    }
+
     fn add_data_object(
         &mut self,
         data_object_name: &str,
@@ -112,6 +124,25 @@ impl PyDatabase {
             .context("Failed to start async runtime to get service.")?
             .block_on(async { self.database.service(service_name).await })?
             .map(PyServiceHandle::new);
+        Ok(result)
+    }
+
+    fn services(&self) -> PyResult<Vec<PyServiceHandle>> {
+        let result = Runtime::new()
+            .context("Failed to start async runtime to get services.")?
+            .block_on(async {
+                let service_names = self.database.all_service_names().await?;
+                let mut result = Vec::with_capacity(service_names.len());
+                for service_name in service_names {
+                    let service_handle = self
+                        .database
+                        .service(&service_name)
+                        .await?
+                        .expect("We just got the name from the database, so it must exist.");
+                    result.push(PyServiceHandle::new(service_handle));
+                }
+                anyhow::Ok(result)
+            })?;
         Ok(result)
     }
 }
