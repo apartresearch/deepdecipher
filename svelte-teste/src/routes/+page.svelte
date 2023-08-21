@@ -1,6 +1,5 @@
 <script>
 	import { error } from '@sveltejs/kit';
-	import { BASE_API_URL, BASE_EXT_API } from '$lib/base';
 	import { getModels } from '$lib/modelMetadata';
 
 	async function models() {
@@ -26,49 +25,47 @@
 	</tr>
 </table>
 <table id="model-table">
-	<thead>
-		<tr>
-			<th>Model</th>
-			<th>Activation Function</th>
-			<th>Dataset</th>
-			<th>Layers</th>
-			<th>Neurons per Layer</th>
-			<th>Total Neurons</th>
-			<th>Total Parameters</th>
-			<th>Available Services</th>
-		</tr>
+	<tr>
+		<th>Model</th>
+		<th>Activation Function</th>
+		<th>Dataset</th>
+		<th>Layers</th>
+		<th>Neurons per Layer</th>
+		<th>Total Neurons</th>
+		<th>Total Parameters</th>
+		<th>Available Services</th>
+	</tr>
 
-		{#await models()}
+	{#await models()}
+		<tr>
+			<td colspan="8">Loading...</td>
+		</tr>
+	{:then models}
+		{#each models as model}
 			<tr>
-				<td colspan="8">Loading...</td>
+				<td><a href="/{model.name}/all">{model.name}</a></td>
+				<td>{model.activationFunction}</td>
+				<td>{model.dataset}</td>
+				<td>{model.numLayers}</td>
+				<td>{model.layerSize.toLocaleString('en-US')}</td>
+				<td>{model.numTotalNeurons.toLocaleString('en-US')}</td>
+				<td>{model.numTotlalParameters.toLocaleString('en-US')}</td>
+				<td>{model.availableServices}</td>
 			</tr>
-		{:then models}
-			{#each models as model}
-				<tr>
-					<td><a href="/{model.name}/all">{model.name}</a></td>
-					<td>{model.activationFunction}</td>
-					<td>{model.dataset}</td>
-					<td>{model.numLayers}</td>
-					<td>{model.layerSize.toLocaleString('en-US')}</td>
-					<td>{model.numTotalNeurons.toLocaleString('en-US')}</td>
-					<td>{model.numTotlalParameters.toLocaleString('en-US')}</td>
-					<td>{model.availableServices}</td>
-				</tr>
-			{/each}
-		{:catch error}
-			<tr>
-				<td colspan="8">{error.message}</td>
-			</tr>
-		{/await}
-	</thead>
+		{/each}
+	{:catch error}
+		<tr>
+			<td colspan="8">{error.message}</td>
+		</tr>
+	{/await}
 	<tbody id="model-table" />
 </table>
 <div id="tooltip" />
 
 <style>
 	#model-table,
-	#model-table th,
-	#model-table td {
+	#model-table tr th,
+	#model-table tr td {
 		border: 1px solid;
 	}
 </style>
