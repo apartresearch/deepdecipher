@@ -1,4 +1,7 @@
-use actix_web::{web, App, HttpServer};
+use actix_web::{
+    middleware::{self, TrailingSlash},
+    web, App, HttpServer,
+};
 use anyhow::{bail, Result};
 
 use utoipa_redoc::{Redoc, Servable};
@@ -29,6 +32,7 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(state.clone())
+            .wrap(middleware::NormalizePath::new(TrailingSlash::Trim))
             .service(Redoc::with_url_and_config(
                 "/doc",
                 state.api_doc().clone(),
