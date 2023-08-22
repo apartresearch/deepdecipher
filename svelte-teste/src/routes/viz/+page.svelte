@@ -1,15 +1,10 @@
-<script>
-	import { error } from '@sveltejs/kit';
-	import { getModels } from '$lib/modelMetadata';
+<script lang="ts">
+	import type { ModelMetadata } from '$lib/modelMetadata';
 	import { VIZ_EXT } from '$lib/base';
 
-	async function models() {
-		const models = await getModels();
-		if (typeof models == 'string') {
-			throw error(500, models);
-		}
-		return models;
-	}
+	export let data: { models: ModelMetadata[] };
+
+	$: models = data.models;
 </script>
 
 <h1>DeepDecipher front page</h1>
@@ -37,28 +32,18 @@
 		<th>Available Services</th>
 	</tr>
 
-	{#await models()}
+	{#each models as model}
 		<tr>
-			<td colspan="8">Loading...</td>
+			<td><a href="/{VIZ_EXT}/{model.name}/all">{model.name}</a></td>
+			<td>{model.activationFunction}</td>
+			<td>{model.dataset}</td>
+			<td>{model.numLayers}</td>
+			<td>{model.layerSize.toLocaleString('en-US')}</td>
+			<td>{model.numTotalNeurons.toLocaleString('en-US')}</td>
+			<td>{model.numTotlalParameters.toLocaleString('en-US')}</td>
+			<td>{model.availableServices}</td>
 		</tr>
-	{:then models}
-		{#each models as model}
-			<tr>
-				<td><a href="/{VIZ_EXT}/{model.name}/all">{model.name}</a></td>
-				<td>{model.activationFunction}</td>
-				<td>{model.dataset}</td>
-				<td>{model.numLayers}</td>
-				<td>{model.layerSize.toLocaleString('en-US')}</td>
-				<td>{model.numTotalNeurons.toLocaleString('en-US')}</td>
-				<td>{model.numTotlalParameters.toLocaleString('en-US')}</td>
-				<td>{model.availableServices}</td>
-			</tr>
-		{/each}
-	{:catch error}
-		<tr>
-			<td colspan="8">{error.message}</td>
-		</tr>
-	{/await}
+	{/each}
 	<tbody id="model-table" />
 </table>
 <div id="tooltip" />
