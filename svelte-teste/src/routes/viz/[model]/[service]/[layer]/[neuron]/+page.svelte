@@ -6,6 +6,7 @@
 	import SimilarNeurons from './SimilarNeurons.svelte';
 	import Gpt4Explanation from './Gpt4Explanation.svelte';
 	import Neuroscope from './Neuroscope.svelte';
+	import Title from '$lib/Title.svelte';
 
 	export let data: Data;
 
@@ -29,7 +30,7 @@
 
 <div class="container">
 	<div id="meta">
-		<h1>DeepDecipher</h1>
+		<h1><Title /></h1>
 		<table id="meta-information">
 			<tr>
 				<td class="meta-data first" data-tooltip="The model name">{modelName}</td>

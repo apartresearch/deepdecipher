@@ -1,13 +1,14 @@
 <script lang="ts">
 	import type { ModelMetadata } from '$lib/modelMetadata';
 	import { VIZ_EXT } from '$lib/base';
+	import Title from '$lib/Title.svelte';
 
 	export let data: { models: ModelMetadata[] };
 
 	$: models = data.models;
 </script>
 
-<h1>DeepDecipher front page</h1>
+<h1><Title /> front page</h1>
 <p>
 	A web page and API that provides interpretability information from many sources on various
 	transformer models.

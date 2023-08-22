@@ -6,6 +6,7 @@
 	import { error } from '@sveltejs/kit';
 	import NeuronChooser from './NeuronChooser.svelte';
 	import type { ModelMetadata } from '$lib/modelMetadata';
+	import Title from '$lib/Title.svelte';
 
 	export let data: Data;
 	export let searchTerm: string = '';
@@ -33,7 +34,7 @@
 	}
 </script>
 
-<h1>DeepDecipher model page</h1>
+<h1><Title /> model page</h1>
 <NeuronChooser {modelMetadata} {serviceName} />
 {#if hasN2GSearch}
 	<h2>Neuron2Graph search</h2>
