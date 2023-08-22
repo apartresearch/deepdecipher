@@ -15,8 +15,6 @@
 
 	let navigating: boolean = false;
 
-	console.log(navigating);
-
 	function goToNeuron() {
 		navigating = true;
 		goto(targetUrl);
