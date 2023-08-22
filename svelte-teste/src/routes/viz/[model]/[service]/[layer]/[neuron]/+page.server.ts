@@ -1,10 +1,10 @@
 import { error } from '@sveltejs/kit';
-import { BASE_URL, API_EXT, VIZ_EXT } from '$lib/base';
+import { BASE_API_URL, API_EXT, VIZ_EXT } from '$lib/base';
 import { modelMetadataFromJson } from '$lib/modelMetadata';
 import type { Data } from './data';
 
 export async function load({ params }: { params: { model: string, service: string, layer: string, neuron: string } }) {
-    const url = `${BASE_URL}/${API_EXT}/${params.model}/all/${params.layer}/${params.neuron}`;
+    const url = `${BASE_API_URL}/${API_EXT}/${params.model}/all/${params.layer}/${params.neuron}`;
     const response = await fetch(
         url
     );
