@@ -33,6 +33,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@viz-js/viz": "^3.1.0",
 		"d3": "^7.8.5"
 	}
 }
