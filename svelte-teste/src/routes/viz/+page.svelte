@@ -45,7 +45,7 @@
 				<td>{model.layerSize.toLocaleString('en-US')}</td>
 				<td>{model.numTotalNeurons.toLocaleString('en-US')}</td>
 				<td>{model.numTotlalParameters.toLocaleString('en-US')}</td>
-				<td>{model.availableServices}</td>
+				<td>{model.availableServices.filter((service) => service !== 'metadata')}</td>
 			</tr>
 		{/each}
 	</tbody>
