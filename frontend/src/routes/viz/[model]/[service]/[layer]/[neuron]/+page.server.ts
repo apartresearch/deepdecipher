@@ -9,7 +9,7 @@ export async function load({ params }: { params: { model: string, service: strin
         url
     );
     if (!response.ok) {
-        return error(500, await response.text());
+        throw error(500, await response.text());
     }
     const json = await response.json();
     let metadata = modelMetadataFromJson(json.metadata.data);
