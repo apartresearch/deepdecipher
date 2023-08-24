@@ -197,6 +197,11 @@ pub async fn scrape_model_to_database(model: &mut ModelHandle) -> Result<()> {
             .add_data_object("neuroscope", DataType::Neuroscope)
             .await?
     };
+    if model.model_data(&data_object).await?.is_some() {
+        println!("Neuroscope pages for model '{}' already scraped.", model.name());
+        anyhow::Ok(())
+    } else {
+        
 
     let mut progress = Progress::start(
         (model.metadata().num_layers * model.metadata().layer_size) as u64,
@@ -216,7 +221,7 @@ pub async fn scrape_model_to_database(model: &mut ModelHandle) -> Result<()> {
         layer_pages.push(layer_page)
     }
 
-    println!("Scraped neuroscope pages.");
+    println!("Scraped neuroscope pages for model '{}'.", model.name());
 
     let neuron_importance: Vec<(NeuronIndex, f32)> = layer_pages
         .into_iter()
@@ -227,4 +232,5 @@ pub async fn scrape_model_to_database(model: &mut ModelHandle) -> Result<()> {
         .add_model_data(&data_object, model_page.to_binary()?)
         .await?;
     model.add_data_object(&data_object).await
+}
 }
