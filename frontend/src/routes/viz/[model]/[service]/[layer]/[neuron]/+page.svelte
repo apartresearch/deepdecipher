@@ -23,10 +23,9 @@
 		nextUrl
 	} = data);
 
-
-	const neuron2graphData = () => {return services['neuron2graph']; };
-	const gpt4Data = () => { return services['neuron-explainer']; };
-	const neuroscopeData = () => { return services['neuroscope']; };
+	$: neuron2graphData = services['neuron2graph'];
+	$: gpt4Data = services['neuron-explainer'];
+	$: neuroscopeData = services['neuroscope'];
 </script>
 
 <div class="container">
@@ -57,52 +56,54 @@
 			</tr>
 		</table>
 	</div>
-	{#if neuron2graphData() !== 'undefined'}
-	<div>
-		<h2 class="section-header">Similar neurons</h2>
-		{#if 'data' in neuron2graphData()}
-			<SimilarNeurons similarNeurons={neuron2graphData().data.similar} {modelName} {serviceName} />
-		{:else}
-			<div class="not-available">Similar neurons are not available for this neuron.</div>
-		{/if}
-	</div>
-	<div id="n2g">
-		<h2 class="section-header">
-			Neuron semantic graph
-			<a href="https://n2g.apartresearch.com">Read what this is</a>
-		</h2>
-		{#if 'data' in neuron2graphData()}
-			<Neuron2Graph graphString={neuron2graphData().data.graph} />
-		{:else}
-			<div class="not-available">Neuron semantic graph is not available for this neuron.</div>
-		{/if}
-	</div>
+	{#if neuron2graphData !== 'undefined'}
+		<div>
+			<h2 class="section-header">Similar neurons</h2>
+			{#if 'data' in neuron2graphData}
+				<SimilarNeurons similarNeurons={neuron2graphData.data.similar} {modelName} {serviceName} />
+			{:else}
+				<div class="not-available">Similar neurons are not available for this neuron.</div>
+			{/if}
+		</div>
+		<div id="n2g">
+			<h2 class="section-header">
+				Neuron semantic graph
+				<a href="https://n2g.apartresearch.com">Read what this is</a>
+			</h2>
+			{#if 'data' in neuron2graphData}
+				<Neuron2Graph graphString={neuron2graphData.data.graph} />
+			{:else}
+				<div class="not-available">Neuron semantic graph is not available for this neuron.</div>
+			{/if}
+		</div>
 	{/if}
-	{#if gpt4Data() !== 'undefined'}
-	<div id="neuronExplainer">
-		<h2 class="section-header">
-			Neuron explanation by GPT-4
-			<a href="https://openaipublic.blob.core.windows.net/neuron-explainer/paper/index.html"
-				>Read what this is</a
-			>
-		</h2>
-		{#if 'data' in gpt4Data}
-			<Gpt4Explanation gpt4ExplanationData={gpt4Data().data} />
-		{:else}
-			<div class="not-available">Neuron explanation by GPT-4 is not available for this neuron.</div>
-		{/if}
-	</div>
+	{#if gpt4Data !== 'undefined'}
+		<div id="neuronExplainer">
+			<h2 class="section-header">
+				Neuron explanation by GPT-4
+				<a href="https://openaipublic.blob.core.windows.net/neuron-explainer/paper/index.html"
+					>Read what this is</a
+				>
+			</h2>
+			{#if 'data' in gpt4Data}
+				<Gpt4Explanation gpt4ExplanationData={gpt4Data.data} />
+			{:else}
+				<div class="not-available">
+					Neuron explanation by GPT-4 is not available for this neuron.
+				</div>
+			{/if}
+		</div>
 	{/if}
-	{#if neuroscopeData() !== 'undefined'}
-	<div id="neuroscope">
-		<h2 class="section-header">Max activating dataset examples for this neuron</h2>
+	{#if neuroscopeData !== 'undefined'}
+		<div id="neuroscope">
+			<h2 class="section-header">Max activating dataset examples for this neuron</h2>
 
-		{#if 'data' in neuroscopeData()}
-			<Neuroscope texts={neuroscopeData().data.texts} />
-		{:else}
-			<div class="not-available">Neuroscope data is not available for this neuron.</div>
-		{/if}
-	</div>
+			{#if 'data' in neuroscopeData}
+				<Neuroscope texts={neuroscopeData.data.texts} />
+			{:else}
+				<div class="not-available">Neuroscope data is not available for this neuron.</div>
+			{/if}
+		</div>
 	{/if}
 	<div id="tooltip" />
 </div>
