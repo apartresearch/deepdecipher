@@ -69,68 +69,75 @@ async fn scrape_layer_to_database(
     num_neurons: u32,
     progress: &mut Progress,
 ) -> Result<NeuroscopeLayerPage> {
-    let mut join_set = JoinSet::new();
+    let page = if let Some(page_data) = model.layer_data(data_object, layer_index).await? {
+        let layer_page = NeuroscopeLayerPage::from_binary(page_data)?;
+        progress.increment_by(num_neurons.into()).expect("Should be impossible to exceed progress total.");
+        layer_page
+    } else {
+        let mut join_set = JoinSet::new();
 
-    let semaphore = Arc::new(Semaphore::new(20));
+        let semaphore = Arc::new(Semaphore::new(20));
 
-    for neuron_index in 0..num_neurons {
-        let neuron_index = NeuronIndex {
-            layer: layer_index,
-            neuron: neuron_index,
-        };
+        for neuron_index in 0..num_neurons {
+            let neuron_index = NeuronIndex {
+                layer: layer_index,
+                neuron: neuron_index,
+            };
 
-        let mut model = model.clone();
-        let data_object = data_object.clone();
+            let mut model = model.clone();
+            let data_object = data_object.clone();
 
-        let semaphore = Arc::clone(&semaphore);
-        join_set.spawn(async move {
-            let permit = semaphore.acquire_owned().await.unwrap();
-            let mut retries = 0;
-                let result = loop {
-                    match scrape_neuron_page_to_database(&mut model, &data_object, neuron_index).await {
-                        Ok(result) => break result,
-                        Err(err) => {
-                            if retries == RETRY_LIMIT { 
-                                log::error!("Failed to fetch neuroscope page for neuron {neuron_index} after {retries} retries. Error: {err}");
-                                return Err(err);
+            let semaphore = Arc::clone(&semaphore);
+            join_set.spawn(async move {
+                let permit = semaphore.acquire_owned().await.unwrap();
+                let mut retries = 0;
+                    let result = loop {
+                        match scrape_neuron_page_to_database(&mut model, &data_object, neuron_index).await {
+                            Ok(result) => break result,
+                            Err(err) => {
+                                if retries == RETRY_LIMIT { 
+                                    log::error!("Failed to fetch neuroscope page for neuron {neuron_index} after {retries} retries. Error: {err}");
+                                    return Err(err);
+                                }
+                                log::error!(
+                                    "Failed to fetch neuroscope page for neuron {neuron_index}. Retrying...",
+                                );
+                                log::error!("Error: {err}");
+                                retries += 1;
+                                tokio::time::sleep(Duration::from_millis(5)).await;
                             }
-                            log::error!(
-                                "Failed to fetch neuroscope page for neuron {neuron_index}. Retrying...",
-                            );
-                            log::error!("Error: {err}");
-                            retries += 1;
-                            tokio::time::sleep(Duration::from_millis(5)).await;
                         }
-                    }
-                };
-            drop(permit);
-            Ok::<_, anyhow::Error>((neuron_index, result))
-        });
-    }
+                    };
+                drop(permit);
+                Ok::<_, anyhow::Error>((neuron_index, result))
+            });
+        }
 
-    let mut max_activations = Vec::with_capacity(num_neurons as usize);
+        let mut max_activations = Vec::with_capacity(num_neurons as usize);
 
-    while let Some(join_result) = join_set.join_next().await {
-        let neuron_max_activation = match join_result {
-            Ok(scrape_result) => scrape_result?,
-            Err(join_error) => {
-                let panic_object = join_error
-                    .try_into_panic()
-                    .expect("Should be impossible to cancel these tasks.");
-                panic::resume_unwind(panic_object);
-            }
-        };
-        max_activations.push(neuron_max_activation);
-        progress.increment();
-        progress.print();
-    }
+        while let Some(join_result) = join_set.join_next().await {
+            let neuron_max_activation = match join_result {
+                Ok(scrape_result) => scrape_result?,
+                Err(join_error) => {
+                    let panic_object = join_error
+                        .try_into_panic()
+                        .expect("Should be impossible to cancel these tasks.");
+                    panic::resume_unwind(panic_object);
+                }
+            };
+            max_activations.push(neuron_max_activation);
+            progress.increment();
+            progress.print();
+        }
 
-    let layer_page = NeuroscopeLayerPage::new(max_activations);
-    model
-        .add_layer_data(data_object, layer_index, layer_page.to_binary()?)
-        .await?;
+        let layer_page = NeuroscopeLayerPage::new(max_activations);
+        model
+            .add_layer_data(data_object, layer_index, layer_page.to_binary()?)
+            .await?;
+        layer_page
+    };
 
-    Ok(layer_page)
+    Ok(page)
 }
 
 pub async fn scrape_model_metadata<S: AsRef<str>>(model: S) -> Result<Metadata> {
