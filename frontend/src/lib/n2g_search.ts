@@ -1,6 +1,7 @@
 import { BASE_API_URL, API_EXT } from "./base";
 
 export async function search(modelName: string, searchTerm: string, loaderCallback: (message: string) => void | null): Promise<Record<string, any> | string> {
+    console.log(`Searching for ${searchTerm} in ${modelName}`)
     showLoader(loaderCallback);
     const url = `/${API_EXT}/${modelName}/neuron2graph-search?query=any:${searchTerm
         .toString()

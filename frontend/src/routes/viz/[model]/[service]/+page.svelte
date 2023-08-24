@@ -9,7 +9,7 @@
 	import Title from '$lib/Title.svelte';
 
 	export let data: Data;
-	export let searchTerm: string = '';
+	let searchTerm: string = '';
 	export let searchMessage: string = '';
 	export let searchResults: any = undefined;
 
@@ -50,7 +50,7 @@
 			<span class="code">"transformers"</span>).
 		</p>
 		<form on:submit|preventDefault={n2gSearch}>
-			<input type="text" value={searchTerm} placeholder="Search..." />
+			<input type="text" bind:value={searchTerm} placeholder="Search..." />
 			<button>Search</button>
 		</form>
 		<div id="search-message">{searchMessage}</div>
