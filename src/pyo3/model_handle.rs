@@ -25,6 +25,10 @@ impl PyModelHandle {
         PyModelMetadata{ metadata: self.model.metadata().clone() }
     }
 
+    pub fn name(&self) -> &str {
+        self.model.name()
+    }
+
     pub fn delete(&self) -> PyResult<()> {
         Runtime::new()
             .context("Failed to start async runtime to delete model.")?

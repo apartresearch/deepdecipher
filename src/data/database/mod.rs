@@ -145,7 +145,7 @@ impl Database {
         ServiceHandle::new(self.clone(), service_name.as_ref().to_owned()).await
     }
 
-    pub async fn all_service_names(&self) -> Result<impl Iterator<Item = String>> {
+    pub async fn all_service_names(&self) -> Result<impl ExactSizeIterator<Item = String>> {
         const GET_ALL_SERVICE_NAMES: &str = r#"
             SELECT name FROM service;
         "#;

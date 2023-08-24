@@ -1,16 +1,21 @@
 use utoipa::OpenApi;
 
 #[derive(OpenApi)]
-#[openapi(paths(
-    super::response::api_index,
-    super::response::model,
-    super::response::layer,
-    super::response::neuron,
-    super::response::all_model,
-    super::response::all_layer,
-    super::response::all_neuron,
-    super::response::api_doc,
-))]
+#[openapi(
+    info(
+        description = "API for DeepDecipher. See [web page](/) and [GitHub](https://github.com/apartresearch/deepdecipher) for more information."
+    ),
+    paths(
+        super::response::api_index,
+        super::response::model,
+        super::response::layer,
+        super::response::neuron,
+        super::response::all_model,
+        super::response::all_layer,
+        super::response::all_neuron,
+        super::response::api_doc,
+    )
+)]
 pub struct ApiDoc;
 
 pub fn api_doc() -> utoipa::openapi::OpenApi {

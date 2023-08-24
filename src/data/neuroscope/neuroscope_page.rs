@@ -70,12 +70,10 @@ impl NeuroscopeNeuronPage {
 
     pub fn from_html_str(html: &str, neuron_index: NeuronIndex) -> Result<Self> {
         let mut sections = html.split("<hr>");
-        let header = sections.next().context("Tag &lt;hr&gt; not found.")?;
-        let nothing = sections
-            .next()
-            .context("Second &lt;hr&gt; tag not found.")?;
+        let header = sections.next().context("Tag '<hr>' not found.")?;
+        let nothing = sections.next().context("Second '<hr>' tag not found.")?;
         if !nothing.trim().is_empty() {
-            bail!("Space between first two &lt;hr&gt; tags not empty.");
+            bail!("Space between first two '<hr>' tags not empty.");
         }
 
         let texts = sections
