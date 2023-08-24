@@ -56,7 +56,7 @@
 			</tr>
 		</table>
 	</div>
-	{#if neuron2graphData !== 'undefined'}
+	{#if neuron2graphData !== undefined}
 		<div>
 			<h2 class="section-header">Similar neurons</h2>
 			{#if 'data' in neuron2graphData}
@@ -77,7 +77,7 @@
 			{/if}
 		</div>
 	{/if}
-	{#if gpt4Data !== 'undefined'}
+	{#if gpt4Data !== undefined}
 		<div id="neuronExplainer">
 			<h2 class="section-header">
 				Neuron explanation by GPT-4
@@ -94,7 +94,7 @@
 			{/if}
 		</div>
 	{/if}
-	{#if neuroscopeData !== 'undefined'}
+	{#if neuroscopeData !== undefined}
 		<div id="neuroscope">
 			<h2 class="section-header">Max activating dataset examples for this neuron</h2>
 
