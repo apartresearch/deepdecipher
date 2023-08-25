@@ -203,34 +203,34 @@ pub async fn scrape_model_to_database(model: &mut ModelHandle) -> Result<()> {
     } else {
         
 
-    let mut progress = Progress::start(
-        (model.metadata().num_layers * model.metadata().layer_size) as u64,
-        "Scraping neuroscope model",
-    );
-    let mut layer_pages = Vec::with_capacity(model.metadata().num_layers as usize);
-    let layer_size = model.metadata().layer_size;
-    for layer_index in 0..model.metadata().num_layers {
-        let layer_page = scrape_layer_to_database(
-            &mut model.clone(),
-            &data_object,
-            layer_index,
-            layer_size,
-            &mut progress,
-        )
-        .await?;
-        layer_pages.push(layer_page)
+        let mut progress = Progress::start(
+            (model.metadata().num_layers * model.metadata().layer_size) as u64,
+            "Scraping neuroscope model",
+        );
+        let mut layer_pages = Vec::with_capacity(model.metadata().num_layers as usize);
+        let layer_size = model.metadata().layer_size;
+        for layer_index in 0..model.metadata().num_layers {
+            let layer_page = scrape_layer_to_database(
+                &mut model.clone(),
+                &data_object,
+                layer_index,
+                layer_size,
+                &mut progress,
+            )
+            .await?;
+            layer_pages.push(layer_page)
+        }
+
+        println!("Scraped neuroscope pages for model '{}'.", model.name());
+
+        let neuron_importance: Vec<(NeuronIndex, f32)> = layer_pages
+            .into_iter()
+            .flat_map(|layer_page| layer_page.important_neurons().to_vec())
+            .collect();
+        let model_page = NeuroscopeModelPage::new(neuron_importance);
+        model
+            .add_model_data(&data_object, model_page.to_binary()?)
+            .await?;
+        model.add_data_object(&data_object).await
     }
-
-    println!("Scraped neuroscope pages for model '{}'.", model.name());
-
-    let neuron_importance: Vec<(NeuronIndex, f32)> = layer_pages
-        .into_iter()
-        .flat_map(|layer_page| layer_page.important_neurons().to_vec())
-        .collect();
-    let model_page = NeuroscopeModelPage::new(neuron_importance);
-    model
-        .add_model_data(&data_object, model_page.to_binary()?)
-        .await?;
-    model.add_data_object(&data_object).await
-}
 }
