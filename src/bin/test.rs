@@ -1,11 +1,19 @@
 use anyhow::Result;
-use deepdecipher::server;
+use deepdecipher::{
+    data::{retrieve::neuroscope::scrape_neuron_page, NeuronIndex},
+    server,
+};
 
 #[tokio::main]
 pub async fn main() -> Result<()> {
-    let api = server::api_doc();
-    let api_json = serde_json::to_string_pretty(&api)?;
-    std::fs::write("api.json", api_json)?;
+    let result = scrape_neuron_page(
+        "solu-12l",
+        NeuronIndex {
+            layer: 9,
+            neuron: 5596,
+        },
+    )
+    .await?;
 
     Ok(())
 }

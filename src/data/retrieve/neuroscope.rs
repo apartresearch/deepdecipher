@@ -49,7 +49,7 @@ async fn scrape_neuron_page_to_database(
         NeuroscopeNeuronPage::from_binary(page_data)?
     } else {
         let page = scrape_neuron_page(model.name(), neuron_index).await?;
-        model.add_neuron_data( data_object, neuron_index.layer, neuron_index.neuron, page.to_binary()?).await.with_context(|| format!("Failed to write neuroscope page for neuron {neuron_index} in layer {layer_index} of model '{model_name}' to database.", neuron_index = neuron_index.neuron, layer_index = neuron_index.layer, model_name = model.name()))?;
+        model.add_neuron_data( data_object, neuron_index.layer, neuron_index.neuron, page.to_binary()?).await.with_context(|| format!("Failed to write neuroscope page for neuron {neuron_index} in model '{model_name}' to database.", model_name = model.name()))?;
         page
     };
     let model_name = model.name();
@@ -96,13 +96,13 @@ async fn scrape_layer_to_database(
                             Ok(result) => break result,
                             Err(err) => {
                                 if retries == RETRY_LIMIT { 
-                                    log::error!("Failed to fetch neuroscope page for neuron {neuron_index} after {retries} retries. Error: {err}");
+                                    log::error!("Failed to fetch neuroscope page for neuron {neuron_index} after {retries} retries. Error: {err:?}");
                                     return Err(err);
                                 }
                                 log::error!(
                                     "Failed to fetch neuroscope page for neuron {neuron_index}. Retrying...",
                                 );
-                                log::error!("Error: {err}");
+                                log::error!("Error: {err:?}");
                                 retries += 1;
                                 tokio::time::sleep(Duration::from_millis(5)).await;
                             }
