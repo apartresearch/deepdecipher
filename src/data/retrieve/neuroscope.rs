@@ -227,6 +227,10 @@ pub async fn scrape_indices_to_database(model: &mut ModelHandle, data_object: &D
         DataType::Neuroscope => {}
         _ => bail!("Cannot scrape missing indices for non-neuroscope data object.")
     }
+
+    let indices = indices.collect::<Vec<_>>();
+
+    let mut progress = Progress::start(indices.len() as u64, "Scraping missing neuroscope items");
     for index in indices {
         match index {
             Index::Model => {
@@ -237,6 +241,8 @@ pub async fn scrape_indices_to_database(model: &mut ModelHandle, data_object: &D
             }
             Index::Neuron(layer_index, neuron_index) => {
                 scrape_neuron_page_to_database(model, data_object, NeuronIndex { layer: layer_index, neuron: neuron_index }).await?;
+                progress.increment();
+                progress.print();
             }
         }
     }
