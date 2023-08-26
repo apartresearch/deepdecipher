@@ -25,6 +25,15 @@ impl Progress {
         assert!(self.progress <= self.total);
     }
 
+    pub fn increment_by(&mut self, amount: u64) -> Option<()> {
+        if self.progress + amount > self.total {
+            None
+        } else {
+            self.progress += amount;
+            Some(())
+        }
+    }
+
     fn message(&self) -> String {
         let percent = (self.progress as f64 / self.total as f64) * 100.0;
         let elapsed = self.start.elapsed();

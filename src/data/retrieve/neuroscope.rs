@@ -49,7 +49,7 @@ async fn scrape_neuron_page_to_database(
         NeuroscopeNeuronPage::from_binary(page_data)?
     } else {
         let page = scrape_neuron_page(model.name(), neuron_index).await?;
-        model.add_neuron_data( data_object, neuron_index.layer, neuron_index.neuron, page.to_binary()?).await.with_context(|| format!("Failed to write neuroscope page for neuron {neuron_index} in layer {layer_index} of model '{model_name}' to database.", neuron_index = neuron_index.neuron, layer_index = neuron_index.layer, model_name = model.name()))?;
+        model.add_neuron_data( data_object, neuron_index.layer, neuron_index.neuron, page.to_binary()?).await.with_context(|| format!("Failed to write neuroscope page for neuron {neuron_index} in model '{model_name}' to database.", model_name = model.name()))?;
         page
     };
     let model_name = model.name();
@@ -69,68 +69,75 @@ async fn scrape_layer_to_database(
     num_neurons: u32,
     progress: &mut Progress,
 ) -> Result<NeuroscopeLayerPage> {
-    let mut join_set = JoinSet::new();
+    let page = if let Some(page_data) = model.layer_data(data_object, layer_index).await? {
+        let layer_page = NeuroscopeLayerPage::from_binary(page_data)?;
+        progress.increment_by(num_neurons.into()).expect("Should be impossible to exceed progress total.");
+        layer_page
+    } else {
+        let mut join_set = JoinSet::new();
 
-    let semaphore = Arc::new(Semaphore::new(20));
+        let semaphore = Arc::new(Semaphore::new(20));
 
-    for neuron_index in 0..num_neurons {
-        let neuron_index = NeuronIndex {
-            layer: layer_index,
-            neuron: neuron_index,
-        };
+        for neuron_index in 0..num_neurons {
+            let neuron_index = NeuronIndex {
+                layer: layer_index,
+                neuron: neuron_index,
+            };
 
-        let mut model = model.clone();
-        let data_object = data_object.clone();
+            let mut model = model.clone();
+            let data_object = data_object.clone();
 
-        let semaphore = Arc::clone(&semaphore);
-        join_set.spawn(async move {
-            let permit = semaphore.acquire_owned().await.unwrap();
-            let mut retries = 0;
-                let result = loop {
-                    match scrape_neuron_page_to_database(&mut model, &data_object, neuron_index).await {
-                        Ok(result) => break result,
-                        Err(err) => {
-                            if retries == RETRY_LIMIT { 
-                                log::error!("Failed to fetch neuroscope page for neuron {neuron_index} after {retries} retries. Error: {err}");
-                                return Err(err);
+            let semaphore = Arc::clone(&semaphore);
+            join_set.spawn(async move {
+                let permit = semaphore.acquire_owned().await.unwrap();
+                let mut retries = 0;
+                    let result = loop {
+                        match scrape_neuron_page_to_database(&mut model, &data_object, neuron_index).await {
+                            Ok(result) => break result,
+                            Err(err) => {
+                                if retries == RETRY_LIMIT { 
+                                    log::error!("Failed to fetch neuroscope page for neuron {neuron_index} after {retries} retries. Error: {err:?}");
+                                    return Err(err);
+                                }
+                                log::error!(
+                                    "Failed to fetch neuroscope page for neuron {neuron_index}. Retrying...",
+                                );
+                                log::error!("Error: {err:?}");
+                                retries += 1;
+                                tokio::time::sleep(Duration::from_millis(5)).await;
                             }
-                            log::error!(
-                                "Failed to fetch neuroscope page for neuron {neuron_index}. Retrying...",
-                            );
-                            log::error!("Error: {err}");
-                            retries += 1;
-                            tokio::time::sleep(Duration::from_millis(5)).await;
                         }
-                    }
-                };
-            drop(permit);
-            Ok::<_, anyhow::Error>((neuron_index, result))
-        });
-    }
+                    };
+                drop(permit);
+                Ok::<_, anyhow::Error>((neuron_index, result))
+            });
+        }
 
-    let mut max_activations = Vec::with_capacity(num_neurons as usize);
+        let mut max_activations = Vec::with_capacity(num_neurons as usize);
 
-    while let Some(join_result) = join_set.join_next().await {
-        let neuron_max_activation = match join_result {
-            Ok(scrape_result) => scrape_result?,
-            Err(join_error) => {
-                let panic_object = join_error
-                    .try_into_panic()
-                    .expect("Should be impossible to cancel these tasks.");
-                panic::resume_unwind(panic_object);
-            }
-        };
-        max_activations.push(neuron_max_activation);
-        progress.increment();
-        progress.print();
-    }
+        while let Some(join_result) = join_set.join_next().await {
+            let neuron_max_activation = match join_result {
+                Ok(scrape_result) => scrape_result?,
+                Err(join_error) => {
+                    let panic_object = join_error
+                        .try_into_panic()
+                        .expect("Should be impossible to cancel these tasks.");
+                    panic::resume_unwind(panic_object);
+                }
+            };
+            max_activations.push(neuron_max_activation);
+            progress.increment();
+            progress.print();
+        }
 
-    let layer_page = NeuroscopeLayerPage::new(max_activations);
-    model
-        .add_layer_data(data_object, layer_index, layer_page.to_binary()?)
-        .await?;
+        let layer_page = NeuroscopeLayerPage::new(max_activations);
+        model
+            .add_layer_data(data_object, layer_index, layer_page.to_binary()?)
+            .await?;
+        layer_page
+    };
 
-    Ok(layer_page)
+    Ok(page)
 }
 
 pub async fn scrape_model_metadata<S: AsRef<str>>(model: S) -> Result<Metadata> {
@@ -190,36 +197,42 @@ pub async fn scrape_model_to_database(model: &mut ModelHandle) -> Result<()> {
             .add_data_object("neuroscope", DataType::Neuroscope)
             .await?
     };
+    if model.model_data(&data_object).await?.is_some() {
+        println!("Neuroscope pages for model '{}' already scraped.", model.name());
+        anyhow::Ok(())
+    } else {
+        
 
-    let mut progress = Progress::start(
-        (model.metadata().num_layers * model.metadata().layer_size) as u64,
-        "Scraping neuroscope model",
-    );
-    let mut layer_pages = Vec::with_capacity(model.metadata().num_layers as usize);
-    let layer_size = model.metadata().layer_size;
-    for layer_index in 0..model.metadata().num_layers {
-        let layer_page = scrape_layer_to_database(
-            &mut model.clone(),
-            &data_object,
-            layer_index,
-            layer_size,
-            &mut progress,
-        )
-        .await?;
-        layer_pages.push(layer_page)
+        let mut progress = Progress::start(
+            (model.metadata().num_layers * model.metadata().layer_size) as u64,
+            "Scraping neuroscope model",
+        );
+        let mut layer_pages = Vec::with_capacity(model.metadata().num_layers as usize);
+        let layer_size = model.metadata().layer_size;
+        for layer_index in 0..model.metadata().num_layers {
+            let layer_page = scrape_layer_to_database(
+                &mut model.clone(),
+                &data_object,
+                layer_index,
+                layer_size,
+                &mut progress,
+            )
+            .await?;
+            layer_pages.push(layer_page)
+        }
+
+        println!("Scraped neuroscope pages for model '{}'.", model.name());
+
+        let neuron_importance: Vec<(NeuronIndex, f32)> = layer_pages
+            .into_iter()
+            .flat_map(|layer_page| layer_page.important_neurons().to_vec())
+            .collect();
+        let model_page = NeuroscopeModelPage::new(neuron_importance);
+        model
+            .add_model_data(&data_object, model_page.to_binary()?)
+            .await?;
+        model.add_data_object(&data_object).await
     }
-
-    println!("Scraped neuroscope pages.");
-
-    let neuron_importance: Vec<(NeuronIndex, f32)> = layer_pages
-        .into_iter()
-        .flat_map(|layer_page| layer_page.important_neurons().to_vec())
-        .collect();
-    let model_page = NeuroscopeModelPage::new(neuron_importance);
-    model
-        .add_model_data(&data_object, model_page.to_binary()?)
-        .await?;
-    model.add_data_object(&data_object).await
 }
 
 pub async fn scrape_indices_to_database(model: &mut ModelHandle, data_object: &DataObjectHandle, indices: impl Iterator<Item = Index>) -> Result<()> {
