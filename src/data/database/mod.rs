@@ -18,6 +18,7 @@ pub use data_object_handle::DataObjectHandle;
 pub mod data_types;
 mod service_handle;
 pub use service_handle::ServiceHandle;
+mod validation;
 
 mod table_definitions;
 use table_definitions::TABLES;

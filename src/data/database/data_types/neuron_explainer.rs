@@ -5,7 +5,10 @@ use crate::data::{
     database::ModelHandle, neuron_explainer_page::NeuronExplainerPage, DataObjectHandle,
 };
 
-use super::{data_object::ModelDataObject, DataTypeDiscriminants};
+use super::{
+    data_object::{DataValidationError, ModelDataObject},
+    DataTypeDiscriminants,
+};
 
 pub struct NeuronExplainer {
     model: ModelHandle,
@@ -27,6 +30,19 @@ impl ModelDataObject for NeuronExplainer {
 
     fn model_handle(&self) -> &ModelHandle {
         &self.model
+    }
+
+    async fn validate(&self) -> anyhow::Result<Result<(), DataValidationError>> {
+        let missing_items: Vec<_> = self
+            .model
+            .missing_neuron_items(&self.data_object)
+            .await?
+            .collect();
+        Ok(if missing_items.is_empty() {
+            Ok(())
+        } else {
+            Err(DataValidationError::MissingItems { missing_items })
+        })
     }
 }
 

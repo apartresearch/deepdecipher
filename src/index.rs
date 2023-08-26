@@ -1,4 +1,4 @@
-use crate::data::Metadata;
+use crate::data::{Metadata, NeuronIndex};
 use anyhow::{anyhow, Result};
 
 #[derive(Clone, Copy, Debug)]
@@ -19,6 +19,10 @@ impl Index {
 
     pub fn neuron(layer_index: u32, neuron_index: u32) -> Self {
         Self::Neuron(layer_index, neuron_index)
+    }
+
+    pub fn from_flat_neuron_index(layer_size: u32, flat_neuron_index: usize) -> Self {
+        NeuronIndex::from_flat_index(layer_size, flat_neuron_index).into()
     }
 
     pub fn valid_in_model(self, metadata: &Metadata) -> Result<()> {
@@ -45,5 +49,11 @@ impl Index {
                 format!("neuron l{layer_index}n{neuron_index}")
             }
         }
+    }
+}
+
+impl From<NeuronIndex> for Index {
+    fn from(neuron_index: NeuronIndex) -> Self {
+        Self::Neuron(neuron_index.layer, neuron_index.neuron)
     }
 }

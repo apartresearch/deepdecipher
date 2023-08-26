@@ -3,8 +3,12 @@ use std::str::FromStr;
 use anyhow::{ensure, Context, Result};
 use async_trait::async_trait;
 use strum::{AsRefStr, EnumDiscriminants, EnumString};
+use thiserror::Error;
 
-use crate::data::{DataObjectHandle, ModelHandle};
+use crate::{
+    data::{DataObjectHandle, ModelHandle},
+    Index,
+};
 
 #[derive(Clone, Debug, AsRefStr, EnumString, EnumDiscriminants, PartialEq)]
 #[strum_discriminants(derive(EnumString, AsRefStr))]
@@ -77,9 +81,18 @@ impl DataType {
     }
 }
 
+#[derive(Debug, Error)]
+pub enum DataValidationError {
+    #[error("Data object missing {num_missing} required items.", num_missing = missing_items.len())]
+    MissingItems { missing_items: Vec<Index> },
+    #[error("{0:?}")]
+    Other(anyhow::Error),
+}
+
 #[async_trait]
 pub trait ModelDataObject: Sized {
     async fn new(model: ModelHandle, data_object: DataObjectHandle) -> Result<Option<Self>>;
     fn data_type() -> DataTypeDiscriminants;
     fn model_handle(&self) -> &ModelHandle;
+    async fn validate(&self) -> anyhow::Result<Result<(), DataValidationError>>;
 }

@@ -2,7 +2,7 @@ use async_trait::async_trait;
 
 use crate::{data::{json::JsonData, DataObjectHandle, ModelHandle}, Index};
 
-use super::{DataTypeDiscriminants, ModelDataObject};
+use super::{DataTypeDiscriminants, ModelDataObject, data_object::DataValidationError};
 
 use anyhow::{bail, Context, Result};
 
@@ -26,6 +26,11 @@ impl ModelDataObject for Json {
 
     fn model_handle(&self) -> &ModelHandle {
         &self.model
+    }
+
+    async fn validate(&self) -> anyhow::Result<Result<(), DataValidationError>> {
+        // We cannot validate JSON data objects since we do not know what they must contain.
+        Ok(Ok(()))
     }
 }
 

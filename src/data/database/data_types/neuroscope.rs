@@ -6,7 +6,10 @@ use crate::data::{
     NeuroscopeNeuronPage,
 };
 
-use super::{data_object::ModelDataObject, DataTypeDiscriminants};
+use super::{
+    data_object::{DataValidationError, ModelDataObject},
+    DataTypeDiscriminants,
+};
 
 pub struct Neuroscope {
     model: ModelHandle,
@@ -28,6 +31,15 @@ impl ModelDataObject for Neuroscope {
 
     fn model_handle(&self) -> &ModelHandle {
         &self.model
+    }
+
+    async fn validate(&self) -> anyhow::Result<Result<(), DataValidationError>> {
+        let missing_items: Vec<_> = self.model.missing_items(&self.data_object).await?.collect();
+        Ok(if missing_items.is_empty() {
+            Ok(())
+        } else {
+            Err(DataValidationError::MissingItems { missing_items })
+        })
     }
 }
 

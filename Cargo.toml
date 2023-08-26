@@ -26,6 +26,7 @@ half = { version = "2.2.1", features = ["serde"] }
 
 # Error handling
 anyhow = "1.0.71"
+thiserror = "1.0.47"
 
 # Scraping
 regex = "1.8.4"
