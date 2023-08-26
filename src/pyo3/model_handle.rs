@@ -50,6 +50,27 @@ impl PyModelHandle {
         Ok(())
     }
 
+    pub fn scrape_missing_neuroscope_items(&mut self) -> PyResult<()> {
+        let model_name = self.model.name().to_owned();
+        Runtime::new()
+            .context("Failed to start async runtime to scrape neuroscope.")?
+            .block_on(async {
+                let model = &mut self.model;
+                let data_object = model.database().data_object("neuroscope").await?.with_context(|| format!("No 'neuroscope' data object for model '{model_name}'"))?;
+                let mut missing_indices: Vec<_> = model.missing_neuron_items(&data_object).await?.collect();
+                while !missing_indices.is_empty() {
+                    println!("{} missing items for model '{model_name}'. Scraping...", missing_indices.len(), model_name=model.name());
+                    retrieve::neuroscope::scrape_indices_to_database(model, &data_object, missing_indices.iter().copied()).await.with_context(|| 
+                        format!("Failed to scrape data for model '{model_name}' from Neuroscope.")
+                    )?;
+                    missing_indices = model.missing_neuron_items(&data_object).await?.collect();
+                }
+                anyhow::Ok(())
+            })
+            .with_context(|| format!("Failed to scrape neuroscope model '{model_name}'."))?;
+        Ok(())
+    }
+
     pub fn add_neuron_store(
         &mut self,
         neuron_store_path: &str,

@@ -6,10 +6,10 @@ use crate::{
         neuroscope::{NeuroscopeLayerPage, NeuroscopeModelPage},
         DataObjectHandle, Metadata, ModelHandle, NeuronIndex, NeuroscopeNeuronPage,
     },
-    util::Progress,
+    util::Progress, Index,
 };
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use reqwest::Client;
 use scraper::{Html, Selector};
 use tokio::{sync::Semaphore, task::JoinSet};
@@ -220,4 +220,34 @@ pub async fn scrape_model_to_database(model: &mut ModelHandle) -> Result<()> {
         .add_model_data(&data_object, model_page.to_binary()?)
         .await?;
     model.add_data_object(&data_object).await
+}
+
+pub async fn scrape_indices_to_database(model: &mut ModelHandle, data_object: &DataObjectHandle, indices: impl Iterator<Item = Index>) -> Result<()> {
+    match data_object.data_type() {
+        DataType::Neuroscope => {}
+        _ => bail!("Cannot scrape missing indices for non-neuroscope data object.")
+    }
+    for index in indices {
+        match index {
+            Index::Model => {
+                bail!("Cannot handle model index.")
+            }
+            Index::Layer(_) => {
+                bail!("Cannot handle layer index.")
+            }
+            Index::Neuron(layer_index, neuron_index) => {
+                scrape_neuron_page_to_database(model, data_object, NeuronIndex { layer: layer_index, neuron: neuron_index }).await?;
+            }
+        }
+    }
+    Ok(())
+}
+
+pub async fn scrape_missing_indices(model: &mut ModelHandle, data_object: &DataObjectHandle) -> Result<()> {
+    match data_object.data_type() {
+        DataType::Neuroscope => {}
+        _ => bail!("Cannot scrape missing indices for non-neuroscope data object.")
+    }
+    let missing_indices = model.missing_items(data_object).await?;
+    scrape_indices_to_database(model, data_object, missing_indices).await
 }
