@@ -1,11 +1,4 @@
-use std::{
-    fs::{self, File},
-    path::Path,
-};
-
 use serde::{Deserialize, Serialize};
-
-use anyhow::{Context, Result};
 
 use super::NeuronIndex;
 
@@ -21,20 +14,6 @@ pub struct Metadata {
 }
 
 impl Metadata {
-    pub fn to_file<P: AsRef<Path>>(&self, data_path: P) -> Result<()> {
-        let model_metadata_path = data_path.as_ref().join(&self.name).join("metadata.json");
-        fs::create_dir_all(
-            model_metadata_path
-                .parent()
-                .with_context(|| format!("Invalid path '{model_metadata_path:?}'"))?,
-        )
-        .with_context(|| format!("Failed to create directory for '{model_metadata_path:?}'"))?;
-        let model_metadata_file = File::create(model_metadata_path)?;
-
-        serde_json::to_writer(model_metadata_file, self)?;
-        Ok(())
-    }
-
     pub fn neuron_indices(&self) -> impl Iterator<Item = NeuronIndex> {
         let layer_size = self.layer_size;
         (0..self.num_layers).flat_map(move |layer_index| {
