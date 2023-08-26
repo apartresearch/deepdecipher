@@ -11,7 +11,7 @@ impl ModelHandle {
     ) -> anyhow::Result<impl ExactSizeIterator<Item = Index>> {
         const COUNT_MODEL_DATA: &str = r#"
         SELECT
-            COUNT(*),
+            COUNT(*)
         FROM model_data
         WHERE model_id = ?1 AND data_object_id = ?2;
         "#;
@@ -50,7 +50,7 @@ impl ModelHandle {
     ) -> anyhow::Result<impl Iterator<Item = Index>> {
         const COUNT_LAYER_DATA: &str = r#"
         SELECT
-            layer_index,
+            layer_index
         FROM layer_data
         WHERE model_id = ?1 AND data_object_id = ?2;
         "#;
@@ -97,7 +97,7 @@ impl ModelHandle {
         const COUNT_NEURON_DATA: &str = r#"
         SELECT
             layer_index,
-            neuron_index,
+            neuron_index
         FROM neuron_data
         WHERE model_id = ?1 AND data_object_id = ?2;
         "#;
@@ -154,5 +154,63 @@ impl ModelHandle {
             .await?
             .chain(self.missing_layer_items(data_object).await?)
             .chain(self.missing_neuron_items(data_object).await?))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::collections::HashMap;
+
+    use rand::Rng;
+
+    use crate::data::{data_types::DataType, Database, Metadata};
+
+    #[tokio::test]
+    async fn missing_items_test() -> Result<(), anyhow::Error> {
+        let database = Database::initialize_in_memory().await?;
+
+        let metadata = Metadata {
+            name: String::from("test"),
+            num_layers: 4,
+            layer_size: 10,
+            activation_function: String::from("test_act"),
+            num_total_neurons: 4 * 10,
+            num_total_parameters: 500,
+            dataset: String::from("test_dataset"),
+        };
+        let mut model = database.add_model(metadata).await?;
+
+        let data_object = database
+            .add_data_object("neuroscope", DataType::Neuroscope)
+            .await?;
+
+        let test_data = vec![0u8; 200];
+
+        let data_indices: HashMap<_, _> = model
+            .metadata()
+            .indices()
+            .map(|index| (index, rand::thread_rng().gen::<bool>()))
+            .collect();
+
+        for (&index, &add_data) in data_indices.iter() {
+            if add_data {
+                model
+                    .add_data(&data_object, index, test_data.clone())
+                    .await?;
+            }
+        }
+
+        let mut neuron_item_exists: HashMap<_, _> = model
+            .metadata()
+            .indices()
+            .map(|index| (index, true))
+            .collect();
+        for missing_index in model.missing_items(&data_object).await? {
+            *neuron_item_exists.get_mut(&missing_index).unwrap() = false;
+        }
+
+        assert_eq!(data_indices, neuron_item_exists);
+
+        Ok(())
     }
 }

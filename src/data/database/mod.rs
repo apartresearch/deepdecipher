@@ -70,6 +70,26 @@ impl Database {
         Ok(database)
     }
 
+    pub async fn initialize_in_memory() -> Result<Self> {
+        let database = Connection::open_in_memory().await?;
+
+        let database = Database {
+            connection: database,
+        };
+
+        for table in TABLES.iter() {
+            database
+                .connection
+                .call(|connection| connection.execute(table, ()))
+                .await?;
+        }
+
+        let metadata_service = Service::new("metadata".to_owned(), ServiceProvider::Metadata);
+        database.add_service(metadata_service).await?;
+
+        Ok(database)
+    }
+
     pub async fn open(path: impl AsRef<Path>) -> Result<Self> {
         if !path.as_ref().exists() {
             bail!("Database does not exist at {:?}", path.as_ref())

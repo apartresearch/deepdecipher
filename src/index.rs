@@ -1,7 +1,7 @@
 use crate::data::{Metadata, NeuronIndex};
 use anyhow::{anyhow, Result};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Index {
     Model,
     Layer(u32),

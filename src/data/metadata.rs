@@ -1,4 +1,8 @@
+use std::iter;
+
 use serde::{Deserialize, Serialize};
+
+use crate::Index;
 
 use super::NeuronIndex;
 
@@ -22,5 +26,11 @@ impl Metadata {
                 neuron: neuron_index,
             })
         })
+    }
+
+    pub fn indices(&self) -> impl Iterator<Item = Index> {
+        iter::once(Index::Model)
+            .chain((0..self.num_layers).map(Index::Layer))
+            .chain(self.neuron_indices().map(Index::from))
     }
 }

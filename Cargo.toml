@@ -76,5 +76,8 @@ zstd = "0.12.3"
 utoipa = { version = "3.4.4", features = ["actix_extras"] }
 utoipa-redoc = { version = "0.1.0", features = ["actix-web"] }
 
+[dev-dependencies]
+rand = "0.8.5"
+
 [features]
 python = ["dep:pyo3", "dep:numpy", "dep:ctrlc"]
