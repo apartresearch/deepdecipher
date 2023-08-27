@@ -2,10 +2,10 @@ use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use crate::Index;
 use crate::data::data_types::Json as JsonData;
 use crate::data::{DataObjectHandle, Database, ModelHandle};
 use crate::server::State;
+use crate::Index;
 
 use super::service_provider::ServiceProviderTrait;
 
@@ -35,11 +35,17 @@ async fn data_object(
     })
 }
 
-async fn page(data_object_name: &str, state: &State, query: &serde_json::Value, model: &ModelHandle, index: Index)-> Result<serde_json::Value> {
+async fn page(
+    data_object_name: &str,
+    state: &State,
+    query: &serde_json::Value,
+    model: &ModelHandle,
+    index: Index,
+) -> Result<serde_json::Value> {
     let model_name = model.name();
     let json_object = data_object(state.database(), model, data_object_name).await?;
     let query = query.as_object().context("Query is not an object.")?;
-    let json = json_object.page(index).await.with_context(|| 
+    let json = json_object.page(index).await.with_context(||
         format!("Failed to get json data object '{data_object_name}' for {index} of model '{model_name}'.", index = index.error_string())
     )?.value;
     if query.is_empty() {
@@ -95,7 +101,14 @@ impl ServiceProviderTrait for Json {
         layer_index: u32,
     ) -> Result<serde_json::Value> {
         let Self(ref data_object_name) = self;
-        page(data_object_name, state, query, model, Index::layer(layer_index)).await
+        page(
+            data_object_name,
+            state,
+            query,
+            model,
+            Index::layer(layer_index),
+        )
+        .await
     }
 
     async fn neuron_page(
@@ -108,6 +121,13 @@ impl ServiceProviderTrait for Json {
         neuron_index: u32,
     ) -> Result<serde_json::Value> {
         let Self(ref data_object_name) = self;
-        page(data_object_name, state, query, model, Index::neuron(layer_index, neuron_index)).await
+        page(
+            data_object_name,
+            state,
+            query,
+            model,
+            Index::neuron(layer_index, neuron_index),
+        )
+        .await
     }
 }

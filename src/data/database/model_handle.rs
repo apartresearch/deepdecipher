@@ -278,9 +278,9 @@ impl ModelHandle {
             .await
             .context("Failed to get list of services.")?
         {
-            if self.missing_data_objects(&service).await.with_context(|| 
+            if self.missing_data_objects(&service).await.with_context(||
                 format!("Failed to get list of missing data objects for model '{model_name}' and service '{service_name}'.", 
-                model_name = self.name(), 
+                model_name = self.name(),
                 service_name = service.name()
                     )
                 )?.is_empty() {

@@ -1,8 +1,11 @@
 use async_trait::async_trait;
 
-use crate::{data::{json::JsonData, DataObjectHandle, ModelHandle}, Index};
+use crate::{
+    data::{json::JsonData, DataObjectHandle, ModelHandle},
+    Index,
+};
 
-use super::{DataTypeDiscriminants, ModelDataObject, data_object::DataValidationError};
+use super::{data_object::DataValidationError, DataTypeDiscriminants, ModelDataObject};
 
 use anyhow::{bail, Context, Result};
 
@@ -38,7 +41,7 @@ impl Json {
     pub async fn page(&self, index: Index) -> Result<JsonData> {
         let model_name = self.model.name();
         let data_object_name = self.data_object.name();
-        let raw_data = self.model.data(&self.data_object, index).await.with_context(|| 
+        let raw_data = self.model.data(&self.data_object, index).await.with_context(||
             format!("Failed to get '{data_object_name}' data for {index} in model '{model_name}'.", index = index.error_string())
         )?.with_context(|| format!("Database has no '{data_object_name}' data for {index} in model '{model_name}'.", index = index.error_string()))?;
         JsonData::from_binary(raw_data.as_slice())
