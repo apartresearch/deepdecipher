@@ -77,15 +77,16 @@ impl ServiceProviderTrait for Neuroscope {
         let page = if let Some(page) = data_object(state, model)
             .await?
             .neuron_page(layer_index, neuron_index)
-            .await? {
-                page
-            } else {
-                scrape_neuron_page(model.name(), NeuronIndex{layer: layer_index, neuron: neuron_index}).await.with_context(|| 
+            .await?
+        {
+            page
+        } else {
+            scrape_neuron_page(model.name(), NeuronIndex{layer: layer_index, neuron: neuron_index}).await.with_context(||
                     format!("No neuroscope page exists for neuron l{layer_index}n{neuron_index} in model '{model_name}' and fetching from source failed.", 
                         model_name = model.name()
                     )
                 )?
-            };
+        };
         Ok(json!(page))
     }
 }

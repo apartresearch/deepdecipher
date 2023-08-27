@@ -1,11 +1,12 @@
-use anyhow::{Context, bail};
+use anyhow::{bail, Context};
 use pyo3::prelude::*;
 use tokio::runtime::Runtime;
 
 use crate::data::{retrieve, ModelHandle};
 
 use super::{
-    data_object_handle::PyDataObjectHandle, index::PyIndex, service_handle::PyServiceHandle, model_metadata::PyModelMetadata,
+    data_object_handle::PyDataObjectHandle, index::PyIndex, model_metadata::PyModelMetadata,
+    service_handle::PyServiceHandle,
 };
 
 #[pyclass(name = "ModelHandle")]
@@ -22,7 +23,9 @@ impl PyModelHandle {
 #[pymethods]
 impl PyModelHandle {
     pub fn metadata(&self) -> PyModelMetadata {
-        PyModelMetadata{ metadata: self.model.metadata().clone() }
+        PyModelMetadata {
+            metadata: self.model.metadata().clone(),
+        }
     }
 
     pub fn name(&self) -> &str {
@@ -43,8 +46,50 @@ impl PyModelHandle {
             .block_on(async {
                 let model = &mut self.model;
                 println!("Scraping model '{model_name}' to database.");
-                retrieve::neuroscope::scrape_model_to_database(model).await.with_context(|| format!("Failed to scrape data for model '{model_name}' from Neuroscope."))?;
+                retrieve::neuroscope::scrape_model_to_database(model)
+                    .await
+                    .with_context(|| {
+                        format!("Failed to scrape data for model '{model_name}' from Neuroscope.")
+                    })?;
                 anyhow::Ok(model)
+            })
+            .with_context(|| format!("Failed to scrape neuroscope model '{model_name}'."))?;
+        Ok(())
+    }
+
+    pub fn scrape_missing_neuroscope_items(&mut self) -> PyResult<()> {
+        let model_name = self.model.name().to_owned();
+        Runtime::new()
+            .context("Failed to start async runtime to scrape neuroscope.")?
+            .block_on(async {
+                let model = &mut self.model;
+                let data_object = model
+                    .database()
+                    .data_object("neuroscope")
+                    .await?
+                    .with_context(|| {
+                        format!("No 'neuroscope' data object for model '{model_name}'")
+                    })?;
+                let mut missing_indices: Vec<_> =
+                    model.missing_neuron_items(&data_object).await?.collect();
+                while !missing_indices.is_empty() {
+                    println!(
+                        "{} missing items for model '{model_name}'. Scraping...",
+                        missing_indices.len(),
+                        model_name = model.name()
+                    );
+                    retrieve::neuroscope::scrape_indices_to_database(
+                        model,
+                        &data_object,
+                        missing_indices.iter().copied(),
+                    )
+                    .await
+                    .with_context(|| {
+                        format!("Failed to scrape data for model '{model_name}' from Neuroscope.")
+                    })?;
+                    missing_indices = model.missing_neuron_items(&data_object).await?.collect();
+                }
+                anyhow::Ok(())
             })
             .with_context(|| format!("Failed to scrape neuroscope model '{model_name}'."))?;
         Ok(())
@@ -82,8 +127,7 @@ impl PyModelHandle {
         Runtime::new()
             .context("Failed to start async runtime to add neuron explainer.")?
             .block_on(async {
-                retrieve::neuron_explainer::retrieve_neuron_explainer_small(&mut self.model)
-                    .await
+                retrieve::neuron_explainer::retrieve_neuron_explainer_small(&mut self.model).await
             })?;
         Ok(())
     }
@@ -92,8 +136,7 @@ impl PyModelHandle {
         Runtime::new()
             .context("Failed to start async runtime to add neuron explainer.")?
             .block_on(async {
-                retrieve::neuron_explainer::retrieve_neuron_explainer_xl(&mut self.model)
-                    .await
+                retrieve::neuron_explainer::retrieve_neuron_explainer_xl(&mut self.model).await
             })?;
         Ok(())
     }
@@ -110,16 +153,16 @@ impl PyModelHandle {
         Runtime::new()
             .context("Failed to start async runtime to add JSON data.")?
             .block_on(async {
-                if !model.has_data_object(data_object).await.with_context(|| 
+                if !model.has_data_object(data_object).await.with_context(||
                     format!(
                         "Failed to check whether model '{model_name}' has data object '{data_object_name}'.", 
-                        model_name=model.name(), 
+                        model_name=model.name(),
                         data_object_name=data_object.name()
                     )
                 )? {
                     bail!("Cannot add JSON data to data object '{data_object_name}' for {index} in model '{model_name}' because model does not have data object.", 
-                        data_object_name=data_object.name(), 
-                        index=index.index.error_string(), 
+                        data_object_name=data_object.name(),
+                        index=index.index.error_string(),
                         model_name=model.name())
                 }
                 retrieve::json::store_json_data(
@@ -130,8 +173,8 @@ impl PyModelHandle {
                 )
                 .await.with_context(|| format!(
                     "Failed to add JSON data to '{data_object_name}' for {index} in model '{model_name}'.", 
-                    data_object_name=data_object.name(), 
-                    index=index.index.error_string(), 
+                    data_object_name=data_object.name(),
+                    index=index.index.error_string(),
                     model_name=model.name()
                 ))
             })?;
@@ -141,9 +184,9 @@ impl PyModelHandle {
     pub fn add_data_object(&mut self, data_object: &PyDataObjectHandle) -> PyResult<()> {
         Runtime::new()
             .context("Failed to start async runtime to add data object to model.")?
-            .block_on(async { 
+            .block_on(async {
                 self.model.add_data_object(&data_object.data_object).await.with_context(|| format!("Failed to add data object '{data_object_name}' to model '{model_name}'.", 
-                    data_object_name=data_object.data_object.name(), 
+                    data_object_name=data_object.data_object.name(),
                     model_name=self.model.name()))
              })?;
         Ok(())

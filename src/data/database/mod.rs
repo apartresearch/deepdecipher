@@ -18,6 +18,7 @@ pub use data_object_handle::DataObjectHandle;
 pub mod data_types;
 mod service_handle;
 pub use service_handle::ServiceHandle;
+mod validation;
 
 mod table_definitions;
 use table_definitions::TABLES;
@@ -51,6 +52,26 @@ impl Database {
         }
 
         let database = Connection::open(path).await?;
+
+        let database = Database {
+            connection: database,
+        };
+
+        for table in TABLES.iter() {
+            database
+                .connection
+                .call(|connection| connection.execute(table, ()))
+                .await?;
+        }
+
+        let metadata_service = Service::new("metadata".to_owned(), ServiceProvider::Metadata);
+        database.add_service(metadata_service).await?;
+
+        Ok(database)
+    }
+
+    pub async fn initialize_in_memory() -> Result<Self> {
+        let database = Connection::open_in_memory().await?;
 
         let database = Database {
             connection: database,
@@ -114,7 +135,7 @@ impl Database {
 
     pub async fn all_models(&self) -> Result<Vec<ModelHandle>> {
         const GET_ALL_MODELS: &str = r#"
-            SELECT name FROM model;
+            SELECT name FROM model ORDER BY id ASC;
         "#;
 
         let model_names = self

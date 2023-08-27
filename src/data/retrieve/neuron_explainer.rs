@@ -1,4 +1,8 @@
-use std::{panic, sync::Arc, time::{Instant, Duration}};
+use std::{
+    panic,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use anyhow::{bail, ensure, Result};
 use reqwest::Client;
@@ -6,7 +10,8 @@ use tokio::{sync::Semaphore, task::JoinSet};
 
 use crate::{
     data::{
-        data_types::DataType, neuron_explainer_page::NeuronExplainerPage, ModelHandle, NeuronIndex, DataObjectHandle,
+        data_types::DataType, neuron_explainer_page::NeuronExplainerPage, DataObjectHandle,
+        ModelHandle, NeuronIndex,
     },
     util::Progress,
 };
@@ -58,8 +63,11 @@ async fn fetch(
     let mut progress = Progress::start((num_layers * layer_size) as u64, "Fetching data");
     progress.print();
     for index in NeuronIndex::iter(num_layers, layer_size) {
-        if model_handle.neuron_data(data_object, index.layer, index.neuron).await?.is_none() {
-
+        if model_handle
+            .neuron_data(data_object, index.layer, index.neuron)
+            .await?
+            .is_none()
+        {
             let url = url(index);
 
             let semaphore = Arc::clone(&semaphore);
@@ -72,7 +80,7 @@ async fn fetch(
                     match fetch_neuron(&client, &url).await {
                         Ok(result) => break Some(result),
                         Err(err) => {
-                            if retries == RETRY_LIMIT { 
+                            if retries == RETRY_LIMIT {
                                 log::error!("Failed to fetch neuron explainer data for neuron {index} after {retries} retries. Error: {err}");
                                 break None;
                             }
@@ -94,7 +102,7 @@ async fn fetch(
     }
 
     while let Some(join_result) = join_set.join_next().await {
-        let (NeuronIndex{layer, neuron}, page) = match join_result {
+        let (NeuronIndex { layer, neuron }, page) = match join_result {
             Ok(scrape_result) => scrape_result,
             Err(join_error) => {
                 let panic_object = join_error
@@ -132,12 +140,10 @@ async fn fetch_to_database(
     let num_layers = model_handle.metadata().num_layers;
     let layer_size = model_handle.metadata().layer_size;
     let start = Instant::now();
-    fetch(model_handle, 
-        &data_object, num_layers, layer_size, url).await?;
+    fetch(model_handle, &data_object, num_layers, layer_size, url).await?;
     let fetch_time = start.elapsed();
     println!("Fetched data in {:?}", fetch_time);
 
-    
     if !model_handle.has_data_object(&data_object).await? {
         model_handle.add_data_object(&data_object).await?;
     }

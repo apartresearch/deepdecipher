@@ -49,19 +49,23 @@ impl ServiceProviderTrait for NeuronExplainer {
         layer_index: u32,
         neuron_index: u32,
     ) -> Result<serde_json::Value> {
-        let index = NeuronIndex{layer: layer_index, neuron: neuron_index};
+        let index = NeuronIndex {
+            layer: layer_index,
+            neuron: neuron_index,
+        };
         let page = if let Some(page) = data_object(state, model)
             .await?
             .neuron_page(layer_index, neuron_index)
-            .await? {
-                page
-            } else {
-                neuron_explainer::fetch_neuron(&Client::new(), neuron_explainer::model_url(model.name(), index)?).await.with_context(|| 
+            .await?
+        {
+            page
+        } else {
+            neuron_explainer::fetch_neuron(&Client::new(), neuron_explainer::model_url(model.name(), index)?).await.with_context(||
                     format!("No neuron explainer page exists for neuron {index} in model '{model_name}' and fetching from source failed.", 
                         model_name = model.name()
                     )
                 )?
-            };
+        };
         Ok(json!(page))
     }
 }

@@ -3,7 +3,7 @@ use async_trait::async_trait;
 
 use crate::data::{neuron2graph::Graph, DataObjectHandle, ModelHandle};
 
-use super::{DataTypeDiscriminants, ModelDataObject};
+use super::{data_object::DataValidationError, DataTypeDiscriminants, ModelDataObject};
 
 pub struct Neuron2Graph {
     model: ModelHandle,
@@ -25,6 +25,19 @@ impl ModelDataObject for Neuron2Graph {
 
     fn model_handle(&self) -> &ModelHandle {
         &self.model
+    }
+
+    async fn validate(&self) -> anyhow::Result<Result<(), DataValidationError>> {
+        let missing_items: Vec<_> = self
+            .model
+            .missing_neuron_items(&self.data_object)
+            .await?
+            .collect();
+        Ok(if missing_items.is_empty() {
+            Ok(())
+        } else {
+            Err(DataValidationError::MissingItems { missing_items })
+        })
     }
 }
 

@@ -22,7 +22,7 @@ pub async fn store_json_data(
         .add_data(
             data_object_handle,
             index,
-            data.to_binary().with_context(|| 
+            data.to_binary().with_context(||
                 format!("Failed to serialize JSON data of data object '{data_object_name}' for {index} in model '{model_name}'.", index = index.error_string())
             )?,
         )
