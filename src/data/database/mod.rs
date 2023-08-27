@@ -135,7 +135,7 @@ impl Database {
 
     pub async fn all_models(&self) -> Result<Vec<ModelHandle>> {
         const GET_ALL_MODELS: &str = r#"
-            SELECT name FROM model;
+            SELECT name FROM model ORDER BY id ASC;
         "#;
 
         let model_names = self
