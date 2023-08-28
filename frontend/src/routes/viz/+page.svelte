@@ -53,9 +53,56 @@
 <div id="tooltip" />
 
 <style>
-	#model-table,
-	.model-table-row th,
+	/* General Table Styles */
+	#model-table {
+		width: 100%;
+		border-collapse: collapse;
+		margin-top: 20px;
+	}
+
+	/* Header Styles */
+	#model-table thead {
+		background-color: #f4f4f4;
+	}
+
+	#model-table th {
+		padding: 12px 20px;
+		text-align: left;
+		font-weight: 600;
+	}
+
+	/* Row and Cell Styles */
+	.model-table-row {
+		border-bottom: 1px solid #ccc;
+	}
+
 	.model-table-row td {
-		border: 1px solid;
+		padding: 12px 20px;
+		text-align: left;
+	}
+
+	/* Hover effect */
+	.model-table-row:hover {
+		background-color: #f5f5f5;
+	}
+
+	/* Tooltip */
+	#tooltip {
+		position: absolute;
+		background-color: #333;
+		color: #fff;
+		padding: 5px;
+		border-radius: 3px;
+		font-size: 12px;
+	}
+
+	/* Links */
+	a {
+		color: #0062ff;
+		text-decoration: none;
+	}
+
+	a:hover {
+		text-decoration: underline;
 	}
 </style>
