@@ -83,8 +83,10 @@ def test_api_throughput(
     avg_requests_per_second /= runs
 
     print(
-        f"Interval: {start_id} - {end_id}. Total Requests: {total_requests} over {runs} runs."
+        f"Interval: {start_id} - {end_id}. Total Requests: {total_requests} times {runs} runs."
     )
+    print(f"Data per Second: {data_per_second:.2f} bytes/s")
+    print(f"Requests per Second: {requests_per_second:.2f}")
     print(f"Average Adjusted Data per Second: {avg_data_per_second:.2f}")
     print(f"Average Requests per Second: {avg_requests_per_second:.2f}")
     print(f"---------------------")
