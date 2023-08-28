@@ -311,3 +311,5 @@ Cargo.lock
 
 # Databases
 *.db
+
+src/bin/test*.rs
