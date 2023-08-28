@@ -60,6 +60,7 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
             .service(response::neuron_viz)
             .service(response::favicon)
     })
+    .workers(config.num_workers())
     .bind((url, port))?
     .run()
     .await?;
