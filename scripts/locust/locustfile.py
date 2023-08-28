@@ -4,13 +4,26 @@ from pyquery import PyQuery
 
 HOST = "https://deepdecipher.org"
 
+BASE_URL = f"{HOST}/viz"
+
 
 class Model:
     def __init__(self, json):
         self.name = json["name"]
+
         self.url = f"/viz/{self.name}"
         self.num_layers = json["num_layers"]
         self.layer_size = json["layer_size"]
+
+        if (
+            self.name == "solu-6l-pile"
+            or self.name == "gpt2-xl"
+            or self.name == "gpt2-small"
+        ):
+            url_name = self.name
+        else:
+            url_name = "[model]"
+        self.name_url = f"/viz/{url_name}"
 
 
 def neuron_url(model: Model, layer: int, neuron: int):
@@ -45,13 +58,14 @@ class WebsiteUser(HttpUser):
 
     def load_model(self, model: Model):
         url = model.url
-        self.cur_content = self.client.get(url).content
+        with self.client.request("GET", url, name=f"{model.name_url}") as response:
+            self.cur_content = response.content
         self.current_page = "model"
         self.current_model = model
 
     def load_neuron(self, model: Model, url: str):
         with self.client.request(
-            "GET", url, name=f"{model.url}/all/[l]/[n]"
+            "GET", url, name=f"{model.name_url}/all/[l]/[n]"
         ) as response:
             self.cur_content = response.content
         self.client.request_name = None

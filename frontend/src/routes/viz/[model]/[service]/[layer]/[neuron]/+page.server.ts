@@ -4,7 +4,15 @@ import { modelMetadataFromJson } from '$lib/modelMetadata';
 import type { Data } from './data';
 
 export async function load({ params }: { params: { model: string, service: string, layer: string, neuron: string } }) {
-    const url = `${BASE_API_URL}/${API_EXT}/${params.model}/all/${params.layer}/${params.neuron}`;
+    const layer_index: number = parseInt(params.layer);
+    if (layer_index < 0 || isNaN(layer_index)) {
+        throw error(404, "Layer index must be a non-negative integer");
+    }
+    const neuron_index: number = parseInt(params.neuron);
+    if (neuron_index < 0 || isNaN(layer_index)) {
+        throw error(404, "Neuron index must be a non-negative integer");
+    }
+    const url = `${BASE_API_URL}/${API_EXT}/${params.model}/all/${layer_index}/${neuron_index}`;
     const response = await fetch(
         url
     );
