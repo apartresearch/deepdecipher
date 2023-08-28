@@ -3,8 +3,11 @@ use std::{fmt::Display, str::FromStr};
 use anyhow::{Context, Result};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, ToSchema,
+)]
 pub struct NeuronIndex {
     pub layer: u32,
     pub neuron: u32,
@@ -22,6 +25,12 @@ impl NeuronIndex {
 
     pub fn flat_index(&self, layer_size: u32) -> usize {
         (self.layer * layer_size + self.neuron) as usize
+    }
+
+    pub fn iter(num_layers: u32, layer_size: u32) -> impl Iterator<Item = Self> {
+        (0..num_layers)
+            .cartesian_product(0..layer_size)
+            .map(|(layer, neuron)| Self { layer, neuron })
     }
 }
 

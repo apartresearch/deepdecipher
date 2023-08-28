@@ -150,9 +150,7 @@ develop-eggs/
 dist/
 downloads/
 eggs/
-.eggs/
-lib/
-lib64/
+.eggs/'
 parts/
 sdist/
 var/
@@ -313,3 +311,6 @@ Cargo.lock
 *.pdb
 
 .vscode/
+
+# Databases
+*.db

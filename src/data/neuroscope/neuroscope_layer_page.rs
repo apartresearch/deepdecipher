@@ -1,12 +1,6 @@
-use std::{
-    fs::{self, File},
-    io::{self, BufReader, Read, Write},
-    path::Path,
-};
-
 use anyhow::{Context, Result};
-use flate2::{bufread::DeflateDecoder, write::DeflateEncoder, Compression};
 use serde::{Deserialize, Serialize};
+use snap::raw::{Decoder, Encoder};
 
 use crate::data::NeuronIndex;
 
@@ -37,34 +31,19 @@ impl NeuroscopeLayerPage {
         self.important_neurons.as_slice()
     }
 
-    pub fn to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
-        let path = path.as_ref();
-        fs::create_dir_all(
-            path.parent()
-                .with_context(|| format!("Invalid path '{path:?}'"))?,
-        )
-        .with_context(|| format!("Failed to create directory for '{path:?}'"))?;
-        let data = postcard::to_allocvec(&self).context("Failed to serialize neuroscope page.")?;
-
-        let file =
-            File::create(path).with_context(|| format!("Failed to create file '{path:?}'."))?;
-        let mut encoder = DeflateEncoder::new(file, Compression::default());
-        encoder
-            .write_all(&data)
-            .context("Failed to compress neuroscope page.")
+    pub fn to_binary(&self) -> Result<Vec<u8>> {
+        let data =
+            postcard::to_allocvec(self).context("Failed to serialize neuroscope layer page.")?;
+        Encoder::new()
+            .compress_vec(data.as_slice())
+            .context("Failed to compress neuroscope layer page.")
     }
 
-    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let path = path.as_ref();
-        let file = File::open(path).with_context(|| format!("Failed to open file '{path:?}'."))?;
-        let buf_reader = BufReader::new(file);
-        let decoder = DeflateDecoder::new(buf_reader);
-        let data = decoder
-            .bytes()
-            .collect::<io::Result<Vec<u8>>>()
-            .context("Failed to decompress neuroscope page.")?;
-
-        postcard::from_bytes(&data)
-            .with_context(|| format!("Failed to deserialize neuroscope page from file '{path:?}'."))
+    pub fn from_binary(data: impl AsRef<[u8]>) -> Result<Self> {
+        let data = Decoder::new()
+            .decompress_vec(data.as_ref())
+            .context("Failed to decompress neuroscope layer page")?;
+        postcard::from_bytes(data.as_slice())
+            .context("Failed to deserialize neuroscope layer page.")
     }
 }

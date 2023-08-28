@@ -1,15 +1,11 @@
-use std::{
-    fs::{self, File},
-    io::{self, BufReader, Read, Write},
-    path::Path,
-    str::FromStr,
-};
+use std::str::FromStr;
 
 use anyhow::{bail, Context, Result};
-use flate2::{bufread::DeflateDecoder, write::DeflateEncoder, Compression};
 use itertools::Itertools;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use snap::raw::{Decoder, Encoder};
+use utoipa::ToSchema;
 
 use crate::data::NeuronIndex;
 
@@ -33,13 +29,13 @@ where
     })
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NeuroscopePage {
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct NeuroscopeNeuronPage {
     neuron_index: NeuronIndex,
     texts: Vec<Text>,
 }
 
-impl NeuroscopePage {
+impl NeuroscopeNeuronPage {
     fn from_html_header_and_texts(
         header_html: &str,
         texts: Vec<Text>,
@@ -74,12 +70,10 @@ impl NeuroscopePage {
 
     pub fn from_html_str(html: &str, neuron_index: NeuronIndex) -> Result<Self> {
         let mut sections = html.split("<hr>");
-        let header = sections.next().context("Tag &lt;hr&gt; not found.")?;
-        let nothing = sections
-            .next()
-            .context("Second &lt;hr&gt; tag not found.")?;
+        let header = sections.next().context("Tag '<hr>' not found.")?;
+        let nothing = sections.next().context("Second '<hr>' tag not found.")?;
         if !nothing.trim().is_empty() {
-            bail!("Space between first two &lt;hr&gt; tags not empty.");
+            bail!("Space between first two '<hr>' tags not empty.");
         }
 
         let texts = sections
@@ -92,35 +86,20 @@ impl NeuroscopePage {
         Self::from_html_header_and_texts(header, texts, neuron_index)
     }
 
-    pub fn to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
-        let path = path.as_ref();
-        fs::create_dir_all(
-            path.parent()
-                .with_context(|| format!("Invalid path '{path:?}'"))?,
-        )
-        .with_context(|| format!("Failed to create directory for '{path:?}'"))?;
-        let data = postcard::to_allocvec(&self).context("Failed to serialize neuroscope page.")?;
-
-        let file =
-            File::create(path).with_context(|| format!("Failed to create file '{path:?}'."))?;
-        let mut encoder = DeflateEncoder::new(file, Compression::default());
-        encoder
-            .write_all(&data)
-            .context("Failed to compress neuroscope page.")
+    pub fn to_binary(&self) -> Result<Vec<u8>> {
+        let data =
+            postcard::to_allocvec(self).context("Failed to serialize neuroscope neuron page.")?;
+        Encoder::new()
+            .compress_vec(data.as_slice())
+            .context("Failed to compress neuroscope neuron page.")
     }
 
-    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let path = path.as_ref();
-        let file = File::open(path).with_context(|| format!("Failed to open file '{path:?}'."))?;
-        let buf_reader = BufReader::new(file);
-        let decoder = DeflateDecoder::new(buf_reader);
-        let data = decoder
-            .bytes()
-            .collect::<io::Result<Vec<u8>>>()
-            .context("Failed to decompress neuroscope page.")?;
-
-        postcard::from_bytes(&data)
-            .with_context(|| format!("Failed to deserialize neuroscope page from file '{path:?}'."))
+    pub fn from_binary(data: impl AsRef<[u8]>) -> Result<Self> {
+        let data = Decoder::new()
+            .decompress_vec(data.as_ref())
+            .context("Failed to decompress neuroscope neuron page")?;
+        postcard::from_bytes(data.as_slice())
+            .context("Failed to deserialize neuroscope neuron page.")
     }
 
     pub fn neuron_index(&self) -> NeuronIndex {
@@ -132,12 +111,13 @@ impl NeuroscopePage {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Text {
     min_range: f32,
     max_range: f32,
     min_activation: f32,
     max_activation: f32,
+    /// The index of the data sample in the training data.
     data_index: u64,
     max_activating_token_index: u32,
     tokens: Vec<String>,
@@ -225,5 +205,13 @@ impl Text {
 
     pub fn max_activation(&self) -> f32 {
         self.max_activation
+    }
+
+    pub fn tokens(&self) -> &[String] {
+        self.tokens.as_slice()
+    }
+
+    pub fn activations(&self) -> &[f32] {
+        self.activations.as_slice()
     }
 }

@@ -1,8 +1,8 @@
-use anyhow::{Context, Result};
-use neuronav::server;
+use anyhow::Result;
+use clap::Parser;
+use deepdecipher::cli::ServerConfig;
 
-pub fn main() -> Result<()> {
-    env_logger::init();
-
-    server::start_server().context("Failed to start server.")
+#[tokio::main]
+pub async fn main() -> Result<()> {
+    ServerConfig::parse().start().await
 }
