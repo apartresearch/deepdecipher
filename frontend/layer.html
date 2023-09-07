@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>DeepDecipher</title>
+    <!-- Link css/style.css -->
+    <!-- <link
+      rel="stylesheet"
+      type="text/css"
+      crossorigin="anonymous"
+      href="/css/style.css"
+    /> -->
+    <link rel="stylesheet" href="/css/style.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.2.0/d3.min.js"></script>
+    <script src="/js/viz-standalone.js" type="application/javascript"></script>
+    <!-- <script src="https://dagrejs.github.io/project/dagre-d3/v0.5.0/dagre-d3.min.js"></script> -->
+  </head>
+  <body>
+    <div class="container">
+      <div id="meta">
+        <h1>DeepDecipher</h1>
+        <table id="meta-information"></table>
+      </div>
+      <div>
+        <h2 class="section-header">
+          Top interesting neurons by activation difference over training
+          samples.
+        </h2>
+        <div id="similar" class="results"></div>
+      </div>
+    </div>
+    <script src="/js/base.js" type="application/javascript"></script>
+    <script src="/js/layer.js" type="application/javascript"></script>
+    <!-- <script src="/js/neuron.js" type="text/javascript"></script> -->
+  </body>
+</html>
