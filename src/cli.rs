@@ -12,8 +12,8 @@ pub struct ServerConfig {
     port: u16,
     #[arg(long, short = 'l')]
     log_path: Option<PathBuf>,
-    #[arg(short = 'w', default_value = "4")]
-    num_workers: usize,
+    #[arg(short = 'w')]
+    num_workers: Option<usize>,
 }
 
 impl ServerConfig {
@@ -33,7 +33,7 @@ impl ServerConfig {
         self.log_path.as_deref()
     }
 
-    pub fn num_workers(&self) -> usize {
+    pub fn num_workers(&self) -> Option<usize> {
         self.num_workers
     }
 }

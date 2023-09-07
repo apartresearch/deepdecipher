@@ -30,7 +30,7 @@ def neuron_url(model: Model, layer: int, neuron: int):
     return f"{model.url}/all/{layer}/{neuron}"
 
 
-class WebsiteUser(HttpUser):
+class WebsiteUser(FastHttpUser):
     host = HOST
 
     wait_time = between(3, 5)

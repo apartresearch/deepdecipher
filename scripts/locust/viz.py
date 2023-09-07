@@ -33,7 +33,7 @@ def neuron_url(model: Model, layer: int, neuron: int):
 class WebsiteUser(HttpUser):
     host = HOST
 
-    wait_time = between(0.5, 30)
+    wait_time = between(3, 5)
 
     models = None
 
