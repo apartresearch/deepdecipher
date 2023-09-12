@@ -4,15 +4,17 @@ import { modelMetadataFromJson } from '$lib/modelMetadata';
 import type { Data } from './data';
 
 export async function load({ params }: { params: { model: string, service: string, layer: string, neuron: string } }) {
-    const layer_index: number = parseInt(params.layer);
-    if (layer_index < 0 || isNaN(layer_index)) {
+    // Check indices.
+    const layerIndex: number = parseInt(params.layer);
+    if (layerIndex < 0 || isNaN(layerIndex)) {
         throw error(404, "Layer index must be a non-negative integer");
     }
-    const neuron_index: number = parseInt(params.neuron);
-    if (neuron_index < 0 || isNaN(layer_index)) {
+    const neuronIndex: number = parseInt(params.neuron);
+    if (neuronIndex < 0 || isNaN(layerIndex)) {
         throw error(404, "Neuron index must be a non-negative integer");
     }
-    const url = `${BASE_API_URL}/${API_EXT}/${params.model}/all/${layer_index}/${neuron_index}`;
+    // Get model metadata.
+    const url = `${BASE_API_URL}/${API_EXT}/${params.model}/metadata/${layerIndex}/${neuronIndex}`;
     const response = await fetch(
         url
     );
@@ -20,10 +22,9 @@ export async function load({ params }: { params: { model: string, service: strin
         throw error(500, await response.text());
     }
     const json = await response.json();
-    let metadata = modelMetadataFromJson(json.metadata.data);
-    let layerIndex = parseInt(params.layer);
-    let neuronIndex = parseInt(params.neuron);
+    let metadata = modelMetadataFromJson(json.data);
 
+    // Check indices against metadata.
     if (typeof metadata == 'string')
         throw error(500, `Model metadata couldn't be loaded. Error: ${metadata}`);
     if (layerIndex >= metadata.numLayers || layerIndex < 0)
@@ -36,6 +37,8 @@ export async function load({ params }: { params: { model: string, service: strin
             404,
             `Neuron index ${neuronIndex} is out of bounds. Layer has ${metadata.layerSize} neurons.`
         );
+
+    // Create useful URLs.
     const modelUrl = `/${VIZ_EXT}/${params.model}/${params.service}`;
     const layerUrl = `${modelUrl}/${layerIndex}`;
     let prevUrl = '';
@@ -55,6 +58,6 @@ export async function load({ params }: { params: { model: string, service: strin
     } else {
         nextUrl = `${modelUrl}/0/0`;
     }
-    const data: Data = { modelName: params.model, serviceName: params.service, layerIndex, neuronIndex, modelMetadata: metadata, services: json, modelUrl, layerUrl, prevUrl, nextUrl };
+    const data: Data = { modelName: params.model, serviceName: params.service, layerIndex, neuronIndex, modelMetadata: metadata, modelUrl, layerUrl, prevUrl, nextUrl };
     return data;
 }
