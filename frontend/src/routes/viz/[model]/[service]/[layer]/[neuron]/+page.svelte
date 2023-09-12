@@ -24,9 +24,6 @@
 	} = data);
 
 	$: availableServices = modelMetadata.availableServices;
-
-	$: console.log(availableServices);
-	$: console.log(availableServices.includes('neuron2graph'));
 </script>
 
 <div class="container">
