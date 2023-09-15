@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { error } from '@sveltejs/kit';
 	import { VIZ_EXT } from '$lib/base';
 	import Neuron2Graph from './Neuron2Graph.svelte';
@@ -24,6 +25,12 @@
 	} = data);
 
 	$: availableServices = modelMetadata.availableServices;
+
+	let neuron2graphFuture: any = null;
+
+	onMount(() => {
+		neuron2graphFuture = getServiceData(modelName, 'neuron2graph', layerIndex, neuronIndex);
+	});
 </script>
 
 <div class="container">
@@ -55,56 +62,58 @@
 		</table>
 	</div>
 	{#if availableServices.includes('neuron2graph')}
-		{#await getServiceData(modelName, 'neuron2graph', layerIndex, neuronIndex)}
-			<div>
-				<h2 class="section-header">Similar neurons</h2>
-				<div>Fetching neuron2graph data...</div>
-			</div>
-			<div id="n2g">
-				<h2 class="section-header">
-					Neuron semantic graph
-					<a href="https://n2g.apartresearch.com">Read what this is</a>
-				</h2>
-				<div>Fetching neuron2graph data...</div>
-			</div>
-		{:then neuron2graphData}
-			<div>
-				<h2 class="section-header">Similar neurons</h2>
+		{#if neuron2graphFuture !== null}
+			{#await getServiceData(modelName, 'neuron2graph', layerIndex, neuronIndex)}
+				<div>
+					<h2 class="section-header">Similar neurons</h2>
+					<div>Fetching neuron2graph data...</div>
+				</div>
+				<div id="n2g">
+					<h2 class="section-header">
+						Neuron semantic graph
+						<a href="https://n2g.apartresearch.com">Read what this is</a>
+					</h2>
+					<div>Fetching neuron2graph data...</div>
+				</div>
+			{:then neuron2graphData}
+				<div>
+					<h2 class="section-header">Similar neurons</h2>
 
-				{#if 'data' in neuron2graphData}
-					<SimilarNeurons
-						similarNeurons={neuron2graphData.data.similar}
-						{modelName}
-						{serviceName}
-					/>
-				{:else}
-					<div class="not-available">Similar neurons are not available for this neuron.</div>
-				{/if}
-			</div>
-			<div id="n2g">
-				<h2 class="section-header">
-					Neuron semantic graph
-					<a href="https://n2g.apartresearch.com">Read what this is</a>
-				</h2>
-				{#if 'data' in neuron2graphData}
-					<Neuron2Graph graphString={neuron2graphData.data.graph} />
-				{:else}
-					<div class="not-available">Neuron semantic graph is not available for this neuron.</div>
-				{/if}
-			</div>
-		{:catch error}
-			<div>
-				<h2 class="section-header">Similar neurons</h2>
-				<div class="not-available">Error occurred while fetching neuron2graph data: {error}</div>
-			</div>
-			<div id="n2g">
-				<h2 class="section-header">
-					Neuron semantic graph
-					<a href="https://n2g.apartresearch.com">Read what this is</a>
-				</h2>
-				<div class="not-available">Error occurred while fetching neuron2graph data: {error}</div>
-			</div>
-		{/await}
+					{#if 'data' in neuron2graphData}
+						<SimilarNeurons
+							similarNeurons={neuron2graphData.data.similar}
+							{modelName}
+							{serviceName}
+						/>
+					{:else}
+						<div class="not-available">Similar neurons are not available for this neuron.</div>
+					{/if}
+				</div>
+				<div id="n2g">
+					<h2 class="section-header">
+						Neuron semantic graph
+						<a href="https://n2g.apartresearch.com">Read what this is</a>
+					</h2>
+					{#if 'data' in neuron2graphData}
+						<Neuron2Graph graphString={neuron2graphData.data.graph} />
+					{:else}
+						<div class="not-available">Neuron semantic graph is not available for this neuron.</div>
+					{/if}
+				</div>
+			{:catch error}
+				<div>
+					<h2 class="section-header">Similar neurons</h2>
+					<div class="not-available">Error occurred while fetching neuron2graph data: {error}</div>
+				</div>
+				<div id="n2g">
+					<h2 class="section-header">
+						Neuron semantic graph
+						<a href="https://n2g.apartresearch.com">Read what this is</a>
+					</h2>
+					<div class="not-available">Error occurred while fetching neuron2graph data: {error}</div>
+				</div>
+			{/await}
+		{/if}
 	{/if}
 	{#if availableServices.includes('neuron_explainer')}
 		<div id="neuronExplainer">
