@@ -8,7 +8,7 @@
 	$: models = data.models;
 </script>
 
-<h1><Title /> front page</h1>
+<h1><Title /></h1>
 <p>
 	A web page and API that provides interpretability information from many sources on various
 	transformer models.

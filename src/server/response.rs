@@ -467,11 +467,3 @@ pub async fn layer_viz() -> impl Responder {
 pub async fn neuron_viz() -> impl Responder {
     viz_response("neuron").await
 }
-
-#[get("/favicon.ico")]
-pub async fn favicon() -> impl actix_web::Responder {
-    let favicon: Vec<u8> = include_bytes!("../../media/favicon.ico").to_vec();
-    HttpResponse::Ok()
-        .content_type("image/x-icon")
-        .body(favicon)
-}

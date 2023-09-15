@@ -29,7 +29,7 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
     log::info!("Serving DeepDecipher on http://{url}:{port}/");
     let state = web::Data::new(State::new(database)?);
 
-    HttpServer::new(move || {
+    let mut server = HttpServer::new(move || {
         App::new()
             .app_data(state.clone())
             .wrap(middleware::NormalizePath::new(TrailingSlash::Trim))
@@ -58,11 +58,11 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
             .service(response::model_viz)
             .service(response::layer_viz)
             .service(response::neuron_viz)
-            .service(response::favicon)
-    })
-    .bind((url, port))?
-    .run()
-    .await?;
+    });
+    if let Some(num_workers) = config.num_workers() {
+        server = server.workers(num_workers);
+    }
+    server.bind((url, port))?.run().await?;
 
     bail!("Server stopped unexpectedly.");
 }

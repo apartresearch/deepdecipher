@@ -3,7 +3,7 @@
 
 	export let graphString: string;
 
-	const renderGraph = async () => {
+	const renderGraph = async (graphString: string) => {
 		return await instance().then((viz) => {
 			const output = viz.render(graphString, { format: 'svg', engine: 'dot' });
 			if (output.output === undefined) {
@@ -12,9 +12,11 @@
 			return output.output;
 		});
 	};
+
+	$: renderGraphFuture = renderGraph(graphString);
 </script>
 
-{#await renderGraph()}
+{#await renderGraphFuture}
 	<div class="neuron2graph">Rendering graph...</div>
 {:then graph}
 	<div class="neuron2graph">{@html graph}</div>
