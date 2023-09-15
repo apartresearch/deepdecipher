@@ -1,0 +1,13 @@
+[Unit]
+Description=DeepDecipher Backend
+After=syslog.target network.target
+
+[Service]
+WorkingDirectory=/home/albert/deepdecipher
+ExecStart=/home/albert/miniconda3/envs/deepdecipher/bin/python -m deepdecipher data.db -l logs
+
+Restart=no
+
+[Install]
+WantedBy=multi-user.target
+

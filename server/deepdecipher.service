@@ -1,0 +1,13 @@
+[Unit]
+Description=DeepDecipher
+After=syslog.target network.target
+
+[Service]
+WorkingDirectory=/home/albert/deepdecipher/frontend
+ExecStart=/usr/local/nodejs/bin/node multi
+
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
