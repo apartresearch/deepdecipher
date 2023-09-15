@@ -1,2 +1,3 @@
+cd /home/albert/deepdecipher;
 cargo build --release;
-systemctl restart deepdecipher-backend;
+sudo systemctl restart deepdecipher-backend;

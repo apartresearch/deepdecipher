@@ -1,0 +1,11 @@
+deepdecipher.org {
+	reverse_proxy localhost:3000
+}
+
+deepdecipher.org:6173 {
+	reverse_proxy localhost:5173
+}
+
+deepdecipher.org:8081 {
+	reverse_proxy localhost:8080
+}

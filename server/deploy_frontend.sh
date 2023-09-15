@@ -1,3 +1,3 @@
-cd frontend;
+cd /home/albert/deepdecipher/frontend;
 npm run build;
-systemctl restart deepdecipher;
+sudo systemctl restart deepdecipher;
