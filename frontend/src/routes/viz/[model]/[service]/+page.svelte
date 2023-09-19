@@ -50,7 +50,7 @@
 			<span class="code">"transformers"</span>).
 		</p>
 		<form on:submit|preventDefault={n2gSearch}>
-			<input type="text" bind:value={searchTerm} placeholder="Search..." />
+			<input name="search-token" type="text" bind:value={searchTerm} placeholder="Search..." />
 			<button>Search</button>
 		</form>
 		<div id="search-message">{searchMessage}</div>
@@ -72,5 +72,9 @@
 		margin: 0.5em 0;
 		font-size: 0.8em;
 		color: rgba(0, 0, 0, 0.5);
+	}
+
+	.code {
+		white-space: nowrap;
 	}
 </style>

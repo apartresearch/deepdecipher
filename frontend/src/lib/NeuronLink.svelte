@@ -15,7 +15,7 @@
 		min-width: 9em;
 		padding: 0.5em 0.2em;
 		text-decoration: none;
-		color: black;
+		/*color: black;*/
 	}
 
 	.result:hover {
