@@ -21,7 +21,49 @@
 		<td style="padding: 0 1em;"><a href="/doc">API documentation</a></td>
 	</tr>
 </table>
-<table id="model-table">
+<h2>Features</h2>
+<table class="table">
+	<thead>
+		<tr>
+			<th>Feature</th>
+			<th>Description</th>
+			<th>Source</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr class="model-table-row">
+			<td>Neuron2Graph</td>
+			<td
+				>Vizualize the activation patterns of neurons as a graph. Each path through the graph is a
+				n-gram which activates the neuron. From this we also derive a set of similar neurons. These are neurons with </td
+			>
+			<td><a href="https://n2g.apartresearch.com/">Paper</a></td>
+		</tr>
+		<tr class="model-table-row">
+			<td>Neuroscope</td>
+			<td
+				>Shows how much the neuron activates to each token in a series of text examples. The
+				examples chosen are the examples with the highest activations for that neuron.
+			</td><td><a href="neuroscope.io">Website</a></td>
+		</tr>
+		<tr class="model-table-row">
+			<td>Neuron explanation</td>
+			<td
+				>An attempt by GPT-4 to explain what concept the neuron activates on. Only available for
+				models <a href="/viz/gpt2-small"><code>gpt2-small</code></a> and
+				<a href="/viz/gpt2-xl"><code>gpt2-xl</code></a>.</td
+			>
+			<td
+				><a
+					href="https://openai.com/research/language-models-can-explain-neurons-in-language-models"
+					>Website</a
+				></td
+			>
+		</tr>
+	</tbody>
+</table>
+<h2>Available models</h2>
+<table class="table">
 	<thead>
 		<tr class="model-table-row">
 			<th>Model</th>
@@ -44,7 +86,7 @@
 				<td>{model.numLayers}</td>
 				<td>{model.layerSize.toLocaleString('en-US')}</td>
 				<td>{model.numTotalNeurons.toLocaleString('en-US')}</td>
-				<td>{model.numTotlalParameters.toLocaleString('en-US')}</td>
+				<td>{model.numTotalParameters.toLocaleString('en-US')}</td>
 				<td>{model.availableServices.filter((service) => service !== 'metadata')}</td>
 			</tr>
 		{/each}
@@ -54,18 +96,18 @@
 
 <style>
 	/* General Table Styles */
-	#model-table {
+	.table {
 		width: 100%;
 		border-collapse: collapse;
 		margin-top: 20px;
 	}
 
 	/* Header Styles */
-	#model-table thead {
+	.table thead {
 		background-color: #f4f4f4;
 	}
 
-	#model-table th {
+	.table th {
 		padding: 12px 20px;
 		text-align: left;
 		font-weight: 600;
