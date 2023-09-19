@@ -80,11 +80,7 @@
 					<h2 class="section-header">Similar neurons</h2>
 
 					{#if 'data' in neuron2graphData}
-						<SimilarNeurons
-							similarNeurons={neuron2graphData.data.similar}
-							{modelName}
-							{serviceName}
-						/>
+						<SimilarNeurons similarNeurons={neuron2graphData.data.similar} {modelName} />
 					{:else}
 						<div class="not-available">Similar neurons are not available for this neuron.</div>
 					{/if}

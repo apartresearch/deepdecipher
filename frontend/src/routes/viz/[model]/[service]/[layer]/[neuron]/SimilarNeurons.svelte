@@ -1,33 +1,36 @@
 <script lang="ts">
+	import NeuronLink from '$lib/NeuronLink.svelte';
 	import { VIZ_EXT } from '$lib/base';
 
 	export let similarNeurons: any[];
 	export let modelName: string;
-	export let serviceName: string;
+
+	$: similarNeurons = similarNeurons.sort((a, b) => b.similarity - a.similarity);
 </script>
 
 <div id="similar">
 	{#if similarNeurons.length > 0}
-		{#each similarNeurons as { layer, neuron, similarity }}
-			<div class="similar_neurons">
-				<a href="/{VIZ_EXT}/{modelName}/{serviceName}/{layer}/{neuron}"> {layer}:{neuron}</a><span
-					data-tooltip="The similarity between the current neuron and the similar neuron."
-					>E{similarity}</span
-				>,
-			</div>
-		{/each}
+		<table>
+			<thead>
+				<tr>
+					<th>Similarity</th>
+					<th>Neuron</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#each similarNeurons as { layer, neuron, similarity }}
+					<tr><td>{similarity}</td><td><NeuronLink {modelName} {layer} {neuron} /></td></tr>
+				{/each}
+			</tbody>
+		</table>
 	{:else}
 		<div>No similar neurons exist for this neuron.</div>
 	{/if}
 </div>
 
 <style>
-	.similar_neurons {
-		max-width: 20em;
-		text-decoration: none;
-	}
-
 	#similar {
+		text-align: left;
 		display: flex;
 		flex-wrap: wrap;
 		flex-direction: row;
