@@ -9,6 +9,8 @@
 	import Gpt4Explanation from './Gpt4Explanation.svelte';
 	import Neuroscope from './Neuroscope.svelte';
 	import Title from '$lib/Title.svelte';
+	import NeuronChooser from '../../NeuronChooser.svelte';
+	import { goto } from '$app/navigation';
 
 	export let data: Data;
 
@@ -31,34 +33,28 @@
 	onMount(() => {
 		neuron2graphFuture = getServiceData(modelName, 'neuron2graph', layerIndex, neuronIndex);
 	});
+
+	function navPrevNeuron() {
+		goto(prevUrl);
+	}
+
+	function navNextNeuron() {
+		goto(nextUrl);
+	}
 </script>
 
 <div class="container">
 	<div id="meta">
 		<h1><Title /></h1>
-		<table id="meta-information">
-			<tr>
-				<td class="meta-data first" data-tooltip="The model name">{modelName}</td>
-				<td class="meta-data" data-tooltip="The service (all includes all available services)"
-					>{serviceName}</td
-				>
-				<td class="meta-data" data-tooltip="The layer index">{layerIndex}</td>
-				<td class="meta-data" data-tooltip="The neuron index">{neuronIndex}</td>
-			</tr>
-			<tr>
-				<td class="meta-data first" data-tooltip="Visit the current model page"
-					><a href={modelUrl}>Model</a></td
-				>
-				<td class="meta-data" data-tooltip="Visit the current layer page"
-					><a href={layerUrl}>Layer</a></td
-				>
-				<td class="meta-data" data-tooltip="Visit the previous neuron page"
-					><a href={prevUrl}>Previous</a></td
-				>
-				<td class="meta-data" data-tooltip="Visit the next neuron page"
-					><a href={nextUrl}>Next</a></td
-				>
-			</tr>
+		<table id="metadata-table">
+			<tr><th>Model</th><th>Layer</th><th>Neuron</th></tr>
+			<tr
+				><td><a href={modelUrl}>{modelMetadata.name}</a></td><td>{layerIndex}</td><td
+					>{neuronIndex}</td
+				><td><button on:click={navPrevNeuron}>Previous</button></td><td
+					><button on:click={navNextNeuron}>Next</button></td
+				></tr
+			>
 		</table>
 	</div>
 	{#if availableServices.includes('neuron2graph')}
@@ -80,11 +76,7 @@
 					<h2 class="section-header">Similar neurons</h2>
 
 					{#if 'data' in neuron2graphData}
-						<SimilarNeurons
-							similarNeurons={neuron2graphData.data.similar}
-							{modelName}
-							{serviceName}
-						/>
+						<SimilarNeurons similarNeurons={neuron2graphData.data.similar} {modelName} />
 					{:else}
 						<div class="not-available">Similar neurons are not available for this neuron.</div>
 					{/if}
@@ -161,6 +153,10 @@
 </div>
 
 <style>
+	#metadata-table tr td,
+	#metadata-table tr th {
+		padding-right: 10px;
+	}
 	.section-header {
 		margin: 0.5em 0;
 		padding: 0;

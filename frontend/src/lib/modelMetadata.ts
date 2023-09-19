@@ -7,7 +7,7 @@ export type ModelMetadata = {
     numLayers: number;
     layerSize: number;
     numTotalNeurons: number;
-    numTotlalParameters: number;
+    numTotalParameters: number;
     availableServices: string[];
 }
 
@@ -19,7 +19,7 @@ export function modelMetadataFromJson(json: any): ModelMetadata {
         numLayers: json["num_layers"],
         layerSize: json["layer_size"],
         numTotalNeurons: json["num_total_neurons"],
-        numTotlalParameters: json["num_total_parameters"],
+        numTotalParameters: json["num_total_parameters"],
         availableServices: json["available_services"]
     }
 }

@@ -1,0 +1,44 @@
+Questions:
+	What do people want to do on the site?
+		Interested in behaviour of specific token.
+		Just want to mess around.
+	Are results across different models ever interesting?
+		Similar neurons in other models?
+		Search across models?
+	What is the use of similar neurons?
+		Connections between similar neurons.
+			Show information side by side.
+				If interesting, look at 
+		Looking for neurons with specific characteristics.
+	What should clicking on N2G nodes do?
+		Search for token
+			What search?
+				Pop-up where user chooses?
+		Text examples that show it
+	Would side by side comparisons of neurons useful?
+
+Neuroscope, don't light up
+
+Dark mode
+
+Zoom in within the graph with the mouse wheel
+
+Tabs for different neurons?
+	More importantly, compare neurons side by side.
+	Tabs is already sufficiently supported by the browser.
+	Viewing side by side is considerably more cumbersome.
+
+See if Neel Nanda has written anything useful about the process
+	Contact him
+Contact the researcher Miko knows
+Talk to Bart
+	Find things about specific nodes in own research, look up neurons
+	Search for tokens
+	Results across models could definitely have use cases
+	Hover over node, maybe pop-up with graphs with token in similar position.
+	Similar neurons: show small graphs
+	Any hover over a neuron link shows the graph.
+	Side by side neurons probably not that interesting.
+		More explicit neuron comparison could be.
+	Neuron explainer game best explanations
+	Statistical connection between neuron activations and logits.

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatNumber } from '$lib/base';
 	import TokenViz from './TokenViz.svelte';
 	import type { Text } from './neuroscope';
 	import * as d3 from 'd3-scale';
@@ -43,11 +44,7 @@
 <div>
 	{#each texts as text, index}
 		<h2 class="text-title">
-			Text {index}<span class="meta-info"
-				>{text.min_activation} to {text.max_activation} activation within the range {text.min_range}
-				to {text.max_range}. Data index {text.data_index}. Max activating token located at index {text.max_activating_token_index}
-				of the text of length {text.tokens.length}.</span
-			>
+			Text {index}
 		</h2>
 		<div class="token-string">
 			{#each tokens(text, true) as { token, activation, color }}
@@ -55,9 +52,17 @@
 			{/each}
 		</div>
 		<button class="collapsible" on:click={() => toggle_all_tokens(index)}>
-			💬 Show all tokens in sample
+			💬 Show whole sample and metadata
 		</button>
 		{#if !collapsed[index]}
+			<div class="meta-info">
+				Data index {text.data_index}. Max activating token located at index {text.max_activating_token_index}
+				of text length {text.tokens.length}. All neuron activations for tokens in sample in range {formatNumber(
+					text.min_activation,
+					5
+				)}
+				to {formatNumber(text.max_activation, 5)}.
+			</div>
 			<div class="token-string">
 				{#each tokens(text, false) as { token, activation, color }}
 					<TokenViz {token} {activation} {color} />
@@ -71,8 +76,6 @@
 	.meta-info {
 		font-size: 0.8em;
 		color: rgba(0, 0, 0, 0.5);
-		margin-left: 1em;
-		white-space: pre-line;
 	}
 
 	.text-title {
@@ -86,6 +89,7 @@
 		background-color: #f1f1f1;
 	}
 
+	.meta-info,
 	.token-string {
 		border: 1px solid grey;
 		padding: 0.5em;
