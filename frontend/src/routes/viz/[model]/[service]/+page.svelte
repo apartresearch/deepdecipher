@@ -45,7 +45,7 @@
 			<span class="code">" "</span> (e.g.
 			<span class="code">"Transformers"</span> would be
 			<span class="code">" Transformers"</span>) however, this searches over a token database that
-			is trimmed and lowercase (i.e.
+			is trimmed and lowercase (e.g.
 			<span class="code">" Transformers"</span> becomes
 			<span class="code">"transformers"</span>).
 		</p>
@@ -55,7 +55,7 @@
 		</form>
 		<div id="search-message">{searchMessage}</div>
 		{#if searchResults !== undefined}
-			<SearchResults baseUrlExtUi={VIZ_EXT} {modelName} {searchResults} />
+			<SearchResults {modelName} {searchResults} />
 		{/if}
 	</div>
 {:else}
@@ -63,6 +63,11 @@
 {/if}
 
 <style>
+	#search-wrapper {
+		width: 40%;
+		text-align: justify;
+	}
+
 	#search-message {
 		margin: 0.5em 0;
 		font-size: 0.8em;
