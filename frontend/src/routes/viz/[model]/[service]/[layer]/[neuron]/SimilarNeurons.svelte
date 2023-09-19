@@ -1,6 +1,6 @@
 <script lang="ts">
 	import NeuronLink from '$lib/NeuronLink.svelte';
-	import { VIZ_EXT } from '$lib/base';
+	import { VIZ_EXT, formatNumber } from '$lib/base';
 
 	export let similarNeurons: any[];
 	export let modelName: string;
@@ -19,7 +19,11 @@
 			</thead>
 			<tbody>
 				{#each similarNeurons as { layer, neuron, similarity }}
-					<tr><td>{similarity}</td><td><NeuronLink {modelName} {layer} {neuron} /></td></tr>
+					<tr
+						><td>{formatNumber(similarity, 5)}</td><td
+							><NeuronLink {modelName} {layer} {neuron} /></td
+						></tr
+					>
 				{/each}
 			</tbody>
 		</table>
