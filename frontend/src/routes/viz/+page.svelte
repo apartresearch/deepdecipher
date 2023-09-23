@@ -35,7 +35,7 @@
 			<td>Neuron2Graph</td>
 			<td
 				>Vizualize the activation patterns of neurons as a graph. Each path through the graph is a
-				n-gram which activates the neuron. From this we also derive a set of similar neurons. These are neurons with </td
+				n-gram which activates the neuron. From this we also derive a set of similar neurons, which are neurons whose graphs are sufficiently similar. </td
 			>
 			<td><a href="https://n2g.apartresearch.com/">Paper</a></td>
 		</tr>
