@@ -410,15 +410,13 @@ pub async fn all_neuron(
 ) -> impl Responder {
     let (model_name, layer_index, neuron_index) = indices.into_inner();
     log::debug!("Received request for all services for neuron l{layer_index}n{neuron_index} in model '{model_name}'.");
-    let x = all_response(
+    all_response(
         state,
         query,
         model_name,
         Index::Neuron(layer_index, neuron_index),
     )
-    .await;
-    println!("{:?}", x.status);
-    Response::success(json!({}))
+    .await
 }
 
 /// Gets the API documentation in JSON format.

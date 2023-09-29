@@ -1,9 +1,10 @@
 use std::str::FromStr;
 
 use anyhow::{bail, Context, Result};
+use half::f16;
 use itertools::Itertools;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 use snap::raw::{Decoder, Encoder};
 use utoipa::ToSchema;
 
@@ -112,6 +113,49 @@ impl NeuroscopeNeuronPage {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct CompactText {
+    min_range: f32,
+    max_range: f32,
+    min_activation: f32,
+    max_activation: f32,
+    /// The index of the data sample in the training data.
+    data_index: u64,
+    max_activating_token_index: u32,
+    tokens: Vec<String>,
+    activations: Vec<f64>,
+}
+
+impl CompactText {
+    pub fn from_text(text: &Text) -> Self {
+        Self {
+            min_range: text.min_range,
+            max_range: text.max_range,
+            min_activation: text.min_activation,
+            max_activation: text.max_activation,
+            data_index: text.data_index,
+            max_activating_token_index: text.max_activating_token_index,
+            tokens: text.tokens.clone(),
+            activations: text
+                .activations
+                .iter()
+                .map(|&activation| (activation as f64 * 1e4).trunc() / 1e4)
+                .collect::<Vec<_>>(),
+        }
+    }
+}
+
+fn serialize_activations<S: serde::Serializer>(
+    activations: &Vec<f32>,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    let activations = activations
+        .iter()
+        .map(|&activation| (activation as f64 * 1e4).trunc() / 1e4)
+        .collect::<Vec<_>>();
+    activations.serialize(serializer)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Text {
     min_range: f32,
     max_range: f32,
@@ -121,6 +165,7 @@ pub struct Text {
     data_index: u64,
     max_activating_token_index: u32,
     tokens: Vec<String>,
+    #[serde(serialize_with = "serialize_activations")]
     activations: Vec<f32>,
 }
 
