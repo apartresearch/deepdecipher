@@ -87,7 +87,6 @@ impl ServiceProviderTrait for Neuroscope {
                     )
                 )?
         };
-        println!("neuroscope page: {:?}", page.texts().len());
-        Ok(json!({}))
+        Ok(json!([page, page]))
     }
 }
