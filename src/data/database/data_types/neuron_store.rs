@@ -5,7 +5,7 @@ use crate::data::{
     neuron_store::SimilarNeurons, DataObjectHandle, ModelHandle, NeuronStore as NeuronStoreData,
 };
 
-use super::{data_object::DataValidationError, DataTypeDiscriminants, ModelDataObject};
+use super::{data_type::DataValidationError, DataTypeDiscriminants, ModelDataObject};
 
 pub struct NeuronStore {
     model: ModelHandle,

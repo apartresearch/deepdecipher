@@ -5,7 +5,7 @@ use crate::{
     Index,
 };
 
-use super::{data_object::DataValidationError, DataTypeDiscriminants, ModelDataObject};
+use super::{data_type::DataValidationError, DataTypeDiscriminants, ModelDataObject};
 
 use anyhow::{bail, Context, Result};
 

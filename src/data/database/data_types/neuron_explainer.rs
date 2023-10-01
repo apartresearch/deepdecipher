@@ -6,7 +6,7 @@ use crate::data::{
 };
 
 use super::{
-    data_object::{DataValidationError, ModelDataObject},
+    data_type::{DataValidationError, ModelDataObject},
     DataTypeDiscriminants,
 };
 

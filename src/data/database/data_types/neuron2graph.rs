@@ -3,7 +3,7 @@ use async_trait::async_trait;
 
 use crate::data::{neuron2graph::Graph, DataObjectHandle, ModelHandle};
 
-use super::{data_object::DataValidationError, DataTypeDiscriminants, ModelDataObject};
+use super::{data_type::DataValidationError, DataTypeDiscriminants, ModelDataObject};
 
 pub struct Neuron2Graph {
     model: ModelHandle,
