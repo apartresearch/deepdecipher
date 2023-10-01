@@ -4,17 +4,17 @@ use rusqlite::OptionalExtension;
 use super::{data_types::DataType, Database, Operation};
 
 #[derive(Clone)]
-pub struct DataObjectHandle {
+pub struct DataTypeHandle {
     id: i64,
     name: String,
     data_type: DataType,
     database: Database,
 }
 
-impl DataObjectHandle {
+impl DataTypeHandle {
     fn create_inner(database: Database, name: String, data_type: DataType) -> impl Operation<Self> {
-        const ADD_DATA_OBJECT: &str = r#"
-        INSERT INTO data_object (
+        const ADD_DATA_TYPE: &str = r#"
+        INSERT INTO data_type (
             name,
             type,
             type_args
@@ -32,7 +32,7 @@ impl DataObjectHandle {
         );
 
         move |transaction| {
-            let id = transaction.prepare(ADD_DATA_OBJECT)?.insert(params)?;
+            let id = transaction.prepare(ADD_DATA_TYPE)?.insert(params)?;
             Ok(Self {
                 id,
                 name,
@@ -57,36 +57,36 @@ impl DataObjectHandle {
             .with_context(|| format!("Failed to create data object '{name}'."))
     }
 
-    pub(super) async fn new(database: Database, data_object_name: &str) -> Result<Option<Self>> {
-        const GET_DATA_OBJECT_TYPE: &str = r#"
+    pub(super) async fn new(database: Database, data_type_name: &str) -> Result<Option<Self>> {
+        const GET_DATA_TYPE_TYPE: &str = r#"
             SELECT id, type, type_args
-            FROM data_object
+            FROM data_type
             WHERE name = $1
         "#;
 
-        let params = (data_object_name.to_owned(),);
+        let params = (data_type_name.to_owned(),);
 
         let type_data: Option<(i64, String, Vec<u8>)> = database
             .connection
             .call(|connection| {
-                let mut statement = connection.prepare(GET_DATA_OBJECT_TYPE)?;
+                let mut statement = connection.prepare(GET_DATA_TYPE_TYPE)?;
                 statement
                     .query_row(params, |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
                     .optional()
             })
             .await
             .with_context(|| {
-                format!("Failed to get data object type for data object '{data_object_name}'.")
+                format!("Failed to get data object type for data object '{data_type_name}'.")
             })?;
         if let Some((id, type_name, type_args)) = type_data {
             let data_type = DataType::from_raw(type_name.as_str(), type_args.as_slice())?;
-            let data_object = Self {
+            let data_type = Self {
                 id,
-                name: data_object_name.to_owned(),
+                name: data_type_name.to_owned(),
                 data_type,
                 database,
             };
-            Ok(Some(data_object))
+            Ok(Some(data_type))
         } else {
             Ok(None)
         }
@@ -105,32 +105,28 @@ impl DataObjectHandle {
     }
 
     fn delete_inner(&self) -> impl Operation<()> {
-        const DELETE_DATA_OBJECT_REFERENCES: &str = r#"
+        const DELETE_DATA_TYPE_REFERENCES: &str = r#"
         DELETE FROM $DATABASE
-        WHERE data_object_id = ?1;
+        WHERE data_type_id = ?1;
         "#;
-        const DELETE_DATA_OBJECT: &str = r#"
-        DELETE FROM data_object
+        const DELETE_DATA_TYPE: &str = r#"
+        DELETE FROM data_type
         WHERE id = ?1;
         "#;
-        const REFERENCE_TABLES: [&str; 4] = [
-            "model_data",
-            "layer_data",
-            "neuron_data",
-            "model_data_object",
-        ];
+        const REFERENCE_TABLES: [&str; 4] =
+            ["model_data", "layer_data", "neuron_data", "model_data_type"];
 
         let params = (self.id,);
         move |transaction| {
             for table in REFERENCE_TABLES.iter() {
                 let mut statement = transaction.prepare(
-                    DELETE_DATA_OBJECT_REFERENCES
+                    DELETE_DATA_TYPE_REFERENCES
                         .replace("$DATABASE", table)
                         .as_str(),
                 )?;
                 statement.execute(params)?;
             }
-            transaction.prepare(DELETE_DATA_OBJECT)?.execute(params)?;
+            transaction.prepare(DELETE_DATA_TYPE)?.execute(params)?;
             Ok(())
         }
     }

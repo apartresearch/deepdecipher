@@ -5,7 +5,7 @@ use serde_json::json;
 
 use crate::data::data_types::Neuroscope as NeuroscopeData;
 use crate::data::retrieve::neuroscope::scrape_neuron_page;
-use crate::data::{DataObjectHandle, Database, ModelHandle, NeuronIndex};
+use crate::data::{DataTypeHandle, Database, ModelHandle, NeuronIndex};
 use crate::server::State;
 
 use super::service_provider::ServiceProviderTrait;
@@ -13,14 +13,14 @@ use super::service_provider::ServiceProviderTrait;
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Neuroscope;
 
-async fn data_object(state: &State, model: &ModelHandle) -> Result<NeuroscopeData> {
+async fn data_type(state: &State, model: &ModelHandle) -> Result<NeuroscopeData> {
     let database = state.database();
-    let data_object_name = "neuroscope";
-    let data_object = database
-        .data_object(data_object_name)
+    let data_type_name = "neuroscope";
+    let data_type = database
+        .data_type(data_type_name)
         .await?
-        .with_context(|| format!("No data object with name '{data_object_name}'."))?;
-    model.data_object(&data_object).await.with_context(|| {
+        .with_context(|| format!("No data object with name '{data_type_name}'."))?;
+    model.data_type(&data_type).await.with_context(|| {
         format!(
             "Failed to get neuroscope data object for model '{}'.",
             model.name()
@@ -30,13 +30,13 @@ async fn data_object(state: &State, model: &ModelHandle) -> Result<NeuroscopeDat
 
 #[async_trait]
 impl ServiceProviderTrait for Neuroscope {
-    async fn required_data_objects(&self, database: &Database) -> Result<Vec<DataObjectHandle>> {
-        let data_object_name = "neuroscope";
-        let data_object = database
-            .data_object(data_object_name)
+    async fn required_data_types(&self, database: &Database) -> Result<Vec<DataTypeHandle>> {
+        let data_type_name = "neuroscope";
+        let data_type = database
+            .data_type(data_type_name)
             .await?
-            .with_context(|| format!("No data object with name '{data_object_name}'. This should have been checked when the service was created."))?;
-        Ok(vec![data_object])
+            .with_context(|| format!("No data object with name '{data_type_name}'. This should have been checked when the service was created."))?;
+        Ok(vec![data_type])
     }
 
     async fn model_page(
@@ -46,7 +46,7 @@ impl ServiceProviderTrait for Neuroscope {
         _query: &serde_json::Value,
         model: &ModelHandle,
     ) -> Result<serde_json::Value> {
-        let page = data_object(state, model).await?.model_page().await?;
+        let page = data_type(state, model).await?.model_page().await?;
         Ok(json!(page))
     }
 
@@ -58,7 +58,7 @@ impl ServiceProviderTrait for Neuroscope {
         model: &ModelHandle,
         layer_index: u32,
     ) -> Result<serde_json::Value> {
-        let page = data_object(state, model)
+        let page = data_type(state, model)
             .await?
             .layer_page(layer_index)
             .await?;
@@ -74,7 +74,7 @@ impl ServiceProviderTrait for Neuroscope {
         layer_index: u32,
         neuron_index: u32,
     ) -> Result<serde_json::Value> {
-        let page = if let Some(page) = data_object(state, model)
+        let page = if let Some(page) = data_type(state, model)
             .await?
             .neuron_page(layer_index, neuron_index)
             .await?

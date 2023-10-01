@@ -1,7 +1,7 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use crate::data::{DataObjectHandle, Database, ModelHandle};
+use crate::data::{DataTypeHandle, Database, ModelHandle};
 
 use super::{ServiceProvider, State};
 
@@ -32,11 +32,8 @@ impl Service {
         false
     }
 
-    pub async fn required_data_objects(
-        &self,
-        database: &Database,
-    ) -> Result<Vec<DataObjectHandle>> {
-        self.provider.required_data_objects(database).await
+    pub async fn required_data_types(&self, database: &Database) -> Result<Vec<DataTypeHandle>> {
+        self.provider.required_data_types(database).await
     }
 
     pub async fn model_page(

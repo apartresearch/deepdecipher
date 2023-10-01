@@ -103,14 +103,14 @@ async fn service_value(
     service_handle: &ServiceHandle,
     page_index: Index,
 ) -> Result<serde_json::Value> {
-    let missing_data_objects = model_handle.missing_data_objects(service_handle).await?;
+    let missing_data_types = model_handle.missing_data_types(service_handle).await?;
     let service = service_handle.service().await?;
 
-    if missing_data_objects.is_empty() {
+    if missing_data_types.is_empty() {
         let page = service_page(state, query, model_handle, &service, page_index).await?;
         Ok(json!({ "data": page }))
     } else {
-        Ok(json!({ "missing_data_objects": missing_data_objects }))
+        Ok(json!({ "missing_data_types": missing_data_types }))
     }
 }
 

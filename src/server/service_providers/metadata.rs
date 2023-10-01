@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    data::{DataObjectHandle, Database, ModelHandle},
+    data::{DataTypeHandle, Database, ModelHandle},
     server::{self, State},
 };
 
@@ -14,7 +14,7 @@ pub struct Metadata;
 
 #[async_trait]
 impl ServiceProviderTrait for Metadata {
-    async fn required_data_objects(&self, _database: &Database) -> Result<Vec<DataObjectHandle>> {
+    async fn required_data_types(&self, _database: &Database) -> Result<Vec<DataTypeHandle>> {
         Ok(vec![])
     }
 

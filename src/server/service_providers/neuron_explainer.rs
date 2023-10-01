@@ -6,7 +6,7 @@ use serde_json::json;
 
 use crate::data::data_types::NeuronExplainer as NeuronExplainerData;
 use crate::data::retrieve::neuron_explainer;
-use crate::data::{DataObjectHandle, Database, ModelHandle, NeuronIndex};
+use crate::data::{DataTypeHandle, Database, ModelHandle, NeuronIndex};
 use crate::server::State;
 
 use super::service_provider::ServiceProviderTrait;
@@ -14,14 +14,14 @@ use super::service_provider::ServiceProviderTrait;
 #[derive(Clone, Serialize, Deserialize)]
 pub struct NeuronExplainer;
 
-async fn data_object(state: &State, model: &ModelHandle) -> Result<NeuronExplainerData> {
+async fn data_type(state: &State, model: &ModelHandle) -> Result<NeuronExplainerData> {
     let database = state.database();
-    let data_object_name = "neuron_explainer";
-    let data_object = database
-        .data_object(data_object_name)
+    let data_type_name = "neuron_explainer";
+    let data_type = database
+        .data_type(data_type_name)
         .await?
-        .with_context(|| format!("No data object with name '{data_object_name}'."))?;
-    model.data_object(&data_object).await.with_context(|| {
+        .with_context(|| format!("No data object with name '{data_type_name}'."))?;
+    model.data_type(&data_type).await.with_context(|| {
         format!(
             "Failed to get neuron explainer data object for model '{}'.",
             model.name()
@@ -31,13 +31,13 @@ async fn data_object(state: &State, model: &ModelHandle) -> Result<NeuronExplain
 
 #[async_trait]
 impl ServiceProviderTrait for NeuronExplainer {
-    async fn required_data_objects(&self, database: &Database) -> Result<Vec<DataObjectHandle>> {
-        let data_object_name = "neuron_explainer";
-        let data_object = database
-            .data_object(data_object_name)
+    async fn required_data_types(&self, database: &Database) -> Result<Vec<DataTypeHandle>> {
+        let data_type_name = "neuron_explainer";
+        let data_type = database
+            .data_type(data_type_name)
             .await?
-            .with_context(|| format!("No data object with name '{data_object_name}'. This should have been checked when the service was created."))?;
-        Ok(vec![data_object])
+            .with_context(|| format!("No data object with name '{data_type_name}'. This should have been checked when the service was created."))?;
+        Ok(vec![data_type])
     }
 
     async fn neuron_page(
@@ -53,7 +53,7 @@ impl ServiceProviderTrait for NeuronExplainer {
             layer: layer_index,
             neuron: neuron_index,
         };
-        let page = if let Some(page) = data_object(state, model)
+        let page = if let Some(page) = data_type(state, model)
             .await?
             .neuron_page(layer_index, neuron_index)
             .await?

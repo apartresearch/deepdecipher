@@ -4,7 +4,7 @@ from .deepdecipher import (
     Database,
     ModelHandle,
     ModelMetadata,
-    DataObjectHandle,
+    DataTypeHandle,
     DataType,
     ServiceHandle,
     ServiceProvider,

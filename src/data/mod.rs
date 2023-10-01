@@ -11,7 +11,7 @@ pub mod neuron2graph;
 pub mod retrieve;
 
 pub mod database;
-pub use database::{data_types, DataObjectHandle, Database, ModelHandle, ServiceHandle};
+pub use database::{data_types, DataTypeHandle, Database, ModelHandle, ServiceHandle};
 
 mod metadata;
 pub use metadata::Metadata;

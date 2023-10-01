@@ -2,24 +2,24 @@ use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 
 use crate::data::{
-    database::ModelHandle, neuron_explainer_page::NeuronExplainerPage, DataObjectHandle,
+    database::ModelHandle, neuron_explainer_page::NeuronExplainerPage, DataTypeHandle,
 };
 
 use super::{
-    data_type::{DataValidationError, ModelDataObject},
+    data_type::{DataValidationError, ModelDataType},
     DataTypeDiscriminants,
 };
 
 pub struct NeuronExplainer {
     model: ModelHandle,
-    data_object: DataObjectHandle,
+    data_type: DataTypeHandle,
 }
 
 #[async_trait]
-impl ModelDataObject for NeuronExplainer {
-    async fn new(model: ModelHandle, data_object: DataObjectHandle) -> Result<Option<Self>> {
-        match data_object.data_type().into() {
-            DataTypeDiscriminants::NeuronExplainer => Ok(Some(Self { model, data_object })),
+impl ModelDataType for NeuronExplainer {
+    async fn new(model: ModelHandle, data_type: DataTypeHandle) -> Result<Option<Self>> {
+        match data_type.data_type().into() {
+            DataTypeDiscriminants::NeuronExplainer => Ok(Some(Self { model, data_type })),
             _ => bail!("Invalid type for neuron explainer data object.",),
         }
     }
@@ -35,7 +35,7 @@ impl ModelDataObject for NeuronExplainer {
     async fn validate(&self) -> anyhow::Result<Result<(), DataValidationError>> {
         let missing_items: Vec<_> = self
             .model
-            .missing_neuron_items(&self.data_object)
+            .missing_neuron_items(&self.data_type)
             .await?
             .collect();
         Ok(if missing_items.is_empty() {
@@ -54,7 +54,7 @@ impl NeuronExplainer {
     ) -> Result<Option<NeuronExplainerPage>> {
         let model_name = self.model.name();
         let raw_data = self.model
-            .neuron_data( &self.data_object, layer_index, neuron_index)
+            .neuron_data( &self.data_type, layer_index, neuron_index)
             .await.with_context(|| {
                 format!("Failed to get neuron explainer neuron data for neuron l{layer_index}n{neuron_index} in model '{model_name}'.")
             })?;

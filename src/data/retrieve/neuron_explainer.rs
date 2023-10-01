@@ -10,7 +10,7 @@ use tokio::{sync::Semaphore, task::JoinSet};
 
 use crate::{
     data::{
-        data_types::DataType, neuron_explainer_page::NeuronExplainerPage, DataObjectHandle,
+        data_types::DataType, neuron_explainer_page::NeuronExplainerPage, DataTypeHandle,
         ModelHandle, NeuronIndex,
     },
     util::Progress,
@@ -50,7 +50,7 @@ pub async fn fetch_neuron(client: &Client, url: impl AsRef<str>) -> Result<Neuro
 
 async fn fetch(
     model_handle: &mut ModelHandle,
-    data_object: &DataObjectHandle,
+    data_type: &DataTypeHandle,
     num_layers: u32,
     layer_size: u32,
     url: impl Fn(NeuronIndex) -> String,
@@ -64,7 +64,7 @@ async fn fetch(
     progress.print();
     for index in NeuronIndex::iter(num_layers, layer_size) {
         if model_handle
-            .neuron_data(data_object, index.layer, index.neuron)
+            .neuron_data(data_type, index.layer, index.neuron)
             .await?
             .is_none()
         {
@@ -113,7 +113,7 @@ async fn fetch(
         };
         if let Some(explanation) = page {
             model_handle
-                .add_neuron_data(data_object, layer, neuron, explanation.to_binary()?)
+                .add_neuron_data(data_type, layer, neuron, explanation.to_binary()?)
                 .await?;
         }
         progress.increment();
@@ -129,23 +129,23 @@ async fn fetch_to_database(
     url: impl Fn(NeuronIndex) -> String,
 ) -> Result<()> {
     let database = model_handle.database();
-    let data_object = if let Some(data_object) = database.data_object("neuron_explainer").await? {
-        data_object
+    let data_type = if let Some(data_type) = database.data_type("neuron_explainer").await? {
+        data_type
     } else {
         database
-            .add_data_object("neuron_explainer", DataType::NeuronExplainer)
+            .add_data_type("neuron_explainer", DataType::NeuronExplainer)
             .await?
     };
 
     let num_layers = model_handle.metadata().num_layers;
     let layer_size = model_handle.metadata().layer_size;
     let start = Instant::now();
-    fetch(model_handle, &data_object, num_layers, layer_size, url).await?;
+    fetch(model_handle, &data_type, num_layers, layer_size, url).await?;
     let fetch_time = start.elapsed();
     println!("Fetched data in {:?}", fetch_time);
 
-    if !model_handle.has_data_object(&data_object).await? {
-        model_handle.add_data_object(&data_object).await?;
+    if !model_handle.has_data_type(&data_type).await? {
+        model_handle.add_data_type(&data_type).await?;
     }
 
     Ok(())

@@ -4,7 +4,7 @@ use crate::{
     data::{
         data_types::DataType,
         neuroscope::{NeuroscopeLayerPage, NeuroscopeModelPage},
-        DataObjectHandle, Metadata, ModelHandle, NeuronIndex, NeuroscopeNeuronPage,
+        DataTypeHandle, Metadata, ModelHandle, NeuronIndex, NeuroscopeNeuronPage,
     },
     util::Progress,
     Index,
@@ -40,17 +40,17 @@ pub async fn scrape_neuron_page<S: AsRef<str>>(
 
 async fn scrape_neuron_page_to_database(
     model: &mut ModelHandle,
-    data_object: &DataObjectHandle,
+    data_type: &DataTypeHandle,
     neuron_index: NeuronIndex,
 ) -> Result<f32> {
     let page = if let Some(page_data) = model
-        .neuron_data(data_object, neuron_index.layer, neuron_index.neuron)
+        .neuron_data(data_type, neuron_index.layer, neuron_index.neuron)
         .await?
     {
         NeuroscopeNeuronPage::from_binary(page_data)?
     } else {
         let page = scrape_neuron_page(model.name(), neuron_index).await?;
-        model.add_neuron_data( data_object, neuron_index.layer, neuron_index.neuron, page.to_binary()?).await.with_context(|| format!("Failed to write neuroscope page for neuron {neuron_index} in model '{model_name}' to database.", model_name = model.name()))?;
+        model.add_neuron_data( data_type, neuron_index.layer, neuron_index.neuron, page.to_binary()?).await.with_context(|| format!("Failed to write neuroscope page for neuron {neuron_index} in model '{model_name}' to database.", model_name = model.name()))?;
         page
     };
     let model_name = model.name();
@@ -65,12 +65,12 @@ async fn scrape_neuron_page_to_database(
 
 async fn scrape_layer_to_database(
     model: &mut ModelHandle,
-    data_object: &DataObjectHandle,
+    data_type: &DataTypeHandle,
     layer_index: u32,
     num_neurons: u32,
     progress: &mut Progress,
 ) -> Result<NeuroscopeLayerPage> {
-    let page = if let Some(page_data) = model.layer_data(data_object, layer_index).await? {
+    let page = if let Some(page_data) = model.layer_data(data_type, layer_index).await? {
         let layer_page = NeuroscopeLayerPage::from_binary(page_data)?;
         progress
             .increment_by(num_neurons.into())
@@ -88,14 +88,14 @@ async fn scrape_layer_to_database(
             };
 
             let mut model = model.clone();
-            let data_object = data_object.clone();
+            let data_type = data_type.clone();
 
             let semaphore = Arc::clone(&semaphore);
             join_set.spawn(async move {
                 let permit = semaphore.acquire_owned().await.unwrap();
                 let mut retries = 0;
                     let result = loop {
-                        match scrape_neuron_page_to_database(&mut model, &data_object, neuron_index).await {
+                        match scrape_neuron_page_to_database(&mut model, &data_type, neuron_index).await {
                             Ok(result) => break result,
                             Err(err) => {
                                 if retries == RETRY_LIMIT {
@@ -135,7 +135,7 @@ async fn scrape_layer_to_database(
 
         let layer_page = NeuroscopeLayerPage::new(max_activations);
         model
-            .add_layer_data(data_object, layer_index, layer_page.to_binary()?)
+            .add_layer_data(data_type, layer_index, layer_page.to_binary()?)
             .await?;
         layer_page
     };
@@ -193,14 +193,14 @@ pub async fn scrape_model_metadata<S: AsRef<str>>(model: S) -> Result<Metadata> 
 
 pub async fn scrape_model_to_database(model: &mut ModelHandle) -> Result<()> {
     let database = model.database();
-    let data_object = if let Some(data_object) = database.data_object("neuroscope").await? {
-        data_object
+    let data_type = if let Some(data_type) = database.data_type("neuroscope").await? {
+        data_type
     } else {
         database
-            .add_data_object("neuroscope", DataType::Neuroscope)
+            .add_data_type("neuroscope", DataType::Neuroscope)
             .await?
     };
-    if model.model_data(&data_object).await?.is_some() {
+    if model.model_data(&data_type).await?.is_some() {
         println!(
             "Neuroscope pages for model '{}' already scraped.",
             model.name()
@@ -216,7 +216,7 @@ pub async fn scrape_model_to_database(model: &mut ModelHandle) -> Result<()> {
         for layer_index in 0..model.metadata().num_layers {
             let layer_page = scrape_layer_to_database(
                 &mut model.clone(),
-                &data_object,
+                &data_type,
                 layer_index,
                 layer_size,
                 &mut progress,
@@ -233,18 +233,18 @@ pub async fn scrape_model_to_database(model: &mut ModelHandle) -> Result<()> {
             .collect();
         let model_page = NeuroscopeModelPage::new(neuron_importance);
         model
-            .add_model_data(&data_object, model_page.to_binary()?)
+            .add_model_data(&data_type, model_page.to_binary()?)
             .await?;
-        model.add_data_object(&data_object).await
+        model.add_data_type(&data_type).await
     }
 }
 
 pub async fn scrape_indices_to_database(
     model: &mut ModelHandle,
-    data_object: &DataObjectHandle,
+    data_type: &DataTypeHandle,
     indices: impl Iterator<Item = Index>,
 ) -> Result<()> {
-    match data_object.data_type() {
+    match data_type.data_type() {
         DataType::Neuroscope => {}
         _ => bail!("Cannot scrape missing indices for non-neuroscope data object."),
     }
@@ -263,7 +263,7 @@ pub async fn scrape_indices_to_database(
             Index::Neuron(layer_index, neuron_index) => {
                 scrape_neuron_page_to_database(
                     model,
-                    data_object,
+                    data_type,
                     NeuronIndex {
                         layer: layer_index,
                         neuron: neuron_index,
@@ -280,12 +280,12 @@ pub async fn scrape_indices_to_database(
 
 pub async fn scrape_missing_indices(
     model: &mut ModelHandle,
-    data_object: &DataObjectHandle,
+    data_type: &DataTypeHandle,
 ) -> Result<()> {
-    match data_object.data_type() {
+    match data_type.data_type() {
         DataType::Neuroscope => {}
         _ => bail!("Cannot scrape missing indices for non-neuroscope data object."),
     }
-    let missing_indices = model.missing_items(data_object).await?;
-    scrape_indices_to_database(model, data_object, missing_indices).await
+    let missing_indices = model.missing_items(data_type).await?;
+    scrape_indices_to_database(model, data_type, missing_indices).await
 }

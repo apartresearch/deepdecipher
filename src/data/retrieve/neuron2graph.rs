@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::data::{
-    data_types::DataType, neuron2graph::Graph, DataObjectHandle, ModelHandle, NeuronIndex,
+    data_types::DataType, neuron2graph::Graph, DataTypeHandle, ModelHandle, NeuronIndex,
 };
 
 use anyhow::{bail, Context, Result};
@@ -17,7 +17,7 @@ fn neuron_path(root: impl AsRef<Path>, neuron_index: NeuronIndex) -> PathBuf {
 
 async fn retrieve_neuron2graph_neuron(
     model_handle: &mut ModelHandle,
-    data_object: &DataObjectHandle,
+    data_type: &DataTypeHandle,
     root: impl AsRef<Path>,
     neuron_index: NeuronIndex,
 ) -> Result<bool> {
@@ -35,7 +35,7 @@ async fn retrieve_neuron2graph_neuron(
     };
     model_handle
         .add_neuron_data(
-            data_object,
+            data_type,
             neuron_index.layer,
             neuron_index.neuron,
             graph.to_binary()?,
@@ -50,22 +50,22 @@ pub async fn retrieve_neuron2graph(
 ) -> Result<()> {
     let database = model_handle.database();
 
-    let data_object = if let Some(data_object) = database.data_object("neuron2graph").await? {
-        data_object
+    let data_type = if let Some(data_type) = database.data_type("neuron2graph").await? {
+        data_type
     } else {
         database
-            .add_data_object("neuron2graph", DataType::Neuron2Graph)
+            .add_data_type("neuron2graph", DataType::Neuron2Graph)
             .await?
     };
 
-    if model_handle.has_data_object(&data_object).await? {
+    if model_handle.has_data_type(&data_type).await? {
         bail!(
             "Model '{}' already has a neuron2graph data object.",
             model_handle.name()
         )
     } else {
         model_handle
-            .add_data_object(&data_object)
+            .add_data_type(&data_type)
             .await
             .with_context(|| {
                 format!(
@@ -84,7 +84,7 @@ pub async fn retrieve_neuron2graph(
     print!("Storing neuron graphs: 0/{num_total_neurons}");
     let mut num_missing = 0;
     for neuron_index in model_handle.metadata().neuron_indices() {
-        if !retrieve_neuron2graph_neuron(model_handle, &data_object, path.as_ref(), neuron_index)
+        if !retrieve_neuron2graph_neuron(model_handle, &data_type, path.as_ref(), neuron_index)
             .await?
         {
             num_missing += 1

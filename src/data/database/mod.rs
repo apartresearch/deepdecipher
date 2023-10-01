@@ -7,14 +7,14 @@ use tokio_rusqlite::Connection;
 
 use crate::server::{Service, ServiceProvider};
 
-use self::data_types::ModelDataObject;
+use self::data_types::ModelDataType;
 
 use super::{data_types::DataType, Metadata};
 
 mod model_handle;
 pub use model_handle::ModelHandle;
-mod data_object_handle;
-pub use data_object_handle::DataObjectHandle;
+mod data_type_handle;
+pub use data_type_handle::DataTypeHandle;
 pub mod data_types;
 mod service_handle;
 pub use service_handle::ServiceHandle;
@@ -183,47 +183,42 @@ impl Database {
             .map(Vec::into_iter)
     }
 
-    pub async fn add_data_object(
+    pub async fn add_data_type(
         &self,
-        data_object_name: impl AsRef<str>,
+        data_type_name: impl AsRef<str>,
         data_type: DataType,
-    ) -> Result<DataObjectHandle> {
-        DataObjectHandle::create(
-            self.clone(),
-            data_object_name.as_ref().to_owned(),
-            data_type,
-        )
-        .await
+    ) -> Result<DataTypeHandle> {
+        DataTypeHandle::create(self.clone(), data_type_name.as_ref().to_owned(), data_type).await
     }
 
-    pub async fn data_object(
+    pub async fn data_type(
         &self,
-        data_object_name: impl AsRef<str>,
-    ) -> Result<Option<DataObjectHandle>> {
-        DataObjectHandle::new(self.clone(), data_object_name.as_ref()).await
+        data_type_name: impl AsRef<str>,
+    ) -> Result<Option<DataTypeHandle>> {
+        DataTypeHandle::new(self.clone(), data_type_name.as_ref()).await
     }
 
-    pub async fn model_data_object<D>(
+    pub async fn model_data_type<D>(
         &self,
         model: &ModelHandle,
-        data_object: &DataObjectHandle,
+        data_type: &DataTypeHandle,
     ) -> Result<D>
     where
-        D: ModelDataObject,
+        D: ModelDataType,
     {
         let model_name = model.name();
-        let data_object_name = data_object.name();
+        let data_type_name = data_type.name();
 
-        if !model.has_data_object(data_object).await? {
-            bail!("Model '{model_name}' does not have data object '{data_object_name}'.");
+        if !model.has_data_type(data_type).await? {
+            bail!("Model '{model_name}' does not have data object '{data_type_name}'.");
         }
-        let result = D::new(model.clone(), data_object.clone()).await?;
+        let result = D::new(model.clone(), data_type.clone()).await?;
         if let Some(result) = result {
             Ok(result)
         } else {
             let output_data_type = D::data_type();
             let output_data_type = output_data_type.as_ref();
-            bail!("Data object '{data_object_name}' is not of type '{output_data_type}'.");
+            bail!("Data object '{data_type_name}' is not of type '{output_data_type}'.");
         }
     }
 }

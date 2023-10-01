@@ -2,7 +2,7 @@ use pyo3::prelude::*;
 
 use crate::server::ServiceProvider;
 
-use super::data_object_handle::PyDataObjectHandle;
+use super::data_type_handle::PyDataTypeHandle;
 
 #[pyclass(name = "ServiceProvider")]
 #[derive(Clone)]
@@ -41,9 +41,9 @@ impl PyServiceProvider {
     }
 
     #[staticmethod]
-    pub fn json(data_object: &PyDataObjectHandle) -> Self {
+    pub fn json(data_type: &PyDataTypeHandle) -> Self {
         PyServiceProvider {
-            provider: ServiceProvider::json(data_object.data_object.name().to_owned()),
+            provider: ServiceProvider::json(data_type.data_type.name().to_owned()),
         }
     }
 

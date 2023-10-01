@@ -12,14 +12,14 @@ use super::{
     neuroscope::Neuroscope,
 };
 use crate::{
-    data::{DataObjectHandle, Database, ModelHandle},
+    data::{DataTypeHandle, Database, ModelHandle},
     server::State,
 };
 
 #[allow(unused_variables)]
 #[async_trait]
 pub trait ServiceProviderTrait: Clone + Serialize + Deserialize<'static> + Send + Sync {
-    async fn required_data_objects(&self, database: &Database) -> Result<Vec<DataObjectHandle>>;
+    async fn required_data_types(&self, database: &Database) -> Result<Vec<DataTypeHandle>>;
 
     async fn model_page(
         &self,
@@ -65,8 +65,8 @@ pub enum ServiceProvider {
 }
 
 impl ServiceProvider {
-    pub fn json(data_object_name: String) -> Self {
-        ServiceProvider::Json(Json::new(data_object_name))
+    pub fn json(data_type_name: String) -> Self {
+        ServiceProvider::Json(Json::new(data_type_name))
     }
 }
 
@@ -84,9 +84,9 @@ impl ServiceProvider {
             ServiceProvider::Neuron2GraphSearch => Neuron2GraphSearch,
             ServiceProvider::Json(json) => json,
         } {
-            pub fn required_data_objects<'a>(
+            pub fn required_data_types<'a>(
                 &'a self, database: &'a Database,
-            ) -> Pin<Box<dyn Future<Output = Result<Vec<DataObjectHandle>>> + Send + 'a>>;
+            ) -> Pin<Box<dyn Future<Output = Result<Vec<DataTypeHandle>>> + Send + 'a>>;
 
             pub fn model_page<'a>(
                 &'a self,

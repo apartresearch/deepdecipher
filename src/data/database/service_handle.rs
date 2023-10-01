@@ -1,6 +1,6 @@
 use crate::server::{Service, ServiceProvider};
 
-use super::{DataObjectHandle, Database, Operation};
+use super::{DataTypeHandle, Database, Operation};
 
 use anyhow::{Context, Result};
 use rusqlite::OptionalExtension;
@@ -118,10 +118,10 @@ impl ServiceHandle {
         &self.name
     }
 
-    pub async fn required_data_objects(&self) -> Result<Vec<DataObjectHandle>> {
+    pub async fn required_data_types(&self) -> Result<Vec<DataTypeHandle>> {
         self.service()
             .await?
-            .required_data_objects(&self.database)
+            .required_data_types(&self.database)
             .await
     }
 
