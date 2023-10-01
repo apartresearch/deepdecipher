@@ -3,8 +3,8 @@ Description=DeepDecipher
 After=syslog.target network.target
 
 [Service]
-WorkingDirectory=/home/albert/deepdecipher/frontend
-ExecStart=/usr/local/nodejs/bin/node multi
+WorkingDirectory=/usr/local/bin/deepdecipher/prod/
+ExecStart=/usr/local/nodejs/bin/node frontend/multi
 
 Restart=on-failure
 
