@@ -1,7 +1,7 @@
 # Noop to authenticate sudo immediately
 sudo true
 # Change to the frontend directory in the repo
-cd /home/albert/deepdecipher/frontend
+cd /home/albert/deepdecipher
 # Install required packages
 /usr/local/nodejs/bin/npm install
 # Build frontend server
