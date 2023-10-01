@@ -1,7 +1,10 @@
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 
-use crate::data::{neuron2graph::Graph, DataTypeHandle, ModelHandle};
+use crate::data::{
+    data_objects::{DataObject, Graph},
+    DataTypeHandle, ModelHandle,
+};
 
 use super::{data_type::DataValidationError, DataTypeDiscriminants, ModelDataType};
 

@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use crate::data::{
-    data_types::DataType, neuron2graph::Graph, DataTypeHandle, ModelHandle, NeuronIndex,
+    data_objects::{DataObject, Graph},
+    data_types::DataType,
+    DataTypeHandle, ModelHandle, NeuronIndex,
 };
 
 use anyhow::{bail, Context, Result};
