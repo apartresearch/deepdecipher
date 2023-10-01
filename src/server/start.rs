@@ -33,6 +33,7 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
         App::new()
             .app_data(state.clone())
             .wrap(middleware::NormalizePath::new(TrailingSlash::Trim))
+            .wrap(middleware::Compress::default())
             .service(Redoc::with_url_and_config(
                 "/doc",
                 state.api_doc().clone(),
