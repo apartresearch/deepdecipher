@@ -1,7 +1,9 @@
-# Noop to authenticate sudo immediately
+# Hack to get repo location. This breaks if the server directory is moved.
+REPO_PATH=$(dirname $(dirname $(readlink -f $0)))
+# Noop to authenticate sudo immediately.
 sudo true
-# Change to the Rust project directory.
-cd /home/albert/deepdecipher
+# Change to the repo directory.
+cd $REPO_PATH
 # Build in release mode.
 /home/albert/.cargo/bin/cargo build --release
 # Copy binary to bin directory.
