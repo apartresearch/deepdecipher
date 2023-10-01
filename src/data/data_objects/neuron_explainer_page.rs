@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use snap::raw::{Decoder, Encoder};
+
+use super::{data_object, DataObject};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct NeuronExplainerPage {
@@ -37,20 +38,16 @@ impl NeuronExplainerPage {
 
         Ok(Self { explanation, score })
     }
+}
 
-    pub fn to_binary(&self) -> Result<Vec<u8>> {
-        let data = postcard::to_allocvec(self)
-            .context("Failed to serialize neuron explainer neuron page.")?;
-        Encoder::new()
-            .compress_vec(data.as_slice())
-            .context("Failed to compress neuron explainer neuron page.")
+impl DataObject for NeuronExplainerPage {
+    fn to_binary(&self) -> Result<Vec<u8>> {
+        data_object::to_binary(self)
+            .context("Failed to serialize Neuron Explainer neuron page to binary data.")
     }
 
-    pub fn from_binary(data: impl AsRef<[u8]>) -> Result<Self> {
-        let data = Decoder::new()
-            .decompress_vec(data.as_ref())
-            .context("Failed to decompress neuron explainer neuron page")?;
-        postcard::from_bytes(data.as_slice())
-            .context("Failed to deserialize neuron explainer neuron page.")
+    fn from_binary(data: impl AsRef<[u8]>) -> Result<Self> {
+        data_object::from_binary(data)
+            .context("Failed to deserialize Neuron Explainer neuron page from binary data.")
     }
 }

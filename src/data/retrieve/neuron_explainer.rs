@@ -10,8 +10,9 @@ use tokio::{sync::Semaphore, task::JoinSet};
 
 use crate::{
     data::{
-        data_types::DataType, neuron_explainer_page::NeuronExplainerPage, DataTypeHandle,
-        ModelHandle, NeuronIndex,
+        data_objects::{DataObject, NeuronExplainerPage},
+        data_types::DataType,
+        DataTypeHandle, ModelHandle, NeuronIndex,
     },
     util::Progress,
 };

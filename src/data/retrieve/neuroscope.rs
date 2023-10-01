@@ -2,9 +2,11 @@ use std::{panic, sync::Arc, time::Duration};
 
 use crate::{
     data::{
+        data_objects::{
+            DataObject, Metadata, NeuroscopeLayerPage, NeuroscopeModelPage, NeuroscopeNeuronPage,
+        },
         data_types::DataType,
-        neuroscope::{NeuroscopeLayerPage, NeuroscopeModelPage},
-        DataTypeHandle, Metadata, ModelHandle, NeuronIndex, NeuroscopeNeuronPage,
+        DataTypeHandle, ModelHandle, NeuronIndex,
     },
     util::Progress,
     Index,

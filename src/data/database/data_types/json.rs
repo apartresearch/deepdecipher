@@ -1,7 +1,10 @@
 use async_trait::async_trait;
 
 use crate::{
-    data::{json::JsonData, DataTypeHandle, ModelHandle},
+    data::{
+        data_objects::{DataObject, JsonData},
+        DataTypeHandle, ModelHandle,
+    },
     Index,
 };
 

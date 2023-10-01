@@ -9,7 +9,7 @@ use crate::server::{Service, ServiceProvider};
 
 use self::data_types::ModelDataType;
 
-use super::{data_types::DataType, Metadata};
+use super::{data_objects::Metadata, data_types::DataType};
 
 mod model_handle;
 pub use model_handle::ModelHandle;

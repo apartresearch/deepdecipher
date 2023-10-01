@@ -2,7 +2,7 @@ use anyhow::Context;
 use pyo3::prelude::*;
 use tokio::runtime::Runtime;
 
-use crate::data::{retrieve, Metadata};
+use crate::data::{data_objects::Metadata, retrieve};
 
 #[pyclass(name = "ModelMetadata")]
 pub struct PyModelMetadata {

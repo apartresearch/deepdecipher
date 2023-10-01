@@ -1,5 +1,9 @@
 use crate::{
-    data::{data_types::DataType, json::JsonData, DataTypeHandle, ModelHandle},
+    data::{
+        data_objects::{DataObject, JsonData},
+        data_types::DataType,
+        DataTypeHandle, ModelHandle,
+    },
     Index,
 };
 

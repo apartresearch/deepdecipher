@@ -1,10 +1,11 @@
 use std::iter;
 
+use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
-use crate::Index;
+use crate::{data::NeuronIndex, Index};
 
-use super::NeuronIndex;
+use super::{data_object, DataObject};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Metadata {
@@ -32,5 +33,15 @@ impl Metadata {
         iter::once(Index::Model)
             .chain((0..self.num_layers).map(Index::Layer))
             .chain(self.neuron_indices().map(Index::from))
+    }
+}
+
+impl DataObject for Metadata {
+    fn to_binary(&self) -> anyhow::Result<Vec<u8>> {
+        data_object::to_binary(self).context("Failed to serialize model metadata to binary data.")
+    }
+    fn from_binary(data: impl AsRef<[u8]>) -> anyhow::Result<Self> {
+        data_object::from_binary(data)
+            .context("Failed to deserialize model metadata from binary data.")
     }
 }

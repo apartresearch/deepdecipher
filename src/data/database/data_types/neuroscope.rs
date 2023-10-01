@@ -2,8 +2,11 @@ use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 
 use crate::data::{
-    database::ModelHandle, DataTypeHandle, NeuroscopeLayerPage, NeuroscopeModelPage,
-    NeuroscopeNeuronPage,
+    data_objects::NeuroscopeLayerPage,
+    data_objects::NeuroscopeNeuronPage,
+    data_objects::{DataObject, NeuroscopeModelPage},
+    database::ModelHandle,
+    DataTypeHandle,
 };
 
 use super::{

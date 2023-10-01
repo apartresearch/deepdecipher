@@ -2,7 +2,9 @@ use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 
 use crate::data::{
-    database::ModelHandle, neuron_explainer_page::NeuronExplainerPage, DataTypeHandle,
+    data_objects::{DataObject, NeuronExplainerPage},
+    database::ModelHandle,
+    DataTypeHandle,
 };
 
 use super::{
