@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 use crate::data::SimilarNeurons;
@@ -12,13 +12,11 @@ pub struct Graph {
 
 impl DataObject for Graph {
     fn to_binary(&self) -> Result<Vec<u8>> {
-        data_object::to_binary(self)
-            .context("Failed to serialize Neuron2Graph graph to binary data.")
+        data_object::to_binary(self, "Neuron2Graph graph")
     }
 
     fn from_binary(data: impl AsRef<[u8]>) -> Result<Self> {
-        data_object::from_binary(data)
-            .context("Failed to deserialize Neuron2Graph graph from binary data.")
+        data_object::from_binary(data, "Neuron2Graph graph")
     }
 }
 
@@ -40,12 +38,10 @@ impl Neuron2GraphData {
 
 impl DataObject for Neuron2GraphData {
     fn to_binary(&self) -> Result<Vec<u8>> {
-        data_object::to_binary(self)
-            .context("Failed to serialize Neuron2Graph data to binary data.")
+        data_object::to_binary(self, "Neuron2Graph data")
     }
 
     fn from_binary(data: impl AsRef<[u8]>) -> Result<Self> {
-        data_object::from_binary(data)
-            .context("Failed to deserialize Neuron2Graph data from binary data.")
+        data_object::from_binary(data, "Neuron2Graph data")
     }
 }

@@ -42,12 +42,10 @@ impl NeuronExplainerPage {
 
 impl DataObject for NeuronExplainerPage {
     fn to_binary(&self) -> Result<Vec<u8>> {
-        data_object::to_binary(self)
-            .context("Failed to serialize Neuron Explainer neuron page to binary data.")
+        data_object::to_binary(self, "Neuron Explainer neuron page")
     }
 
     fn from_binary(data: impl AsRef<[u8]>) -> Result<Self> {
-        data_object::from_binary(data)
-            .context("Failed to deserialize Neuron Explainer neuron page from binary data.")
+        data_object::from_binary(data, "Neuron Explainer neuron page")
     }
 }

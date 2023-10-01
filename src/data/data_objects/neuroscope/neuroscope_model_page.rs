@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -27,12 +27,10 @@ impl NeuroscopeModelPage {
 
 impl DataObject for NeuroscopeModelPage {
     fn to_binary(&self) -> Result<Vec<u8>> {
-        data_object::to_binary(self)
-            .context("Failed to serialize Neuroscope model page to binary data.")
+        data_object::to_binary(self, "Neuroscope model page")
     }
 
     fn from_binary(data: impl AsRef<[u8]>) -> Result<Self> {
-        data_object::from_binary(data)
-            .context("Failed to deserialize Neuroscope model page from binary data.")
+        data_object::from_binary(data, "Neuroscope model page")
     }
 }

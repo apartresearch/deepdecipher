@@ -100,13 +100,11 @@ impl NeuroscopeNeuronPage {
 
 impl DataObject for NeuroscopeNeuronPage {
     fn to_binary(&self) -> Result<Vec<u8>> {
-        data_object::to_binary(self)
-            .context("Failed to serialize Neuroscope neuron page to binary data.")
+        data_object::to_binary(self, "Neuroscope neuron page")
     }
 
     fn from_binary(data: impl AsRef<[u8]>) -> Result<Self> {
-        data_object::from_binary(data)
-            .context("Failed to deserialize Neuroscope neuron page from binary data.")
+        data_object::from_binary(data, "Neuroscope neuron page")
     }
 }
 

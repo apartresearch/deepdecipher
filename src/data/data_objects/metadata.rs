@@ -1,6 +1,5 @@
 use std::iter;
 
-use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
 use crate::{data::NeuronIndex, Index};
@@ -38,10 +37,9 @@ impl Metadata {
 
 impl DataObject for Metadata {
     fn to_binary(&self) -> anyhow::Result<Vec<u8>> {
-        data_object::to_binary(self).context("Failed to serialize model metadata to binary data.")
+        data_object::to_binary(self, "model metadata")
     }
     fn from_binary(data: impl AsRef<[u8]>) -> anyhow::Result<Self> {
-        data_object::from_binary(data)
-            .context("Failed to deserialize model metadata from binary data.")
+        data_object::from_binary(data, "model metadata")
     }
 }

@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 use super::{data_object, DataObject};
@@ -16,11 +16,10 @@ impl JsonData {
 
 impl DataObject for JsonData {
     fn to_binary(&self) -> Result<Vec<u8>> {
-        data_object::to_binary(self).context("Failed to serialize JSON value to binary data.")
+        data_object::to_binary(self, "JSON object")
     }
 
     fn from_binary(bytes: impl AsRef<[u8]>) -> Result<Self> {
-        data_object::from_binary(bytes)
-            .context("Failed to deserialize JSON value from binary data.")
+        data_object::from_binary(bytes, "JSON object")
     }
 }
