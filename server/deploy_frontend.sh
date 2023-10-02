@@ -4,6 +4,8 @@ REPO_PATH=$(dirname $(dirname $(readlink -f $0)))
 sudo true
 # Change to the repo directory.
 cd $REPO_PATH
+# Change to frontend directory.
+cd frontend
 # Install required packages.
 /usr/local/nodejs/bin/npm install
 # Build frontend server.
