@@ -6,6 +6,10 @@ deepdecipher.org:5273 {
 	reverse_proxy localhost:5173
 }
 
+deepdecipher.org:4273 {
+	reverse_proxy localhost:4173
+}
+
 deepdecipher.org:8180 {
 	reverse_proxy localhost:8080
 }

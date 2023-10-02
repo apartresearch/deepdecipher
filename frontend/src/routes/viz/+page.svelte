@@ -15,9 +15,11 @@
 </p>
 <table>
 	<tr>
-		<td style="padding: 0 1em;"
-			><a href="https://github.com/apartresearch/deepdecipher">GitHub</a></td
-		>
+		<!-- Removed while article is under review. Should be re-added as soon as possible
+			<td style="padding: 0 1em;">
+				<a href="https://github.com/apartresearch/deepdecipher">GitHub</a>
+			</td>
+		-->
 		<td style="padding: 0 1em;"><a href="/doc">API documentation</a></td>
 	</tr>
 </table>
