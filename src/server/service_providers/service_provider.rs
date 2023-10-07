@@ -4,6 +4,7 @@ use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use delegate::delegate;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use strum::AsRefStr;
 
 use super::{
@@ -12,25 +13,136 @@ use super::{
     neuroscope::Neuroscope,
 };
 use crate::{
-    data::{DataTypeHandle, Database, ModelHandle},
+    data::{data_objects::DataObject, DataTypeHandle, Database, ModelHandle},
     server::State,
 };
+
+#[derive(Clone, Serialize, Deserialize)]
+pub enum NoData {}
+
+impl DataObject for NoData {
+    fn to_binary(&self) -> Result<Vec<u8>> {
+        unreachable!("NoData can never be instantiated.")
+    }
+
+    fn from_binary(_data: impl AsRef<[u8]>) -> Result<Self> {
+        unreachable!("NoData can never be instantiated.")
+    }
+}
 
 #[allow(unused_variables)]
 #[async_trait]
 pub trait ServiceProviderTrait: Clone + Serialize + Deserialize<'static> + Send + Sync {
+    type ModelPageObject: DataObject;
+    type LayerPageObject: DataObject;
+    type NeuronPageObject: DataObject;
+
     async fn required_data_types(&self, database: &Database) -> Result<Vec<DataTypeHandle>>;
 
-    async fn model_page(
+    async fn model_object(
+        &self,
+        service_name: &str,
+        state: &State,
+        query: &serde_json::Value,
+        model_handle: &ModelHandle,
+    ) -> Result<Self::ModelPageObject> {
+        bail!(
+            "No model data exists for service '{}' for model '{}'.",
+            service_name,
+            model_handle.name()
+        );
+    }
+
+    async fn layer_object(
+        &self,
+        service_name: &str,
+        state: &State,
+        query: &serde_json::Value,
+        model_handle: &ModelHandle,
+        layer_index: u32,
+    ) -> Result<Self::LayerPageObject> {
+        bail!(
+            "No layer data exists for service '{}' for model '{}'.",
+            service_name,
+            model_handle.name()
+        );
+    }
+
+    async fn neuron_object(
+        &self,
+        service_name: &str,
+        state: &State,
+        query: &serde_json::Value,
+        model_handle: &ModelHandle,
+        layer_index: u32,
+        neuron_index: u32,
+    ) -> Result<Self::NeuronPageObject> {
+        bail!(
+            "No neuron data exists for service '{}' for model '{}'.",
+            service_name,
+            model_handle.name()
+        );
+    }
+
+    async fn model_binary(
+        &self,
+        service_name: &str,
+        state: &State,
+        query: &serde_json::Value,
+        model_handle: &ModelHandle,
+    ) -> Result<Vec<u8>> {
+        self.model_object(service_name, state, query, model_handle)
+            .await?
+            .to_binary()
+    }
+
+    async fn layer_binary(
+        &self,
+        service_name: &str,
+        state: &State,
+        query: &serde_json::Value,
+        model_handle: &ModelHandle,
+        layer_index: u32,
+    ) -> Result<Vec<u8>> {
+        self.layer_object(service_name, state, query, model_handle, layer_index)
+            .await?
+            .to_binary()
+    }
+
+    async fn neuron_binary(
+        &self,
+        service_name: &str,
+        state: &State,
+        query: &serde_json::Value,
+        model_handle: &ModelHandle,
+        layer_index: u32,
+        neuron_index: u32,
+    ) -> Result<Vec<u8>> {
+        self.neuron_object(
+            service_name,
+            state,
+            query,
+            model_handle,
+            layer_index,
+            neuron_index,
+        )
+        .await?
+        .to_binary()
+    }
+
+    async fn model_json(
         &self,
         service_name: &str,
         state: &State,
         query: &serde_json::Value,
         model_handle: &ModelHandle,
     ) -> Result<serde_json::Value> {
-        bail!("No model page exists for service '{}'.", service_name);
+        self.model_object(service_name, state, query, model_handle)
+            .await
+            .map(|object| json!(object))
     }
-    async fn layer_page(
+
+    async fn layer_json(
         &self,
         service_name: &str,
         state: &State,
@@ -38,9 +150,12 @@ pub trait ServiceProviderTrait: Clone + Serialize + Deserialize<'static> + Send 
         model_handle: &ModelHandle,
         layer_index: u32,
     ) -> Result<serde_json::Value> {
-        bail!("No layer page exists for service '{}'.", service_name);
+        self.layer_object(service_name, state, query, model_handle, layer_index)
+            .await
+            .map(|object| json!(object))
     }
-    async fn neuron_page(
+
+    async fn neuron_json(
         &self,
         service_name: &str,
         state: &State,
@@ -49,7 +164,16 @@ pub trait ServiceProviderTrait: Clone + Serialize + Deserialize<'static> + Send 
         layer_index: u32,
         neuron_index: u32,
     ) -> Result<serde_json::Value> {
-        bail!("No neuron page exists for service '{}'.", service_name);
+        self.neuron_object(
+            service_name,
+            state,
+            query,
+            model_handle,
+            layer_index,
+            neuron_index,
+        )
+        .await
+        .map(|object| json!(object))
     }
 }
 
@@ -88,7 +212,34 @@ impl ServiceProvider {
                 &'a self, database: &'a Database,
             ) -> Pin<Box<dyn Future<Output = Result<Vec<DataTypeHandle>>> + Send + 'a>>;
 
-            pub fn model_page<'a>(
+            pub fn model_binary<'a>(
+                &'a self,
+                service_name: &'a str,
+                state: &'a State,
+                query: &'a serde_json::Value,
+                model_handle: &'a ModelHandle,
+            ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>>> + Send + 'a>>;
+
+            pub fn layer_binary<'a>(
+                &'a self,
+                service_name: &'a str,
+                state: &'a State,
+                query: &'a serde_json::Value,
+                model_handle: &'a ModelHandle,
+                layer_index: u32,
+            ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>>> + Send + 'a >>;
+
+            pub fn neuron_binary<'a>(
+                &'a self,
+                service_name: &'a str,
+                state: &'a State,
+                query: &'a serde_json::Value,
+                model_handle: &'a ModelHandle,
+                layer_index: u32,
+                neuron_index: u32,
+            ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>>> + Send + 'a >>;
+
+            pub fn model_json<'a>(
                 &'a self,
                 service_name: &'a str,
                 state: &'a State,
@@ -96,7 +247,7 @@ impl ServiceProvider {
                 model_handle: &'a ModelHandle,
             ) -> Pin<Box<dyn Future<Output = Result<serde_json::Value>> + Send + 'a>>;
 
-            pub fn layer_page<'a>(
+            pub fn layer_json<'a>(
                 &'a self,
                 service_name: &'a str,
                 state: &'a State,
@@ -105,7 +256,7 @@ impl ServiceProvider {
                 layer_index: u32,
             ) -> Pin<Box<dyn Future<Output = Result<serde_json::Value>> + Send + 'a >>;
 
-            pub fn neuron_page<'a>(
+            pub fn neuron_json<'a>(
                 &'a self,
                 service_name: &'a str,
                 state: &'a State,

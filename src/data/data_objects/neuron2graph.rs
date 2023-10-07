@@ -22,18 +22,8 @@ impl DataObject for Graph {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Neuron2GraphData {
-    neuron2graph: Graph,
-    similar_neurons: SimilarNeurons,
-}
-
-impl Neuron2GraphData {
-    pub fn graph(&self) -> &Graph {
-        &self.neuron2graph
-    }
-
-    pub fn similar_neurons(&self) -> &SimilarNeurons {
-        &self.similar_neurons
-    }
+    pub graph: Graph,
+    pub similar: SimilarNeurons,
 }
 
 impl DataObject for Neuron2GraphData {

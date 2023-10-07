@@ -3,8 +3,8 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    data::{DataTypeHandle, Database, ModelHandle},
-    server::{self, State},
+    data::{data_objects::MetadataObject, DataTypeHandle, Database, ModelHandle},
+    server::State,
 };
 
 use super::ServiceProviderTrait;
@@ -14,32 +14,36 @@ pub struct Metadata;
 
 #[async_trait]
 impl ServiceProviderTrait for Metadata {
+    type ModelPageObject = MetadataObject;
+    type LayerPageObject = MetadataObject;
+    type NeuronPageObject = MetadataObject;
+
     async fn required_data_types(&self, _database: &Database) -> Result<Vec<DataTypeHandle>> {
         Ok(vec![])
     }
 
-    async fn model_page(
+    async fn model_object(
         &self,
         _service_name: &str,
         _state: &State,
         _query: &serde_json::Value,
         model: &ModelHandle,
-    ) -> Result<serde_json::Value> {
-        server::metadata_value(model).await
+    ) -> Result<Self::ModelPageObject> {
+        MetadataObject::new(model).await
     }
 
-    async fn layer_page(
+    async fn layer_object(
         &self,
         _service_name: &str,
         _state: &State,
         _query: &serde_json::Value,
         model: &ModelHandle,
         _layer_index: u32,
-    ) -> Result<serde_json::Value> {
-        server::metadata_value(model).await
+    ) -> Result<Self::LayerPageObject> {
+        MetadataObject::new(model).await
     }
 
-    async fn neuron_page(
+    async fn neuron_object(
         &self,
         _service_name: &str,
         _state: &State,
@@ -47,7 +51,7 @@ impl ServiceProviderTrait for Metadata {
         model: &ModelHandle,
         _layer_index: u32,
         _neuron_index: u32,
-    ) -> Result<serde_json::Value> {
-        server::metadata_value(model).await
+    ) -> Result<Self::NeuronPageObject> {
+        MetadataObject::new(model).await
     }
 }

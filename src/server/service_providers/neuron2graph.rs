@@ -2,17 +2,17 @@ use anyhow::{Context, Result};
 use async_trait::async_trait;
 
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 use crate::{
     data::{
+        data_objects::Neuron2GraphData as Neuron2GraphDataObject,
         data_types::{Neuron2Graph as Neuron2GraphData, NeuronStore as NeuronStoreData},
         ModelHandle,
     },
     server::State,
 };
 
-use super::service_provider::ServiceProviderTrait;
+use super::service_provider::{NoData, ServiceProviderTrait};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Neuron2Graph;
@@ -49,6 +49,10 @@ async fn data_type(
 
 #[async_trait]
 impl ServiceProviderTrait for Neuron2Graph {
+    type ModelPageObject = NoData;
+    type LayerPageObject = NoData;
+    type NeuronPageObject = Neuron2GraphDataObject;
+
     async fn required_data_types(
         &self,
         database: &crate::data::Database,
@@ -66,7 +70,7 @@ impl ServiceProviderTrait for Neuron2Graph {
         Ok(vec![n2g_data_type, neuron_store_data_type])
     }
 
-    async fn neuron_page(
+    async fn neuron_object(
         &self,
         _service_name: &str,
         state: &State,
@@ -74,18 +78,14 @@ impl ServiceProviderTrait for Neuron2Graph {
         model: &ModelHandle,
         layer_index: u32,
         neuron_index: u32,
-    ) -> Result<serde_json::Value> {
+    ) -> Result<Self::NeuronPageObject> {
         let (n2g_data_type, neuron_store_data_type) = data_type(state, model).await?;
-        let neuron_graph = n2g_data_type
+        let graph = n2g_data_type
             .neuron_graph(layer_index, neuron_index)
             .await?;
-
-        let similar_neurons = neuron_store_data_type
+        let similar = neuron_store_data_type
             .neuron_similarities(layer_index, neuron_index)
             .await?;
-
-        Ok(json!({
-        "graph": neuron_graph.graph,
-        "similar": similar_neurons.to_json(),}))
+        Ok(Neuron2GraphDataObject { graph, similar })
     }
 }

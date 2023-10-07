@@ -1,4 +1,4 @@
-use crate::{data::data_objects::Metadata, Index};
+use crate::{data::Metadata, Index};
 
 use super::{
     data_types::ModelDataType, service_handle::ServiceHandle, DataTypeHandle, Database, Operation,

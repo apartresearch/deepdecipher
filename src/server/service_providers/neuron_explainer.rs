@@ -2,14 +2,16 @@ use anyhow::{Context, Result};
 use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
-use crate::data::data_types::NeuronExplainer as NeuronExplainerData;
-use crate::data::retrieve::neuron_explainer;
-use crate::data::{DataTypeHandle, Database, ModelHandle, NeuronIndex};
-use crate::server::State;
+use crate::{
+    data::{
+        data_objects::NeuronExplainerPage, data_types::NeuronExplainer as NeuronExplainerData,
+        retrieve::neuron_explainer, DataTypeHandle, Database, ModelHandle, NeuronIndex,
+    },
+    server::State,
+};
 
-use super::service_provider::ServiceProviderTrait;
+use super::service_provider::{NoData, ServiceProviderTrait};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct NeuronExplainer;
@@ -31,6 +33,10 @@ async fn data_type(state: &State, model: &ModelHandle) -> Result<NeuronExplainer
 
 #[async_trait]
 impl ServiceProviderTrait for NeuronExplainer {
+    type ModelPageObject = NoData;
+    type LayerPageObject = NoData;
+    type NeuronPageObject = NeuronExplainerPage;
+
     async fn required_data_types(&self, database: &Database) -> Result<Vec<DataTypeHandle>> {
         let data_type_name = "neuron_explainer";
         let data_type = database
@@ -40,7 +46,7 @@ impl ServiceProviderTrait for NeuronExplainer {
         Ok(vec![data_type])
     }
 
-    async fn neuron_page(
+    async fn neuron_object(
         &self,
         _service_name: &str,
         state: &State,
@@ -48,7 +54,7 @@ impl ServiceProviderTrait for NeuronExplainer {
         model: &ModelHandle,
         layer_index: u32,
         neuron_index: u32,
-    ) -> Result<serde_json::Value> {
+    ) -> Result<Self::NeuronPageObject> {
         let index = NeuronIndex {
             layer: layer_index,
             neuron: neuron_index,
@@ -66,6 +72,6 @@ impl ServiceProviderTrait for NeuronExplainer {
                     )
                 )?
         };
-        Ok(json!(page))
+        Ok(page)
     }
 }

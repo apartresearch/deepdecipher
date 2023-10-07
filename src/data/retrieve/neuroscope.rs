@@ -3,10 +3,10 @@ use std::{panic, sync::Arc, time::Duration};
 use crate::{
     data::{
         data_objects::{
-            DataObject, Metadata, NeuroscopeLayerPage, NeuroscopeModelPage, NeuroscopeNeuronPage,
+            DataObject, NeuroscopeLayerPage, NeuroscopeModelPage, NeuroscopeNeuronPage,
         },
         data_types::DataType,
-        DataTypeHandle, ModelHandle, NeuronIndex,
+        DataTypeHandle, Metadata, ModelHandle, NeuronIndex,
     },
     util::Progress,
     Index,

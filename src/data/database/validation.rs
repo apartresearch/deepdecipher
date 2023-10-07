@@ -163,7 +163,7 @@ mod test {
 
     use rand::Rng;
 
-    use crate::data::{data_objects::Metadata, data_types::DataType, Database};
+    use crate::data::{data_types::DataType, Database, Metadata};
 
     #[tokio::test]
     async fn missing_items_test() -> Result<(), anyhow::Error> {

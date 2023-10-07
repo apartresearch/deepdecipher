@@ -4,8 +4,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::{data::NeuronIndex, Index};
 
-use super::{data_object, DataObject};
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Metadata {
     pub name: String,
@@ -32,14 +30,5 @@ impl Metadata {
         iter::once(Index::Model)
             .chain((0..self.num_layers).map(Index::Layer))
             .chain(self.neuron_indices().map(Index::from))
-    }
-}
-
-impl DataObject for Metadata {
-    fn to_binary(&self) -> anyhow::Result<Vec<u8>> {
-        data_object::to_binary(self, "model metadata")
-    }
-    fn from_binary(data: impl AsRef<[u8]>) -> anyhow::Result<Self> {
-        data_object::from_binary(data, "model metadata")
     }
 }

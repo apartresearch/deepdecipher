@@ -1,4 +1,4 @@
-use crate::data::{data_objects::Metadata, NeuronIndex};
+use crate::data::{Metadata, NeuronIndex};
 use anyhow::{anyhow, Result};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

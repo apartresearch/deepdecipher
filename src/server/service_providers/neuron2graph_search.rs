@@ -3,36 +3,39 @@ use std::{collections::HashSet, str::FromStr};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 use crate::{
     data::{
         data_types::NeuronStore as NeuronStoreObject, DataTypeHandle, Database, ModelHandle,
-        TokenSearch,
+        NeuronIndex, TokenSearch,
     },
     server::State,
 };
 
-use super::service_provider::ServiceProviderTrait;
+use super::service_provider::{NoData, ServiceProviderTrait};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Neuron2GraphSearch;
 
 #[async_trait]
 impl ServiceProviderTrait for Neuron2GraphSearch {
+    type ModelPageObject = Vec<NeuronIndex>;
+    type LayerPageObject = NoData;
+    type NeuronPageObject = NoData;
+
     async fn required_data_types(&self, database: &Database) -> Result<Vec<DataTypeHandle>> {
         database.data_type("neuron_store").await?.context(
             "No data object named 'neuron_store' in database. This should have been checked when service was created."
         ).map(|data_type| vec![data_type])
     }
 
-    async fn model_page(
+    async fn model_object(
         &self,
         _service_name: &str,
         state: &State,
         query: &serde_json::Value,
         model: &ModelHandle,
-    ) -> Result<serde_json::Value> {
+    ) -> Result<Self::ModelPageObject> {
         let database = state.database();
         let neuron_store_object = database
             .data_type("neuron_store")
@@ -80,6 +83,6 @@ impl ServiceProviderTrait for Neuron2GraphSearch {
             .into_iter()
             .collect::<Vec<_>>();
 
-        Ok(json!(results))
+        Ok(results)
     }
 }

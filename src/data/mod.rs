@@ -9,3 +9,6 @@ pub mod database;
 pub use database::{data_types, DataTypeHandle, Database, ModelHandle, ServiceHandle};
 
 pub mod data_objects;
+
+mod metadata;
+pub use metadata::Metadata;

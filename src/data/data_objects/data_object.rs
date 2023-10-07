@@ -26,3 +26,26 @@ pub trait DataObject: Sized + Serialize + DeserializeOwned + Clone {
 
     fn from_binary(data: impl AsRef<[u8]>) -> Result<Self>;
 }
+
+impl<T> DataObject for Vec<T>
+where
+    T: Serialize + DeserializeOwned + Clone,
+{
+    fn to_binary(&self) -> Result<Vec<u8>> {
+        to_binary(self, "Vec<T>")
+    }
+
+    fn from_binary(data: impl AsRef<[u8]>) -> Result<Self> {
+        from_binary(data, "Vec<T>")
+    }
+}
+
+impl DataObject for serde_json::Value {
+    fn to_binary(&self) -> Result<Vec<u8>> {
+        to_binary(self, "JSON value")
+    }
+
+    fn from_binary(data: impl AsRef<[u8]>) -> Result<Self> {
+        from_binary(data, "JSON value")
+    }
+}

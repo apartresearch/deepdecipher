@@ -72,6 +72,10 @@ async fn page(
 
 #[async_trait]
 impl ServiceProviderTrait for Json {
+    type ModelPageObject = serde_json::Value;
+    type LayerPageObject = serde_json::Value;
+    type NeuronPageObject = serde_json::Value;
+
     async fn required_data_types(&self, database: &Database) -> Result<Vec<DataTypeHandle>> {
         let Self(ref data_type_name) = self;
         let data_type = database
@@ -81,7 +85,7 @@ impl ServiceProviderTrait for Json {
         Ok(vec![data_type])
     }
 
-    async fn model_page(
+    async fn model_object(
         &self,
         _service_name: &str,
         state: &State,
@@ -92,7 +96,7 @@ impl ServiceProviderTrait for Json {
         page(data_type_name, state, query, model, Index::model()).await
     }
 
-    async fn layer_page(
+    async fn layer_object(
         &self,
         _service_name: &str,
         state: &State,
@@ -111,7 +115,7 @@ impl ServiceProviderTrait for Json {
         .await
     }
 
-    async fn neuron_page(
+    async fn neuron_object(
         &self,
         _service_name: &str,
         state: &State,
