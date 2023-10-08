@@ -8,7 +8,7 @@ use crate::{
 };
 
 use super::{
-    data_object_handle::PyDataObjectHandle, data_type::PyDataType, model_handle::PyModelHandle,
+    data_type::PyDataType, data_type_handle::PyDataTypeHandle, model_handle::PyModelHandle,
     model_metadata::PyModelMetadata, service_handle::PyServiceHandle,
     service_provider::PyServiceProvider,
 };
@@ -68,11 +68,11 @@ impl PyDatabase {
         Ok(result)
     }
 
-    fn add_data_object(
+    fn add_data_type(
         &mut self,
-        data_object_name: &str,
+        data_type_name: &str,
         data_type: PyDataType,
-    ) -> PyResult<PyDataObjectHandle> {
+    ) -> PyResult<PyDataTypeHandle> {
         match data_type.as_ref() {
             DataType::Json => {}
             data_type => {
@@ -85,20 +85,20 @@ impl PyDatabase {
             .context("Failed to start async runtime to add data object.")?
             .block_on(async {
                 self.database
-                    .add_data_object(data_object_name, data_type.into())
+                    .add_data_type(data_type_name, data_type.into())
                     .await
-                    .with_context(|| format!("Failed to create data object '{data_object_name}'."))
+                    .with_context(|| format!("Failed to create data object '{data_type_name}'."))
             })
-            .map(PyDataObjectHandle::new)?;
+            .map(PyDataTypeHandle::new)?;
 
         Ok(result)
     }
 
-    fn data_object(&self, data_object_name: &str) -> PyResult<Option<PyDataObjectHandle>> {
+    fn data_type(&self, data_type_name: &str) -> PyResult<Option<PyDataTypeHandle>> {
         let result = Runtime::new()
             .context("Failed to start async runtime to get data object.")?
-            .block_on(async { self.database.data_object(data_object_name).await })?
-            .map(PyDataObjectHandle::new);
+            .block_on(async { self.database.data_type(data_type_name).await })?
+            .map(PyDataTypeHandle::new);
         Ok(result)
     }
 

@@ -5,35 +5,62 @@ use actix_web::{body::BoxBody, get, http::header::ContentType, web, HttpResponse
 use anyhow::{anyhow, Result};
 use reqwest::StatusCode;
 use serde_json::json;
-use tokio::fs;
 
 use crate::{
-    data::{Database, ModelHandle, ServiceHandle},
-    server::{self, State},
+    data::{data_objects::MetadataObject, Database, ModelHandle, ServiceHandle},
+    server::State,
     Index,
 };
 
-use super::Service;
+use super::{RequestType, Service};
+
+pub enum Body {
+    Json(serde_json::Value),
+    Binary(Vec<u8>),
+    String(String),
+}
+
+impl Body {
+    pub fn content_type(&self) -> ContentType {
+        match self {
+            Body::Json(_) => ContentType::json(),
+            Body::Binary(_) => ContentType::octet_stream(),
+            Body::String(_) => ContentType::plaintext(),
+        }
+    }
+}
+
+impl From<serde_json::Value> for Body {
+    fn from(value: serde_json::Value) -> Self {
+        Body::Json(value)
+    }
+}
+
+impl From<Vec<u8>> for Body {
+    fn from(value: Vec<u8>) -> Self {
+        Body::Binary(value)
+    }
+}
+
+impl From<Body> for BoxBody {
+    fn from(value: Body) -> Self {
+        match value {
+            Body::Json(value) => BoxBody::new(value.to_string()),
+            Body::Binary(value) => BoxBody::new(value),
+            Body::String(value) => BoxBody::new(value),
+        }
+    }
+}
 
 struct Response {
-    body: String,
-    content_type: ContentType,
+    body: Body,
     status: StatusCode,
 }
 
 impl Response {
-    pub fn success(body: serde_json::Value) -> Self {
+    pub fn success(body: impl Into<Body>) -> Self {
         Self {
-            body: body.to_string(),
-            content_type: ContentType::json(),
-            status: StatusCode::OK,
-        }
-    }
-
-    pub fn html(file: String) -> Self {
-        Self {
-            body: file,
-            content_type: ContentType::html(),
+            body: body.into(),
             status: StatusCode::OK,
         }
     }
@@ -41,8 +68,7 @@ impl Response {
     pub fn error(error: impl fmt::Debug, status: StatusCode) -> Self {
         assert!(status.is_client_error() || status.is_server_error());
         Self {
-            body: format!("{error:?}"),
-            content_type: ContentType::plaintext(),
+            body: Body::String(format!("{error:?}")),
             status,
         }
     }
@@ -53,14 +79,14 @@ impl Responder for Response {
 
     fn respond_to(self, req: &actix_web::HttpRequest) -> HttpResponse<Self::Body> {
         HttpResponse::build(self.status)
-            .content_type(self.content_type)
+            .content_type(self.body.content_type())
             .append_header(("Access-Control-Allow-Origin", "*"))
-            .body(self.body)
+            .body(BoxBody::from(self.body))
             .respond_to(req)
     }
 }
 
-async fn service_page(
+async fn service_json(
     state: &State,
     query: &serde_json::Value,
     model_handle: &ModelHandle,
@@ -68,15 +94,37 @@ async fn service_page(
     page_index: Index,
 ) -> Result<serde_json::Value> {
     match page_index {
-        Index::Model => service.model_page(state, query, model_handle).await,
+        Index::Model => service.model_json(state, query, model_handle).await,
         Index::Layer(layer_index) => {
             service
-                .layer_page(state, query, model_handle, layer_index)
+                .layer_json(state, query, model_handle, layer_index)
                 .await
         }
         Index::Neuron(layer_index, neuron_index) => {
             service
-                .neuron_page(state, query, model_handle, layer_index, neuron_index)
+                .neuron_json(state, query, model_handle, layer_index, neuron_index)
+                .await
+        }
+    }
+}
+
+async fn service_binary(
+    state: &State,
+    query: &serde_json::Value,
+    model_handle: &ModelHandle,
+    service: &Service,
+    page_index: Index,
+) -> Result<Vec<u8>> {
+    match page_index {
+        Index::Model => service.model_binary(state, query, model_handle).await,
+        Index::Layer(layer_index) => {
+            service
+                .layer_binary(state, query, model_handle, layer_index)
+                .await
+        }
+        Index::Neuron(layer_index, neuron_index) => {
+            service
+                .neuron_binary(state, query, model_handle, layer_index, neuron_index)
                 .await
         }
     }
@@ -103,20 +151,21 @@ async fn service_value(
     service_handle: &ServiceHandle,
     page_index: Index,
 ) -> Result<serde_json::Value> {
-    let missing_data_objects = model_handle.missing_data_objects(service_handle).await?;
+    let missing_data_types = model_handle.missing_data_types(service_handle).await?;
     let service = service_handle.service().await?;
 
-    if missing_data_objects.is_empty() {
-        let page = service_page(state, query, model_handle, &service, page_index).await?;
+    if missing_data_types.is_empty() {
+        let page = service_json(state, query, model_handle, &service, page_index).await?;
         Ok(json!({ "data": page }))
     } else {
-        Ok(json!({ "missing_data_objects": missing_data_objects }))
+        Ok(json!({ "missing_data_types": missing_data_types }))
     }
 }
 
 async fn response(
     state: web::Data<State>,
     query: &serde_json::Value,
+    request_type: RequestType,
     model_name: impl AsRef<str>,
     service_name: impl AsRef<str>,
     page_index: Index,
@@ -145,34 +194,46 @@ async fn response(
         Err(error) => return Response::error(error, StatusCode::INTERNAL_SERVER_ERROR),
     };
 
-    let metadata_json = service_page(
-        state.as_ref(),
-        query,
-        &model_handle,
-        &Service::metadata(),
-        page_index,
-    )
-    .await;
-    let service_json = if service.is_metadata() {
-        metadata_json
-    } else {
-        let metadata_json = metadata_json.unwrap_or(serde_json::Value::Null);
-        service_value(
-            state.as_ref(),
-            query,
-            &model_handle,
-            &service_handle,
-            page_index,
-        )
-        .await
-        .map(|mut service_json| {
-            service_json["metadata"] = metadata_json;
-            service_json
-        })
-    };
-    match service_json {
-        Ok(page) => Response::success(page),
-        Err(error) => Response::error(error, StatusCode::INTERNAL_SERVER_ERROR),
+    match request_type {
+        RequestType::Json => {
+            let metadata_json = service_json(
+                state.as_ref(),
+                query,
+                &model_handle,
+                &Service::metadata(),
+                page_index,
+            )
+            .await;
+            let service_json = if service.is_metadata() {
+                metadata_json
+            } else {
+                let metadata_json = metadata_json.unwrap_or(serde_json::Value::Null);
+                service_value(
+                    state.as_ref(),
+                    query,
+                    &model_handle,
+                    &service_handle,
+                    page_index,
+                )
+                .await
+                .map(|mut service_json| {
+                    service_json["metadata"] = metadata_json;
+                    service_json
+                })
+            };
+            match service_json {
+                Ok(page) => Response::success(Body::Json(page)),
+                Err(error) => Response::error(error, StatusCode::INTERNAL_SERVER_ERROR),
+            }
+        }
+        RequestType::Binary => {
+            let data =
+                service_binary(state.as_ref(), query, &model_handle, &service, page_index).await;
+            match data {
+                Ok(data) => Response::success(Body::Binary(data)),
+                Err(error) => Response::error(error, StatusCode::INTERNAL_SERVER_ERROR),
+            }
+        }
     }
 }
 
@@ -220,7 +281,7 @@ async fn index_data(database: &Database) -> Result<serde_json::Value> {
     let models = database.all_models().await?;
     let mut model_data: Vec<_> = Vec::with_capacity(models.len());
     for ref model_handle in models {
-        let model_value = server::metadata_value(model_handle).await?;
+        let model_value = json!(MetadataObject::new(model_handle).await?);
         model_data.push(model_value);
     }
     Ok(json!({ "models": model_data }))
@@ -254,19 +315,32 @@ pub async fn api_index(state: web::Data<State>) -> impl Responder {
         (status = "5XX", description = "Failed to retrieve data for the specified model and service.", body = String) 
     ),
     params(
+        ("request_type" = String, Path, description = "The type of request to make. Must be either 'api' or 'bin'."),
         ("model_name" = String, Path, description = "The name of the model to fetch data for."),
         ("service_name" = String, Path, description = "The name of the service to fetch data for.")
     )
 )]
-#[get("/api/{model_name}/{service_name}")]
+#[get("/{request_type}/{model_name}/{service_name}")]
 pub async fn model(
     state: web::Data<State>,
-    indices: web::Path<(String, String)>,
+    indices: web::Path<(String, String, String)>,
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
-    let (model_name, service_name) = indices.into_inner();
-    log::debug!("Received request for service '{service_name}' for model '{model_name}'.");
-    response(state, query.deref(), model_name, service_name, Index::Model).await
+    let (request_type_string, model_name, service_name) = indices.into_inner();
+    let request_type = match RequestType::from_path_string(&request_type_string) {
+        Ok(request_type) => request_type,
+        Err(error) => return Response::error(error, StatusCode::BAD_REQUEST),
+    };
+    log::debug!("Received {request_type_string} request for service '{service_name}' for model '{model_name}'.");
+    response(
+        state,
+        query.deref(),
+        request_type,
+        model_name,
+        service_name,
+        Index::Model,
+    )
+    .await
 }
 
 /// Gets the data for the specified layer and service.
@@ -279,6 +353,7 @@ pub async fn model(
         (status = "5XX", description = "Failed to retrieve data for the specified layer and service.", body = String) 
     ),
     params(
+        ("request_type" = String, Path, description = "The type of request to make. Must be either 'api' or 'bin'."),
         ("model_name" = String, Path, description = "The name of the model to fetch data for."),
         ("service_name" = String, Path, description = "The name of the service to fetch data for."),
         ("layer_index" = u32, Path, description = "The index of the layer to fetch data for.")
@@ -287,14 +362,19 @@ pub async fn model(
 #[get("/api/{model_name}/{service}/{layer_index}")]
 pub async fn layer(
     state: web::Data<State>,
-    indices: web::Path<(String, String, u32)>,
+    indices: web::Path<(String, String, String, u32)>,
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
-    let (model_name, service_name, layer_index) = indices.into_inner();
-    log::debug!("Received request for service '{service_name}' for layer {layer_index} in model '{model_name}'.");
+    let (request_type_string, model_name, service_name, layer_index) = indices.into_inner();
+    let request_type = match RequestType::from_path_string(&request_type_string) {
+        Ok(request_type) => request_type,
+        Err(error) => return Response::error(error, StatusCode::BAD_REQUEST),
+    };
+    log::debug!("Received {request_type_string} request for service '{service_name}' for layer {layer_index} in model '{model_name}'.");
     response(
         state,
         query.deref(),
+        request_type,
         model_name,
         service_name,
         Index::Layer(layer_index),
@@ -312,23 +392,30 @@ pub async fn layer(
         (status = "5XX", description = "Failed to retrieve data for the specified neuron and service.", body = String) 
     ),
     params(
+        ("request_type" = String, Path, description = "The type of request to make. Must be either 'api' or 'bin'."),
         ("model_name" = String, Path, description = "The name of the model to fetch data for."),
         ("service_name" = String, Path, description = "The name of the service to fetch data for."),
         ("layer_index" = u32, Path, description = "The index of the layer to fetch data for."),
         ("neuron_index" = u32, Path, description = "The index of the neuron to fetch data for.")
     )
 )]
-#[get("/api/{model_name}/{service}/{layer_index}/{neuron_index}")]
+#[get("/{request_type}/{model_name}/{service}/{layer_index}/{neuron_index}")]
 pub async fn neuron(
     state: web::Data<State>,
-    indices: web::Path<(String, String, u32, u32)>,
+    indices: web::Path<(String, String, String, u32, u32)>,
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
-    let (model_name, service_name, layer_index, neuron_index) = indices.into_inner();
-    log::debug!("Received request for service '{service_name}' for neuron l{layer_index}n{neuron_index} in model '{model_name}'.");
+    let (request_type_string, model_name, service_name, layer_index, neuron_index) =
+        indices.into_inner();
+    let request_type = match RequestType::from_path_string(&request_type_string) {
+        Ok(request_type) => request_type,
+        Err(error) => return Response::error(error, StatusCode::BAD_REQUEST),
+    };
+    log::debug!("Received {request_type_string} request for service '{service_name}' for neuron l{layer_index}n{neuron_index} in model '{model_name}'.");
     response(
         state,
         query.deref(),
+        request_type,
         model_name,
         service_name,
         Index::Neuron(layer_index, neuron_index),
@@ -433,37 +520,4 @@ pub async fn all_neuron(
 pub async fn api_doc(state: web::Data<State>) -> impl Responder {
     log::debug!("Sending API documentation.");
     Response::success(serde_json::to_value(state.api_doc()).unwrap()) // This should always succeed.
-}
-
-async fn viz_response(file: &str) -> Response {
-    log::debug!("Sending viz file '{file}.html'.");
-    match fs::read_to_string(format!("frontend/{file}.html")).await {
-        Ok(file) => Response::html(file),
-        Err(error) => Response::error(error, StatusCode::INTERNAL_SERVER_ERROR),
-    }
-}
-
-#[get("/")]
-pub async fn base() -> impl Responder {
-    viz_response("index").await
-}
-
-#[get("/viz")]
-pub async fn index_viz() -> impl Responder {
-    viz_response("index").await
-}
-
-#[get("/viz/{model_name}/{service}")]
-pub async fn model_viz() -> impl Responder {
-    viz_response("model").await
-}
-
-#[get("/viz/{model_name}/{service}/{layer_index}")]
-pub async fn layer_viz() -> impl Responder {
-    viz_response("layer").await
-}
-
-#[get("/viz/{model_name}/{service}/{layer_index}/{neuron_index}")]
-pub async fn neuron_viz() -> impl Responder {
-    viz_response("neuron").await
 }

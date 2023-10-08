@@ -2,9 +2,7 @@ use std::iter;
 
 use serde::{Deserialize, Serialize};
 
-use crate::Index;
-
-use super::NeuronIndex;
+use crate::{data::NeuronIndex, Index};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Metadata {

@@ -1,9 +1,12 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use crate::data::{DataObjectHandle, Database, ModelHandle};
+use crate::{
+    data::{DataTypeHandle, Database, ModelHandle},
+    Index,
+};
 
-use super::{ServiceProvider, State};
+use super::{response::Body, RequestType, ServiceProvider, State};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Service {
@@ -32,46 +35,43 @@ impl Service {
         false
     }
 
-    pub async fn required_data_objects(
-        &self,
-        database: &Database,
-    ) -> Result<Vec<DataObjectHandle>> {
-        self.provider.required_data_objects(database).await
+    pub async fn required_data_types(&self, database: &Database) -> Result<Vec<DataTypeHandle>> {
+        self.provider.required_data_types(database).await
     }
 
-    pub async fn model_page(
+    pub async fn model_binary(
         &self,
         state: &State,
         query: &serde_json::Value,
         model_handle: &ModelHandle,
-    ) -> Result<serde_json::Value> {
+    ) -> Result<Vec<u8>> {
         self.provider
-            .model_page(self.name(), state, query, model_handle)
+            .model_binary(self.name(), state, query, model_handle)
             .await
     }
 
-    pub async fn layer_page(
+    pub async fn layer_binary(
         &self,
         state: &State,
         query: &serde_json::Value,
         model_handle: &ModelHandle,
         layer_index: u32,
-    ) -> Result<serde_json::Value> {
+    ) -> Result<Vec<u8>> {
         self.provider
-            .layer_page(self.name(), state, query, model_handle, layer_index)
+            .layer_binary(self.name(), state, query, model_handle, layer_index)
             .await
     }
 
-    pub async fn neuron_page(
+    pub async fn neuron_binary(
         &self,
         state: &State,
         query: &serde_json::Value,
         model_handle: &ModelHandle,
         layer_index: u32,
         neuron_index: u32,
-    ) -> Result<serde_json::Value> {
+    ) -> Result<Vec<u8>> {
         self.provider
-            .neuron_page(
+            .neuron_binary(
                 self.name(),
                 state,
                 query,
@@ -80,5 +80,76 @@ impl Service {
                 neuron_index,
             )
             .await
+    }
+
+    pub async fn model_json(
+        &self,
+        state: &State,
+        query: &serde_json::Value,
+        model_handle: &ModelHandle,
+    ) -> Result<serde_json::Value> {
+        self.provider
+            .model_json(self.name(), state, query, model_handle)
+            .await
+    }
+
+    pub async fn layer_json(
+        &self,
+        state: &State,
+        query: &serde_json::Value,
+        model_handle: &ModelHandle,
+        layer_index: u32,
+    ) -> Result<serde_json::Value> {
+        self.provider
+            .layer_json(self.name(), state, query, model_handle, layer_index)
+            .await
+    }
+
+    pub async fn neuron_json(
+        &self,
+        state: &State,
+        query: &serde_json::Value,
+        model_handle: &ModelHandle,
+        layer_index: u32,
+        neuron_index: u32,
+    ) -> Result<serde_json::Value> {
+        self.provider
+            .neuron_json(
+                self.name(),
+                state,
+                query,
+                model_handle,
+                layer_index,
+                neuron_index,
+            )
+            .await
+    }
+
+    pub async fn page(
+        &self,
+        state: &State,
+        query: &serde_json::Value,
+        model_handle: &ModelHandle,
+        index: Index,
+        request_type: RequestType,
+    ) -> Result<Body> {
+        Ok(match request_type {
+            RequestType::Json => Body::Json(match index {
+                Index::Model => self.model_json(state, query, model_handle).await?,
+                Index::Layer(layer) => self.layer_json(state, query, model_handle, layer).await?,
+                Index::Neuron(layer, neuron) => {
+                    self.neuron_json(state, query, model_handle, layer, neuron)
+                        .await?
+                }
+            }),
+            RequestType::Binary => Body::Binary(match index {
+                Index::Model => self.model_binary(state, query, model_handle).await?,
+                Index::Layer(layer) => self.layer_binary(state, query, model_handle, layer).await?,
+                Index::Neuron(layer, neuron) => {
+                    self.neuron_binary(state, query, model_handle, layer, neuron)
+                        .await?
+                }
+            }),
+        })
     }
 }

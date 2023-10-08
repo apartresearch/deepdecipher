@@ -1,8 +1,7 @@
 use crate::{data::Metadata, Index};
 
 use super::{
-    data_types::ModelDataObject, service_handle::ServiceHandle, DataObjectHandle, Database,
-    Operation,
+    data_types::ModelDataType, service_handle::ServiceHandle, DataTypeHandle, Database, Operation,
 };
 
 use anyhow::{Context, Result};
@@ -138,12 +137,8 @@ impl ModelHandle {
         DELETE FROM model
         WHERE id = ?1;
         "#;
-        const REFERENCE_TABLES: [&str; 4] = [
-            "model_data_object",
-            "model_data",
-            "layer_data",
-            "neuron_data",
-        ];
+        const REFERENCE_TABLES: [&str; 4] =
+            ["model_data_type", "model_data", "layer_data", "neuron_data"];
 
         let params = (self.id,);
         move |transaction| {
@@ -166,58 +161,54 @@ impl ModelHandle {
             .with_context(|| format!("Problem deleting model '{name}'."))
     }
 
-    pub async fn missing_data_objects(&self, service: &ServiceHandle) -> Result<Vec<String>> {
-        let mut missing_data_objects = vec![];
-        for data_object in service.required_data_objects().await? {
-            if !self.has_data_object(&data_object).await? {
-                missing_data_objects.push(data_object.name().to_owned());
+    pub async fn missing_data_types(&self, service: &ServiceHandle) -> Result<Vec<String>> {
+        let mut missing_data_types = vec![];
+        for data_type in service.required_data_types().await? {
+            if !self.has_data_type(&data_type).await? {
+                missing_data_types.push(data_type.name().to_owned());
             }
         }
-        Ok(missing_data_objects)
+        Ok(missing_data_types)
     }
 
-    fn add_data_object_inner(&self, data_object: &DataObjectHandle) -> impl Operation<()> {
-        const ADD_DATA_OBJECT: &str = r#"
-        INSERT INTO model_data_object (
+    fn add_data_type_inner(&self, data_type: &DataTypeHandle) -> impl Operation<()> {
+        const ADD_DATA_TYPE: &str = r#"
+        INSERT INTO model_data_type (
             model_id,
-            data_object_id
+            data_type_id
         ) VALUES (
             ?1,
             ?2
         );
         "#;
-        let params = (self.id(), data_object.id());
+        let params = (self.id(), data_type.id());
 
         move |transaction| {
-            transaction.prepare(ADD_DATA_OBJECT)?.insert(params)?;
+            transaction.prepare(ADD_DATA_TYPE)?.insert(params)?;
             Ok(())
         }
     }
 
-    pub async fn add_data_object(&mut self, data_object: &DataObjectHandle) -> Result<()> {
-        let data_object_name = data_object.name().to_owned();
+    pub async fn add_data_type(&mut self, data_type: &DataTypeHandle) -> Result<()> {
+        let data_type_name = data_type.name().to_owned();
         let model_name = self.name().to_owned();
 
         self.database
-            .execute(self.add_data_object_inner(data_object))
+            .execute(self.add_data_type_inner(data_type))
             .await
             .with_context(|| {
-                format!("Failed to add data object '{data_object_name}' to model '{model_name}'.")
+                format!("Failed to add data object '{data_type_name}' to model '{model_name}'.")
             })
     }
 
-    fn delete_data_object_inner(&self, data_object: &DataObjectHandle) -> impl Operation<()> {
+    fn delete_data_type_inner(&self, data_type: &DataTypeHandle) -> impl Operation<()> {
         const DELETE_DATA: &str = r#"
         DELETE FROM $DATABASE
-        WHERE model_id = ?1 AND data_object_id = ?2"#;
-        const REFERENCE_TABLES: [&str; 4] = [
-            "model_data",
-            "layer_data",
-            "neuron_data",
-            "model_data_object",
-        ];
+        WHERE model_id = ?1 AND data_type_id = ?2"#;
+        const REFERENCE_TABLES: [&str; 4] =
+            ["model_data", "layer_data", "neuron_data", "model_data_type"];
 
-        let params = (self.id, data_object.id());
+        let params = (self.id, data_type.id());
         move |transaction| {
             for table in REFERENCE_TABLES.iter() {
                 let mut statement =
@@ -228,48 +219,48 @@ impl ModelHandle {
         }
     }
 
-    pub async fn delete_data_object(&mut self, data_object: &DataObjectHandle) -> Result<()> {
+    pub async fn delete_data_type(&mut self, data_type: &DataTypeHandle) -> Result<()> {
         self.database
-            .execute(self.delete_data_object_inner(data_object))
+            .execute(self.delete_data_type_inner(data_type))
             .await
             .with_context(|| {
                 format!(
-                    "Problem deleting data object '{data_object_name}' from model '{name}.",
-                    data_object_name = data_object.name(),
+                    "Problem deleting data object '{data_type_name}' from model '{name}.",
+                    data_type_name = data_type.name(),
                     name = self.name()
                 )
             })
     }
 
-    pub async fn has_data_object(&self, data_object: &DataObjectHandle) -> Result<bool> {
-        const CHECK_DATA_OBJECT: &str = r#"
+    pub async fn has_data_type(&self, data_type: &DataTypeHandle) -> Result<bool> {
+        const CHECK_DATA_TYPE: &str = r#"
         SELECT 
             model_id
-        FROM model_data_object
-        WHERE model_id = ?1 AND data_object_id = ?2;
+        FROM model_data_type
+        WHERE model_id = ?1 AND data_type_id = ?2;
         "#;
 
-        let data_object_name = data_object.name();
+        let data_type_name = data_type.name();
 
-        let params = (self.id(), data_object.id());
+        let params = (self.id(), data_type.id());
 
         self.database
             .connection
-            .call(move |connection| connection.prepare(CHECK_DATA_OBJECT)?.exists(params))
+            .call(move |connection| connection.prepare(CHECK_DATA_TYPE)?.exists(params))
             .await
             .with_context(|| {
                 format!(
-                    "Failed to check whether model '{}' has data object '{data_object_name}'",
+                    "Failed to check whether model '{}' has data object '{data_type_name}'",
                     self.name()
                 )
             })
     }
 
-    pub async fn data_object<D>(&self, data_object: &DataObjectHandle) -> Result<D>
+    pub async fn data_type<D>(&self, data_type: &DataTypeHandle) -> Result<D>
     where
-        D: ModelDataObject,
+        D: ModelDataType,
     {
-        self.database.model_data_object(self, data_object).await
+        self.database.model_data_type(self, data_type).await
     }
 
     pub async fn available_services(&self) -> Result<Vec<ServiceHandle>> {
@@ -278,7 +269,7 @@ impl ModelHandle {
             .await
             .context("Failed to get list of services.")?
         {
-            if self.missing_data_objects(&service).await.with_context(||
+            if self.missing_data_types(&service).await.with_context(||
                 format!("Failed to get list of missing data objects for model '{model_name}' and service '{service_name}'.", 
                 model_name = self.name(),
                 service_name = service.name()
@@ -292,13 +283,13 @@ impl ModelHandle {
 
     fn add_model_data_inner(
         &self,
-        data_object: &DataObjectHandle,
+        data_type: &DataTypeHandle,
         data: Vec<u8>,
     ) -> impl Operation<()> {
         const ADD_MODEL_DATA: &str = r#"
         INSERT INTO model_data (
             model_id,
-            data_object_id,
+            data_type_id,
             data
         ) VALUES (
             ?1,
@@ -307,7 +298,7 @@ impl ModelHandle {
         );
         "#;
 
-        let params = (self.id(), data_object.id(), data);
+        let params = (self.id(), data_type.id(), data);
         move |transaction| {
             transaction.prepare(ADD_MODEL_DATA)?.insert(params)?;
             Ok(())
@@ -316,27 +307,27 @@ impl ModelHandle {
 
     pub async fn add_model_data(
         &mut self,
-        data_object: &DataObjectHandle,
+        data_type: &DataTypeHandle,
         data: Vec<u8>,
     ) -> Result<()> {
         let model_name = self.name().to_owned();
 
         self.database
-            .execute(self.add_model_data_inner(data_object, data))
+            .execute(self.add_model_data_inner(data_type, data))
             .await
             .with_context(|| format!("Failed to add model data to model '{model_name}'."))
     }
 
     fn add_layer_data_inner(
         &self,
-        data_object: &DataObjectHandle,
+        data_type: &DataTypeHandle,
         layer_index: u32,
         data: Vec<u8>,
     ) -> impl Operation<()> {
         const ADD_LAYER_DATA: &str = r#"
         INSERT INTO layer_data (
             model_id,
-            data_object_id,
+            data_type_id,
             layer_index,
             data
         ) VALUES (
@@ -347,7 +338,7 @@ impl ModelHandle {
         );
         "#;
 
-        let params = (self.id(), data_object.id(), layer_index, data);
+        let params = (self.id(), data_type.id(), layer_index, data);
 
         move |transaction| {
             transaction.prepare(ADD_LAYER_DATA)?.insert(params)?;
@@ -357,19 +348,19 @@ impl ModelHandle {
 
     pub async fn add_layer_data(
         &mut self,
-        data_object: &DataObjectHandle,
+        data_type: &DataTypeHandle,
         layer_index: u32,
         data: Vec<u8>,
     ) -> Result<()> {
         self.database
-            .execute(self.add_layer_data_inner(data_object, layer_index, data))
+            .execute(self.add_layer_data_inner(data_type, layer_index, data))
             .await
             .context("Failed to add layer data.")
     }
 
     fn add_neuron_data_inner(
         &self,
-        data_object: &DataObjectHandle,
+        data_type: &DataTypeHandle,
         layer_index: u32,
         neuron_index: u32,
         data: Vec<u8>,
@@ -377,7 +368,7 @@ impl ModelHandle {
         const ADD_NEURON_DATA: &str = r#"
         INSERT INTO neuron_data (
             model_id,
-            data_object_id,
+            data_type_id,
             layer_index,
             neuron_index,
             data
@@ -390,7 +381,7 @@ impl ModelHandle {
         );
         "#;
 
-        let params = (self.id(), data_object.id(), layer_index, neuron_index, data);
+        let params = (self.id(), data_type.id(), layer_index, neuron_index, data);
 
         move |transaction| {
             transaction.prepare(ADD_NEURON_DATA)?.insert(params)?;
@@ -400,42 +391,42 @@ impl ModelHandle {
 
     pub async fn add_neuron_data(
         &mut self,
-        data_object: &DataObjectHandle,
+        data_type: &DataTypeHandle,
         layer_index: u32,
         neuron_index: u32,
         data: Vec<u8>,
     ) -> Result<()> {
         self.database
-            .execute(self.add_neuron_data_inner(data_object, layer_index, neuron_index, data))
+            .execute(self.add_neuron_data_inner(data_type, layer_index, neuron_index, data))
             .await
             .context("Failed to add neuron data.")
     }
 
     pub async fn add_data(
         &mut self,
-        data_object: &DataObjectHandle,
+        data_type: &DataTypeHandle,
         index: Index,
         data: Vec<u8>,
     ) -> Result<()> {
         match index {
-            Index::Model => self.add_model_data(data_object, data).await,
-            Index::Layer(layer_index) => self.add_layer_data(data_object, layer_index, data).await,
+            Index::Model => self.add_model_data(data_type, data).await,
+            Index::Layer(layer_index) => self.add_layer_data(data_type, layer_index, data).await,
             Index::Neuron(layer_index, neuron_index) => {
-                self.add_neuron_data(data_object, layer_index, neuron_index, data)
+                self.add_neuron_data(data_type, layer_index, neuron_index, data)
                     .await
             }
         }
     }
 
-    pub async fn model_data(&self, data_object: &DataObjectHandle) -> Result<Option<Vec<u8>>> {
+    pub async fn model_data(&self, data_type: &DataTypeHandle) -> Result<Option<Vec<u8>>> {
         const GET_MODEL_DATA: &str = r#"
         SELECT
             data
         FROM model_data
-        WHERE model_id = ?1 AND data_object_id = ?2;
+        WHERE model_id = ?1 AND data_type_id = ?2;
         "#;
 
-        let params = (self.id(), data_object.id());
+        let params = (self.id(), data_type.id());
 
         self.database
             .connection
@@ -448,24 +439,24 @@ impl ModelHandle {
                 format!(
                     "Failed to get model data for data object '{}' for model '{}'.",
                     self.name(),
-                    data_object.name()
+                    data_type.name()
                 )
             })
     }
 
     pub async fn layer_data(
         &self,
-        data_object: &DataObjectHandle,
+        data_type: &DataTypeHandle,
         layer_index: u32,
     ) -> Result<Option<Vec<u8>>> {
         const GET_LAYER_DATA: &str = r#"
         SELECT
             data
         FROM layer_data
-        WHERE model_id = ?1 AND data_object_id = ?2 AND layer_index = ?3;
+        WHERE model_id = ?1 AND data_type_id = ?2 AND layer_index = ?3;
         "#;
 
-        let params = (self.id(), data_object.id(), layer_index);
+        let params = (self.id(), data_type.id(), layer_index);
         self.database
             .connection
             .call(move |connection| {
@@ -477,14 +468,14 @@ impl ModelHandle {
                 format!(
                     "Failed to get layer data for layer {layer_index} data object '{}' for model '{}'.",
                     self.name(),
-                    data_object.name()
+                    data_type.name()
                 )
             })
     }
 
     pub async fn neuron_data(
         &self,
-        data_object: &DataObjectHandle,
+        data_type: &DataTypeHandle,
         layer_index: u32,
         neuron_index: u32,
     ) -> Result<Option<Vec<u8>>> {
@@ -492,10 +483,10 @@ impl ModelHandle {
         SELECT
             data
         FROM neuron_data
-        WHERE model_id = ?1 AND data_object_id = ?2 AND layer_index = ?3 AND neuron_index = ?4;
+        WHERE model_id = ?1 AND data_type_id = ?2 AND layer_index = ?3 AND neuron_index = ?4;
         "#;
 
-        let params = (self.id(), data_object.id(), layer_index, neuron_index);
+        let params = (self.id(), data_type.id(), layer_index, neuron_index);
 
         self.database
             .connection
@@ -507,23 +498,18 @@ impl ModelHandle {
             .with_context(|| {
                 format!(
                     "Failed to get neuron data for neuron l{layer_index}n{neuron_index} for data object '{}' for model '{}'.",
-                    data_object.name(),
+                    data_type.name(),
                     self.name(),
                 )
             })
     }
 
-    pub async fn data(
-        &self,
-        data_object: &DataObjectHandle,
-        index: Index,
-    ) -> Result<Option<Vec<u8>>> {
+    pub async fn data(&self, data_type: &DataTypeHandle, index: Index) -> Result<Option<Vec<u8>>> {
         match index {
-            Index::Model => self.model_data(data_object).await,
-            Index::Layer(layer_index) => self.layer_data(data_object, layer_index).await,
+            Index::Model => self.model_data(data_type).await,
+            Index::Layer(layer_index) => self.layer_data(data_type, layer_index).await,
             Index::Neuron(layer_index, neuron_index) => {
-                self.neuron_data(data_object, layer_index, neuron_index)
-                    .await
+                self.neuron_data(data_type, layer_index, neuron_index).await
             }
         }
     }

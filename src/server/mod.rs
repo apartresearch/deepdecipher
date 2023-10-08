@@ -1,6 +1,6 @@
-use anyhow::Result;
+use anyhow::{bail, Result};
 
-use crate::data::{database::Database, ModelHandle};
+use crate::data::database::Database;
 
 mod service;
 pub use service::Service;
@@ -32,14 +32,18 @@ impl State {
     }
 }
 
-pub async fn metadata_value(model_handle: &ModelHandle) -> Result<serde_json::Value> {
-    let mut metadata = serde_json::to_value(model_handle.metadata())?;
-    let available_services: Vec<_> = model_handle
-        .available_services()
-        .await?
-        .into_iter()
-        .map(|service| service.name().to_owned())
-        .collect();
-    metadata["available_services"] = serde_json::to_value(available_services)?;
-    Ok(metadata)
+#[derive(Clone, Copy)]
+pub enum RequestType {
+    Json,
+    Binary,
+}
+
+impl RequestType {
+    pub fn from_path_string(s: impl AsRef<str>) -> Result<Self> {
+        match s.as_ref() {
+            "api" => Ok(Self::Json),
+            "bin" => Ok(Self::Binary),
+            s => bail!("Invalid request type '{s}'."),
+        }
+    }
 }

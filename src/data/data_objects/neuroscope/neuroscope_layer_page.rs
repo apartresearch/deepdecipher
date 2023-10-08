@@ -1,8 +1,10 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use snap::raw::{Decoder, Encoder};
 
-use crate::data::NeuronIndex;
+use crate::data::{
+    data_objects::{data_object, DataObject},
+    NeuronIndex,
+};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NeuroscopeLayerPage {
@@ -30,20 +32,14 @@ impl NeuroscopeLayerPage {
     pub fn important_neurons(&self) -> &[(NeuronIndex, f32)] {
         self.important_neurons.as_slice()
     }
+}
 
-    pub fn to_binary(&self) -> Result<Vec<u8>> {
-        let data =
-            postcard::to_allocvec(self).context("Failed to serialize neuroscope layer page.")?;
-        Encoder::new()
-            .compress_vec(data.as_slice())
-            .context("Failed to compress neuroscope layer page.")
+impl DataObject for NeuroscopeLayerPage {
+    fn to_binary(&self) -> Result<Vec<u8>> {
+        data_object::to_binary(self, "Neuroscope layer page")
     }
 
-    pub fn from_binary(data: impl AsRef<[u8]>) -> Result<Self> {
-        let data = Decoder::new()
-            .decompress_vec(data.as_ref())
-            .context("Failed to decompress neuroscope layer page")?;
-        postcard::from_bytes(data.as_slice())
-            .context("Failed to deserialize neuroscope layer page.")
+    fn from_binary(data: impl AsRef<[u8]>) -> Result<Self> {
+        data_object::from_binary(data, "Neuroscope layer page")
     }
 }

@@ -4,10 +4,13 @@ use anyhow::{bail, Context, Result};
 use itertools::Itertools;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use snap::raw::{Decoder, Encoder};
+
 use utoipa::ToSchema;
 
-use crate::data::NeuronIndex;
+use crate::data::{
+    data_objects::{data_object, DataObject},
+    NeuronIndex,
+};
 
 const FLOAT_REGEX: &str = r"-?\d+(?:\.\d*)?";
 
@@ -86,28 +89,22 @@ impl NeuroscopeNeuronPage {
         Self::from_html_header_and_texts(header, texts, neuron_index)
     }
 
-    pub fn to_binary(&self) -> Result<Vec<u8>> {
-        let data =
-            postcard::to_allocvec(self).context("Failed to serialize neuroscope neuron page.")?;
-        Encoder::new()
-            .compress_vec(data.as_slice())
-            .context("Failed to compress neuroscope neuron page.")
-    }
-
-    pub fn from_binary(data: impl AsRef<[u8]>) -> Result<Self> {
-        let data = Decoder::new()
-            .decompress_vec(data.as_ref())
-            .context("Failed to decompress neuroscope neuron page")?;
-        postcard::from_bytes(data.as_slice())
-            .context("Failed to deserialize neuroscope neuron page.")
-    }
-
     pub fn neuron_index(&self) -> NeuronIndex {
         self.neuron_index
     }
 
     pub fn texts(&self) -> &[Text] {
         self.texts.as_slice()
+    }
+}
+
+impl DataObject for NeuroscopeNeuronPage {
+    fn to_binary(&self) -> Result<Vec<u8>> {
+        data_object::to_binary(self, "Neuroscope neuron page")
+    }
+
+    fn from_binary(data: impl AsRef<[u8]>) -> Result<Self> {
+        data_object::from_binary(data, "Neuroscope neuron page")
     }
 }
 

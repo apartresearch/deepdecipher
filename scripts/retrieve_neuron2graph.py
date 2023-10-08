@@ -23,10 +23,10 @@ if model is None:
     model = database.add_model(model_metadata)
 assert model is not None
 
-data_object = database.data_object("neuron2graph")
-if data_object is not None and model.has_data_object(data_object):
+data_type = database.data_type("neuron2graph")
+if data_type is not None and model.has_data_type(data_type):
     print("Deleting existing neuron2graph data from model.")
-    model.delete_data_object(data_object)
+    model.delete_data_type(data_type)
 
 
 print("Adding neuron2graph neuron graphs to model.")

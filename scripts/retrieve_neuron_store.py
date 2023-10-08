@@ -23,10 +23,10 @@ if model is None:
     model = database.add_model(model_metadata)
 assert model is not None
 
-data_object = database.data_object("neuron_store")
-if data_object is not None:
+data_type = database.data_type("neuron_store")
+if data_type is not None:
     print("Deleting existing neuron store data for model.")
-    model.delete_data_object(data_object)
+    model.delete_data_type(data_type)
 
 print("Adding neuron store data for model.")
 model.add_neuron_store(neuron_store_path, 0.4)

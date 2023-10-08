@@ -51,13 +51,6 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
             .service(response::layer)
             .service(response::neuron)
             .service(response::api_doc)
-            .service(actix_files::Files::new("/js", "./frontend/js"))
-            .service(actix_files::Files::new("/css", "./frontend/css"))
-            .service(response::base)
-            .service(response::index_viz)
-            .service(response::model_viz)
-            .service(response::layer_viz)
-            .service(response::neuron_viz)
     });
     if let Some(num_workers) = config.num_workers() {
         server = server.workers(num_workers);

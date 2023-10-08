@@ -1,5 +1,5 @@
-mod data_object;
-pub use data_object::{DataType, DataTypeDiscriminants, ModelDataObject};
+mod data_type;
+pub use data_type::{DataType, DataTypeDiscriminants, ModelDataType};
 mod neuroscope;
 pub use neuroscope::Neuroscope;
 mod neuron_explainer;

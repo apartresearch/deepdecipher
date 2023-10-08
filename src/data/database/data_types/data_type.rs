@@ -6,7 +6,7 @@ use strum::{AsRefStr, EnumDiscriminants, EnumString};
 use thiserror::Error;
 
 use crate::{
-    data::{DataObjectHandle, ModelHandle},
+    data::{DataTypeHandle, ModelHandle},
     Index,
 };
 
@@ -90,8 +90,8 @@ pub enum DataValidationError {
 }
 
 #[async_trait]
-pub trait ModelDataObject: Sized {
-    async fn new(model: ModelHandle, data_object: DataObjectHandle) -> Result<Option<Self>>;
+pub trait ModelDataType: Sized {
+    async fn new(model: ModelHandle, data_type: DataTypeHandle) -> Result<Option<Self>>;
     fn data_type() -> DataTypeDiscriminants;
     fn model_handle(&self) -> &ModelHandle;
     async fn validate(&self) -> anyhow::Result<Result<(), DataValidationError>>;

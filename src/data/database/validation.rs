@@ -2,21 +2,21 @@ use anyhow::{bail, Context};
 
 use crate::{data::NeuronIndex, Index};
 
-use super::{DataObjectHandle, ModelHandle};
+use super::{DataTypeHandle, ModelHandle};
 
 impl ModelHandle {
     pub async fn missing_model_items(
         &self,
-        data_object: &DataObjectHandle,
+        data_type: &DataTypeHandle,
     ) -> anyhow::Result<impl ExactSizeIterator<Item = Index>> {
         const COUNT_MODEL_DATA: &str = r#"
         SELECT
             COUNT(*)
         FROM model_data
-        WHERE model_id = ?1 AND data_object_id = ?2;
+        WHERE model_id = ?1 AND data_type_id = ?2;
         "#;
 
-        let params = (self.id(), data_object.id());
+        let params = (self.id(), data_type.id());
 
         let num_rows: u32 = self
             .database()
@@ -30,7 +30,7 @@ impl ModelHandle {
                 format!(
                     "Failed to count model data for data object '{}' for model '{}'.",
                     self.name(),
-                    data_object.name()
+                    data_type.name()
                 )
             })?;
         match num_rows {
@@ -39,23 +39,23 @@ impl ModelHandle {
             _ => bail!(
                 "Model '{}' has multiple data objects named '{}'. This should be impossible.",
                 self.name(),
-                data_object.name()
+                data_type.name()
             ),
         }
     }
 
     pub async fn missing_layer_items(
         &self,
-        data_object: &DataObjectHandle,
+        data_type: &DataTypeHandle,
     ) -> anyhow::Result<impl Iterator<Item = Index>> {
         const COUNT_LAYER_DATA: &str = r#"
         SELECT
             layer_index
         FROM layer_data
-        WHERE model_id = ?1 AND data_object_id = ?2;
+        WHERE model_id = ?1 AND data_type_id = ?2;
         "#;
 
-        let params = (self.id(), data_object.id());
+        let params = (self.id(), data_type.id());
 
         let existing_layers = self
             .database()
@@ -71,7 +71,7 @@ impl ModelHandle {
                 format!(
                     "Failed to count layer data for data object '{}' for model '{}'.",
                     self.name(),
-                    data_object.name()
+                    data_type.name()
                 )
             })?;
         let mut layer_item_exists = vec![false; self.metadata().num_layers as usize];
@@ -92,19 +92,19 @@ impl ModelHandle {
 
     pub async fn missing_neuron_items(
         &self,
-        data_object: &DataObjectHandle,
+        data_type: &DataTypeHandle,
     ) -> anyhow::Result<impl Iterator<Item = Index>> {
         const COUNT_NEURON_DATA: &str = r#"
         SELECT
             layer_index,
             neuron_index
         FROM neuron_data
-        WHERE model_id = ?1 AND data_object_id = ?2;
+        WHERE model_id = ?1 AND data_type_id = ?2;
         "#;
 
         let layer_size = self.metadata().layer_size;
 
-        let params = (self.id(), data_object.id());
+        let params = (self.id(), data_type.id());
 
         let existing_neurons = self
             .database()
@@ -127,7 +127,7 @@ impl ModelHandle {
                 format!(
                     "Failed to count neuron data for data object '{}' for model '{}'.",
                     self.name(),
-                    data_object.name()
+                    data_type.name()
                 )
             })?;
         let mut neuron_item_exists = vec![false; self.metadata().num_total_neurons as usize];
@@ -147,13 +147,13 @@ impl ModelHandle {
 
     pub async fn missing_items(
         &self,
-        data_object: &DataObjectHandle,
+        data_type: &DataTypeHandle,
     ) -> anyhow::Result<impl Iterator<Item = Index>> {
         Ok(self
-            .missing_model_items(data_object)
+            .missing_model_items(data_type)
             .await?
-            .chain(self.missing_layer_items(data_object).await?)
-            .chain(self.missing_neuron_items(data_object).await?))
+            .chain(self.missing_layer_items(data_type).await?)
+            .chain(self.missing_neuron_items(data_type).await?))
     }
 }
 
@@ -180,8 +180,8 @@ mod test {
         };
         let mut model = database.add_model(metadata).await?;
 
-        let data_object = database
-            .add_data_object("neuroscope", DataType::Neuroscope)
+        let data_type = database
+            .add_data_type("neuroscope", DataType::Neuroscope)
             .await?;
 
         let test_data = vec![0u8; 200];
@@ -194,9 +194,7 @@ mod test {
 
         for (&index, &add_data) in data_indices.iter() {
             if add_data {
-                model
-                    .add_data(&data_object, index, test_data.clone())
-                    .await?;
+                model.add_data(&data_type, index, test_data.clone()).await?;
             }
         }
 
@@ -205,7 +203,7 @@ mod test {
             .indices()
             .map(|index| (index, true))
             .collect();
-        for missing_index in model.missing_items(&data_object).await? {
+        for missing_index in model.missing_items(&data_type).await? {
             *neuron_item_exists.get_mut(&missing_index).unwrap() = false;
         }
 

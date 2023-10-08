@@ -5,7 +5,7 @@ use tokio::runtime::Runtime;
 use crate::data::{retrieve, ModelHandle};
 
 use super::{
-    data_object_handle::PyDataObjectHandle, index::PyIndex, model_metadata::PyModelMetadata,
+    data_type_handle::PyDataTypeHandle, index::PyIndex, model_metadata::PyModelMetadata,
     service_handle::PyServiceHandle,
 };
 
@@ -63,15 +63,15 @@ impl PyModelHandle {
             .context("Failed to start async runtime to scrape neuroscope.")?
             .block_on(async {
                 let model = &mut self.model;
-                let data_object = model
+                let data_type = model
                     .database()
-                    .data_object("neuroscope")
+                    .data_type("neuroscope")
                     .await?
                     .with_context(|| {
                         format!("No 'neuroscope' data object for model '{model_name}'")
                     })?;
                 let mut missing_indices: Vec<_> =
-                    model.missing_neuron_items(&data_object).await?.collect();
+                    model.missing_neuron_items(&data_type).await?.collect();
                 while !missing_indices.is_empty() {
                     println!(
                         "{} missing items for model '{model_name}'. Scraping...",
@@ -80,14 +80,14 @@ impl PyModelHandle {
                     );
                     retrieve::neuroscope::scrape_indices_to_database(
                         model,
-                        &data_object,
+                        &data_type,
                         missing_indices.iter().copied(),
                     )
                     .await
                     .with_context(|| {
                         format!("Failed to scrape data for model '{model_name}' from Neuroscope.")
                     })?;
-                    missing_indices = model.missing_neuron_items(&data_object).await?.collect();
+                    missing_indices = model.missing_neuron_items(&data_type).await?.collect();
                 }
                 anyhow::Ok(())
             })
@@ -143,37 +143,37 @@ impl PyModelHandle {
 
     pub fn add_json_data(
         &mut self,
-        data_object: &PyDataObjectHandle,
+        data_type: &PyDataTypeHandle,
         index: PyIndex,
         json_data: &str,
     ) -> PyResult<()> {
         let model = &mut self.model;
-        let data_object = &data_object.data_object;
+        let data_type = &data_type.data_type;
         let json = serde_json::from_str(json_data).context("Failed to parse JSON data.")?;
         Runtime::new()
             .context("Failed to start async runtime to add JSON data.")?
             .block_on(async {
-                if !model.has_data_object(data_object).await.with_context(||
+                if !model.has_data_type(data_type).await.with_context(||
                     format!(
-                        "Failed to check whether model '{model_name}' has data object '{data_object_name}'.", 
+                        "Failed to check whether model '{model_name}' has data object '{data_type_name}'.", 
                         model_name=model.name(),
-                        data_object_name=data_object.name()
+                        data_type_name=data_type.name()
                     )
                 )? {
-                    bail!("Cannot add JSON data to data object '{data_object_name}' for {index} in model '{model_name}' because model does not have data object.", 
-                        data_object_name=data_object.name(),
+                    bail!("Cannot add JSON data to data object '{data_type_name}' for {index} in model '{model_name}' because model does not have data object.", 
+                        data_type_name=data_type.name(),
                         index=index.index.error_string(),
                         model_name=model.name())
                 }
                 retrieve::json::store_json_data(
                     model,
-                    data_object,
+                    data_type,
                     index.into(),
                     json,
                 )
                 .await.with_context(|| format!(
-                    "Failed to add JSON data to '{data_object_name}' for {index} in model '{model_name}'.", 
-                    data_object_name=data_object.name(),
+                    "Failed to add JSON data to '{data_type_name}' for {index} in model '{model_name}'.", 
+                    data_type_name=data_type.name(),
                     index=index.index.error_string(),
                     model_name=model.name()
                 ))
@@ -181,48 +181,47 @@ impl PyModelHandle {
         Ok(())
     }
 
-    pub fn add_data_object(&mut self, data_object: &PyDataObjectHandle) -> PyResult<()> {
+    pub fn add_data_type(&mut self, data_type: &PyDataTypeHandle) -> PyResult<()> {
         Runtime::new()
             .context("Failed to start async runtime to add data object to model.")?
             .block_on(async {
-                self.model.add_data_object(&data_object.data_object).await.with_context(|| format!("Failed to add data object '{data_object_name}' to model '{model_name}'.", 
-                    data_object_name=data_object.data_object.name(),
-                    model_name=self.model.name()))
-             })?;
+                self.model
+                    .add_data_type(&data_type.data_type)
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "Failed to add data object '{data_type_name}' to model '{model_name}'.",
+                            data_type_name = data_type.data_type.name(),
+                            model_name = self.model.name()
+                        )
+                    })
+            })?;
         Ok(())
     }
 
-    pub fn has_data_object(&self, data_object: &PyDataObjectHandle) -> PyResult<bool> {
+    pub fn has_data_type(&self, data_type: &PyDataTypeHandle) -> PyResult<bool> {
         let result = Runtime::new()
             .context("Failed to start async runtime to check whether model has data object.")?
-            .block_on(async { self.model.has_data_object(&data_object.data_object).await })?;
+            .block_on(async { self.model.has_data_type(&data_type.data_type).await })?;
         Ok(result)
     }
 
-    pub fn delete_data_object(&mut self, data_object: &PyDataObjectHandle) -> PyResult<()> {
+    pub fn delete_data_type(&mut self, data_type: &PyDataTypeHandle) -> PyResult<()> {
         Runtime::new()
             .context("Failed to start async runtime to delete model.")?
-            .block_on(async {
-                self.model
-                    .delete_data_object(&data_object.data_object)
-                    .await
-            })?;
+            .block_on(async { self.model.delete_data_type(&data_type.data_type).await })?;
         Ok(())
     }
 
-    pub fn missing_data_objects(&self, service: &PyServiceHandle) -> PyResult<Vec<String>> {
+    pub fn missing_data_types(&self, service: &PyServiceHandle) -> PyResult<Vec<String>> {
         let result = Runtime::new()
             .context("Failed to start async runtime to check missing data objects for service.")?
-            .block_on(async {
-                self.model
-                    .missing_data_objects(&service.service_handle)
-                    .await
-            })?;
+            .block_on(async { self.model.missing_data_types(&service.service_handle).await })?;
         Ok(result)
     }
 
     pub fn has_service(&self, service: &PyServiceHandle) -> PyResult<bool> {
-        self.missing_data_objects(service)
+        self.missing_data_types(service)
             .map(|missing| missing.is_empty())
     }
 }
