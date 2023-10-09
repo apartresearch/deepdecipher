@@ -24,7 +24,7 @@ async fn retrieve_neuron2graph_neuron(
     neuron_index: NeuronIndex,
 ) -> Result<bool> {
     let path = neuron_path(root, neuron_index);
-    let graph = match fs::read_to_string(path).await.map(|graph| Graph { graph }) {
+    let graph: Graph = match fs::read_to_string(path).await.map(|graph| todo!()) {
         Ok(graph) => graph,
         Err(err) => {
             if err.kind() == std::io::ErrorKind::NotFound {
