@@ -206,7 +206,7 @@ fn attribute(key: impl AsRef<str>, value: impl AsRef<str>) -> Attribute {
 }
 
 fn index_pair_to_dot_edge(index1: usize, index2: usize) -> Edge {
-    edge!(index_to_vertex(index2) => index_to_vertex(index1); attribute("dir", "back"), attribute("penwidth", "3"))
+    edge!(index_to_vertex(index1) => index_to_vertex(index2))
 }
 
 fn importance_to_color(importance: f32, activating: bool) -> String {
@@ -235,9 +235,6 @@ fn dot_subgraph<'a>(
                     "fillcolor",
                     importance_to_color(*importance, subgraph_index <= 1),
                 ),
-                attribute("fontcolor", "black"),
-                attribute("fontsize", "25"),
-                attribute("penwidth", "7"),
             ],
         })
     });
@@ -269,28 +266,31 @@ impl From<Graph> for DotGraph {
         });
         let edge_statement_iter =
             edge_iter.map(|(index1, index2)| Stmt::Edge(index_pair_to_dot_edge(index1, index2)));
-        let graph_attributes = vec![
+        let graph_attributes = Stmt::GAttribute(GraphAttributes::Graph(vec![
             attribute("nodesep", "0.2"),
-            attribute("rankdir", "RL"),
+            attribute("rankdir", "LR"),
             attribute("ranksep", "1.5"),
             attribute("splines", "spline"),
-        ];
+            attribute("pencolor", "white"),
+            attribute("penwidth", "3"),
+        ]));
         // Add more node attributes. E.g. shape, style and maybe penwidth. This removes them from the individual nodes and saves complexity/space.
         // If global attributes can be changed halfway through, use this for fontcolor.
-        let node_attributes = vec![
+        let node_attributes = Stmt::GAttribute(GraphAttributes::Node(vec![
             attribute("fixedsize", "true"),
             attribute("height", "0.75"),
             attribute("width", "2"),
             attribute("style", "\"filled,solid\""),
             attribute("shape", "box"),
-        ];
+            attribute("fontcolor", "black"),
+            attribute("fontsize", "25"),
+            attribute("penwidth", "7"),
+        ]));
+        let edge_attributes =
+            Stmt::GAttribute(GraphAttributes::Edge(vec![attribute("penwidth", "3")]));
         // Add global edge attributes.
-        let statement_iter = iter::once(Stmt::GAttribute(GraphAttributes::Graph(graph_attributes)))
-            .chain(iter::once(Stmt::GAttribute(GraphAttributes::Node(
-                node_attributes,
-            ))))
-            .chain(iter::once(Stmt::Attribute(attribute("pencolor", "white"))))
-            .chain(iter::once(Stmt::Attribute(attribute("penwidth", "3"))))
+        let statement_iter = [graph_attributes, node_attributes, edge_attributes]
+            .into_iter()
             .chain(edge_statement_iter)
             .chain(subgraph_statement_iter);
         DotGraph::DiGraph {
