@@ -175,11 +175,12 @@ We use the [Gitmoji commit standards](gitmoji.dev).
 To cite our work, please use the following BibTeX entry:
 
 
-@misc{garde2023deepdecipher,<p>
-title={DeepDecipher: Accessing and Investigating Neuron Activation in Large Language Models},</p>
-author={Albert Garde and Esben Kran and Fazl Barez},<p>
-year={2023},</p>
-eprint={2310.01870},<p>
-archivePrefix={arXiv},</p>
-primaryClass={cs.LG}
+```bibtex
+@misc{garde2023deepdecipher,
+  title={DeepDecipher: Accessing and Investigating Neuron Activation in Large Language Models},
+  author={Albert Garde and Esben Kran and Fazl Barez},
+  year={2023},
+  eprint={2310.01870},
+  archivePrefix={arXiv},
+  primaryClass={cs.LG}
 }
