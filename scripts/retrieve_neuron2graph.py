@@ -3,20 +3,20 @@ import sys
 
 from deepdecipher import Database, ModelMetadata, ServiceProvider
 
-if len(sys.argv) < 3:
+if len(sys.argv) < 4:
     raise RuntimeError(
-        "Please specify a database file as the first argument and data path as the second argument."
+        "Please specify a database file as the first argument, data path as the second argument and model name as the third argument."
     )
 
 database_path = sys.argv[1]
 data_path = sys.argv[2]
+model_name = sys.argv[3]
 
 if path.isfile(database_path):
     database = Database.open(database_path)
 else:
     database = Database.initialize(database_path)
 
-model_name = "solu-6l-pile"
 model = database.model(model_name)
 if model is None:
     model_metadata = ModelMetadata.from_neuroscope(model_name)
