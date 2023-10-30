@@ -7,6 +7,7 @@ use graphviz_rust::{
         Attribute, Edge, EdgeTy, Graph as DotGraph, GraphAttributes, Id, Node as DotNode, NodeId,
         Stmt, Subgraph, Vertex,
     },
+    printer::{DotPrinter, PrinterContext},
 };
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -244,11 +245,12 @@ fn dot_subgraph<'a>(
     }
 }
 
-impl From<Graph> for DotGraph {
-    fn from(value: Graph) -> Self {
+impl From<&Graph> for DotGraph {
+    fn from(value: &Graph) -> Self {
         let subgraphs = value
             .subgraph_indices
-            .into_iter()
+            .iter()
+            .copied()
             .tuple_windows()
             .map(|(start_index, end_index)| {
                 value.graph[start_index..end_index]
@@ -301,6 +303,12 @@ impl From<Graph> for DotGraph {
     }
 }
 
+impl From<Graph> for DotGraph {
+    fn from(value: Graph) -> Self {
+        DotGraph::from(&value)
+    }
+}
+
 impl DataObject for Graph {
     fn to_binary(&self) -> Result<Vec<u8>> {
         data_object::to_binary(self, "Neuron2Graph graph")
@@ -314,8 +322,21 @@ impl DataObject for Graph {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Neuron2GraphData {
     pub graph: Graph,
+    pub graphviz: String,
     #[serde(flatten)]
-    pub similar: SimilarNeurons,
+    pub similar_neurons: SimilarNeurons,
+}
+
+impl Neuron2GraphData {
+    pub fn new(graph: Graph, similar_neurons: SimilarNeurons) -> Self {
+        let mut graphviz_printer_context = PrinterContext::default();
+        let graphviz = DotGraph::from(&graph).print(&mut graphviz_printer_context);
+        Neuron2GraphData {
+            graph,
+            graphviz,
+            similar_neurons,
+        }
+    }
 }
 
 impl DataObject for Neuron2GraphData {
