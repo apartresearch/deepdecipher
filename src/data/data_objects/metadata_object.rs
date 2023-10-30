@@ -7,6 +7,7 @@ use super::{data_object, DataObject};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MetadataObject {
+    #[serde(flatten)]
     pub metadata: Metadata,
     pub available_services: Vec<String>,
 }

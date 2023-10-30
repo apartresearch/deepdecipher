@@ -314,6 +314,7 @@ impl DataObject for Graph {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Neuron2GraphData {
     pub graph: Graph,
+    #[serde(flatten)]
     pub similar: SimilarNeurons,
 }
 

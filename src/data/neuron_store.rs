@@ -68,6 +68,7 @@ impl FromStr for TokenSearch {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SimilarNeurons {
+    #[serde(rename = "similar")]
     similar_neurons: Vec<(NeuronIndex, f32)>,
 }
 
