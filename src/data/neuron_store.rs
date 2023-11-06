@@ -219,6 +219,8 @@ impl NeuronStore {
                 }
             }
         }
+        println!("Found similar neurons.                                       ");
+        std::io::stdout().flush().unwrap();
 
         Ok(NeuronSimilarity {
             layer_size: self.layer_size,

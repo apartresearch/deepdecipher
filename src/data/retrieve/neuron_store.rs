@@ -16,8 +16,9 @@ pub async fn store_similar_neurons(
     let model_name = model_handle.name().to_owned();
     let model_name = model_name.as_str();
     print!("Calculating neuron similarities...");
-    let neuron_relatedness = neuron_store.neuron_similarity(similarity_threshold).with_context(|| format!("Failed to calculate neuron similarities for model '{model_name}'.",))?;
-    println!("\rNeuron similarities calculated.    ");
+    let neuron_relatedness = neuron_store.neuron_similarity(similarity_threshold).with_context(|| 
+        format!("Failed to calculate neuron similarities for model '{model_name}'.",)
+    )?;
 
     let num_neurons = model_handle.metadata().num_total_neurons;
     let mut num_completed = 0;
