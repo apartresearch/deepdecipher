@@ -6,6 +6,8 @@ sudo true
 cd $REPO_PATH
 # Build in release mode.
 /home/albert/.cargo/bin/cargo build --release
+# Stop service in order to edit the bin directory.
+sudo systemctl stop deepdecipher-backend
 # Copy binary to bin directory.
 sudo cp target/release/server /usr/local/bin/deepdecipher/prod/server
 # Restart the backend service to use the new binary.
