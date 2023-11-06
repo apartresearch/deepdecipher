@@ -9,7 +9,6 @@ use itertools::Itertools;
 use ndarray::{s, Array2};
 use serde::Deserialize;
 use serde::Serialize;
-use serde_json::json;
 use snap::raw::{Decoder, Encoder};
 
 use super::NeuronIndex;
@@ -66,38 +65,38 @@ impl FromStr for TokenSearch {
     }
 }
 
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+struct SimilarNeuron {
+    layer: u32,
+    neuron: u32,
+    similarity: f32,
+}
+
+impl SimilarNeuron {
+    fn new(neuron_index: NeuronIndex, similarity: f32) -> Self {
+        Self {
+            layer: neuron_index.layer,
+            neuron: neuron_index.neuron,
+            similarity,
+        }
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SimilarNeurons {
     #[serde(rename = "similar")]
-    similar_neurons: Vec<(NeuronIndex, f32)>,
+    similar_neurons: Vec<SimilarNeuron>,
 }
 
 impl SimilarNeurons {
-    pub fn as_slice(&self) -> &[(NeuronIndex, f32)] {
-        self.similar_neurons.as_slice()
-    }
-
     pub fn to_binary(&self) -> Result<Vec<u8>> {
-        let result = postcard::to_allocvec(self.as_slice())?;
+        let result = postcard::to_allocvec(self.similar_neurons.as_slice())?;
         Ok(result)
     }
 
     pub fn from_binary(bytes: &[u8]) -> Result<Self> {
         let result = postcard::from_bytes(bytes)?;
         Ok(result)
-    }
-
-    pub fn to_json(&self) -> serde_json::Value {
-        self.similar_neurons
-            .iter()
-            .map(|(neuron_index, similarity)| {
-                json!({
-                    "layer": neuron_index.layer,
-                    "neuron": neuron_index.neuron,
-                    "similarity": similarity,
-                })
-            })
-            .collect()
     }
 }
 
@@ -128,15 +127,16 @@ impl NeuronSimilarity {
             })
             .filter(|&(index2, similarity)| index2 != index && similarity >= threshold)
             .map(|(index2, similarity)| {
-                (
+                SimilarNeuron::new(
                     NeuronIndex::from_flat_index(self.layer_size, index2),
                     similarity,
                 )
             })
             .collect();
-        similar_neurons.sort_by(|(_, similarity1), (_, similarity2)| {
-            similarity2
-                .partial_cmp(similarity1)
+        similar_neurons.sort_by(|neuron1, neuron2| {
+            neuron1
+                .similarity
+                .partial_cmp(&neuron2.similarity)
                 .unwrap_or(Ordering::Equal)
         });
         SimilarNeurons { similar_neurons }
