@@ -16,7 +16,7 @@ pub async fn store_similar_neurons(
     let model_name = model_handle.name().to_owned();
     let model_name = model_name.as_str();
     print!("Calculating neuron similarities...");
-    let neuron_relatedness = neuron_store.neuron_similarity();
+    let neuron_relatedness = neuron_store.neuron_similarity(similarity_threshold).with_context(|| format!("Failed to calculate neuron similarities for model '{model_name}'.",))?;
     println!("\rNeuron similarities calculated.    ");
 
     let num_neurons = model_handle.metadata().num_total_neurons;
@@ -24,7 +24,9 @@ pub async fn store_similar_neurons(
     print!("Adding neuron similarities to database: {num_completed}/{num_neurons}",);
     for neuron_index in model_handle.metadata().neuron_indices() {
         let similar_neurons =
-            neuron_relatedness.similar_neurons(neuron_index, similarity_threshold);
+            neuron_relatedness.similar_neurons(neuron_index).with_context(|| 
+                format!("Failed to get similar neurons for neuron {neuron_index} in model '{model_name}'.")
+            )?;
         let data = similar_neurons.to_binary().with_context(|| 
             format!("Failed to serialize similar neuron vector for neuron {neuron_index} in model {model_name}.")
         )?;
