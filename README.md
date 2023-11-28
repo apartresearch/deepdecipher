@@ -2,7 +2,7 @@
 
 🦠 Official repository and open-source website for DeepDecipher.
 
-paper: DeepDecipher: [Accessing and Investigating Neuron Activation in Large Language Models](https://arxiv.org/abs/2310.01870)
+Paper: [Accessing and Investigating Neuron Activation in Large Language Models](https://arxiv.org/abs/2310.01870)
 
 
 Website available [here](deepdecipher.org).
