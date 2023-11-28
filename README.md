@@ -1,6 +1,9 @@
 # DeepDecipher
 
-🦠 Official repository and open-source website for DeepDecipher- The associated paper is under review. 
+🦠 Official repository and open-source website for DeepDecipher.
+
+Paper: [Accessing and Investigating Neuron Activation in Large Language Models](https://arxiv.org/abs/2310.01870)
+
 
 Website available [here](deepdecipher.org).
 Contributers, see [below](#contributor-setup) for a setup guide.
@@ -166,3 +169,18 @@ Simply download the x86 target with the suggested command and everything should 
 ## Repo standards
 
 We use the [Gitmoji commit standards](gitmoji.dev).
+
+## References
+
+To cite our work, please use the following BibTeX entry:
+
+
+```bibtex
+@misc{garde2023deepdecipher,
+  title={DeepDecipher: Accessing and Investigating Neuron Activation in Large Language Models},
+  author={Albert Garde and Esben Kran and Fazl Barez},
+  year={2023},
+  eprint={2310.01870},
+  archivePrefix={arXiv},
+  primaryClass={cs.LG}
+}
