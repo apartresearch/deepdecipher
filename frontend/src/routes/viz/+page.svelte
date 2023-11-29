@@ -45,7 +45,7 @@
 			<td
 				>Shows how much the neuron activates to each token in a series of text examples. The
 				examples chosen are the examples with the highest activations for that neuron.
-			</td><td><a href="neuroscope.io">Website</a></td>
+			</td><td><a href="https://neuroscope.io/">Website</a></td>
 		</tr>
 		<tr class="model-table-row">
 			<td>Neuron explanation</td>
