@@ -29,12 +29,13 @@ GROUP BY model_id
 """
 
 counts = cursor.execute(count_query, (n2g_id, neuron_store_id)).fetchall()
+
 good_emoji = "\N{white heavy check mark}"
 bad_emoji = "\N{cross mark}"
 
 for name, num_neurons, n2g_count, neuron_store_count in counts:
-    n2g_percent = f"{n2g_count / num_neurons * 100:.0f}%"
-    neuron_store_percent = f"{neuron_store_count / num_neurons * 100:.0f}%"
+    n2g_percent = f"{n2g_count * 100 // num_neurons}%"
+    neuron_store_percent = f"{neuron_store_count* 100 // num_neurons }%"
     col_width = 13
     if num_neurons == n2g_count and num_neurons == neuron_store_count:
         print(f"{good_emoji} {name}: ")
