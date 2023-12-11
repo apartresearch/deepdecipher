@@ -7,12 +7,12 @@ use crate::data::{
 };
 
 use anyhow::{bail, Context, Result};
+use regex::Regex;
 use tokio::fs;
 
 fn neuron_path(root: impl AsRef<Path>, neuron_index: NeuronIndex) -> PathBuf {
     let NeuronIndex { layer, neuron } = neuron_index;
     root.as_ref()
-        .join(format!("layer_{layer}"))
         .join(format!("{layer}_{neuron}"))
         .join("graph")
 }
@@ -24,13 +24,26 @@ async fn retrieve_neuron2graph_neuron(
     neuron_index: NeuronIndex,
 ) -> Result<bool> {
     let path = neuron_path(root, neuron_index);
-    let graph = match fs::read_to_string(path).await.map(|graph| Graph { graph }) {
-        Ok(graph) => graph,
-        Err(err) => {
-            if err.kind() == std::io::ErrorKind::NotFound {
+    let graph: Graph = match fs::read_to_string(path).await {
+        Ok(graph_string) => {
+            let regex = Regex::new(r#"\[label=([^"]\S*)"#)
+                .context("Failed to compile regex. This should never happen.")?;
+            let graph_str = regex.replace_all(graph_string.as_str(), r#"[label="$1""#);
+            let graph = match graphviz_rust::parse(graph_str.as_ref()) {
+                Ok(graph) => graph,
+                Err(parse_error) => {
+                    bail!("Failed to parse graph for neuron {neuron_index} in model '{}'. Error: '{parse_error}'", model_handle.name())
+                }
+            };
+            Graph::from_dot(graph).with_context(|| 
+                format!("Succesfully parsed graph, but graph is not a valid neuron2graph grpah. Neuron {neuron_index} in model '{}'.", model_handle.name())
+            )?
+        }
+        Err(read_err) => {
+            if read_err.kind() == std::io::ErrorKind::NotFound {
                 return Ok(false);
             } else {
-                return Err(err)
+                return Err(read_err)
                     .with_context(|| format!("Failed to read neuron2graph graph file for neuron {neuron_index} in model '{}'.", model_handle.name()));
             }
         }
@@ -50,6 +63,13 @@ pub async fn retrieve_neuron2graph(
     model_handle: &mut ModelHandle,
     path: impl AsRef<Path>,
 ) -> Result<()> {
+
+    let path = path.as_ref();
+
+    if !path.is_dir() {
+        bail!("Path '{}' is not a directory.", path.display())
+    }
+
     let database = model_handle.database();
 
     let data_type = if let Some(data_type) = database.data_type("neuron2graph").await? {
@@ -86,7 +106,7 @@ pub async fn retrieve_neuron2graph(
     print!("Storing neuron graphs: 0/{num_total_neurons}");
     let mut num_missing = 0;
     for neuron_index in model_handle.metadata().neuron_indices() {
-        if !retrieve_neuron2graph_neuron(model_handle, &data_type, path.as_ref(), neuron_index)
+        if !retrieve_neuron2graph_neuron(model_handle, &data_type, path, neuron_index)
             .await?
         {
             num_missing += 1

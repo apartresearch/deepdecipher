@@ -87,7 +87,7 @@
 						<a href="https://n2g.apartresearch.com">Read what this is</a>
 					</h2>
 					{#if 'data' in neuron2graphData}
-						<Neuron2Graph graphString={neuron2graphData.data.graph} />
+						<Neuron2Graph graphString={neuron2graphData.data.graphviz} />
 					{:else}
 						<div class="not-available">Neuron semantic graph is not available for this neuron.</div>
 					{/if}

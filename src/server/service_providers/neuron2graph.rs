@@ -86,6 +86,6 @@ impl ServiceProviderTrait for Neuron2Graph {
         let similar = neuron_store_data_type
             .neuron_similarities(layer_index, neuron_index)
             .await?;
-        Ok(Neuron2GraphDataObject { graph, similar })
+        Ok(Neuron2GraphDataObject::new(graph, similar))
     }
 }

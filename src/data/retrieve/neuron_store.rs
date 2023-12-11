@@ -16,17 +16,24 @@ pub async fn store_similar_neurons(
     let model_name = model_handle.name().to_owned();
     let model_name = model_name.as_str();
     print!("Calculating neuron similarities...");
-    let neuron_relatedness = neuron_store.neuron_similarity();
-    println!("\rNeuron similarities calculated.    ");
+    let neuron_relatedness = neuron_store.neuron_similarity(similarity_threshold).with_context(|| 
+        format!("Failed to calculate neuron similarities for model '{model_name}'.",)
+    )?;
 
     let num_neurons = model_handle.metadata().num_total_neurons;
     let mut num_completed = 0;
     print!("Adding neuron similarities to database: {num_completed}/{num_neurons}",);
     for neuron_index in model_handle.metadata().neuron_indices() {
         let similar_neurons =
-            neuron_relatedness.similar_neurons(neuron_index, similarity_threshold);
-        let data = similar_neurons.to_binary().with_context(|| format!("Failed to serialize similar neuron vector for neuron {neuron_index} in model {model_name}."))?;
-        model_handle.add_neuron_data(data_type_handle, neuron_index.layer, neuron_index.neuron, data).await.with_context(||format!("Failed to add similar neuron vector for neuron {neuron_index} in model {model_name} to database."))?;
+            neuron_relatedness.similar_neurons(neuron_index).with_context(|| 
+                format!("Failed to get similar neurons for neuron {neuron_index} in model '{model_name}'.")
+            )?;
+        let data = similar_neurons.to_binary().with_context(|| 
+            format!("Failed to serialize similar neuron vector for neuron {neuron_index} in model {model_name}.")
+        )?;
+        model_handle.add_neuron_data(data_type_handle, neuron_index.layer, neuron_index.neuron, data).await.with_context(||
+            format!("Failed to add similar neuron vector for neuron {neuron_index} in model {model_name} to database.")
+        )?;
 
         num_completed += 1;
         print!("\rAdding neuron similarities to database: {num_completed}/{num_neurons}",);
@@ -73,7 +80,9 @@ pub async fn store_neuron_store(
             format!("Failed to add neuron store data for model '{model_name}' to database.",)
         })?;
 
-    store_similar_neurons(model_handle, &data_type, neuron_store, similarity_threshold).await
+    store_similar_neurons(model_handle, &data_type, neuron_store, similarity_threshold)
+        .await
+        .context("Failed to store similar neurons.")
 }
 
 pub async fn store_raw_neuron_store(
@@ -84,7 +93,8 @@ pub async fn store_raw_neuron_store(
 ) -> Result<()> {
     let metadata = model_handle.metadata();
     let neuron_store =
-        NeuronStore::from_raw(neuron_store, metadata.num_layers, metadata.layer_size)?;
+        NeuronStore::from_raw(neuron_store, metadata.num_layers, metadata.layer_size)
+            .context("Failed to convert raw neuron store")?;
     store_neuron_store(database, model_handle, neuron_store, similarity_threshold).await
 }
 
@@ -97,5 +107,12 @@ pub async fn retrieve_neuron_store(
     let neuron_store = NeuronStoreRaw::load(neuron_store_path)
         .with_context(|| format!("Failed to load neuron store from '{neuron_store_path:?}'."))?;
     let database = model_handle.database().clone();
-    store_raw_neuron_store(&database, model_handle, neuron_store, similarity_threshold).await
+    store_raw_neuron_store(&database, model_handle, neuron_store, similarity_threshold)
+        .await
+        .with_context(|| {
+            format!(
+                "Failed to store neuron store for model '{model_name}'.",
+                model_name = model_handle.name()
+            )
+        })
 }
