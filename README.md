@@ -98,8 +98,7 @@ Tested in Windows Subsystem for Linux with Ubuntu 22.04.2 LTS.
    Any version from the last few years should work.
    The newest one definitely will.
 3. Clone the repo and move to the root of the repo.
-4. Set up a python environment using `python -m venv .env`.
-5. Activate the environment.
+4. Ensure a Python environment is active (conda, venv, whatever...)
 6. Install the `maturin` package by running `python -m pip install maturin`.
 7. Build the package by running `maturin develop --release`.
    The package will now be installed in your environment.
