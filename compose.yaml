@@ -13,7 +13,7 @@ services:
       context: .
       target: backend-prod
     volumes:
-      - ./${DB_PATH}:/data.db
+      - ./${DB_PATH?database path}:/data.db
     ports:
       - 8080:8080
 
