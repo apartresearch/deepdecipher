@@ -63,7 +63,7 @@ tokio = { version = "1.28.2", features = [
     "fs",
     "macros",
 ] }
-reqwest = { version = "0.11.18", features = ["json"] }
+reqwest = { version = "0.11.18", default-features = false, features = ["json"] }
 ndarray = { version = "0.15.6", features = ["serde"] }
 scraper = "0.17.1"
 delegate = "0.10.0"
@@ -83,4 +83,4 @@ criterion = "0.5.1"
 rand = "0.8.5"
 
 [features]
-python = ["dep:pyo3", "dep:numpy", "dep:ctrlc"]
+python = ["dep:pyo3", "dep:numpy", "dep:ctrlc", "reqwest/default-tls"]
