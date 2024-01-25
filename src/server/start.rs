@@ -24,7 +24,7 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
         log::error!("Database not found at {database_path:?}.");
         bail!("Database not found at {database_path:?}.");
     };
-    let url = "127.0.0.1";
+    let url = config.url();
     let port = config.port();
     log::info!("Serving DeepDecipher on http://{url}:{port}/");
     let state = web::Data::new(State::new(database)?);
