@@ -26,6 +26,9 @@
 **/npm-debug.log
 **/secrets.dev.yaml
 **/values.dev.yaml
+/frontend/node_modules
+/frontend/.svelte-kit
+/frontend/build
 /bin
 /target
 LICENSE
