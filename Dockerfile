@@ -1,15 +1,13 @@
-FROM lukemathwalker/cargo-chef:latest as planner
+# Use an image with a specific version of Rust.
+FROM lukemathwalker/cargo-chef:0.1.62-rust-1.75-slim-buster as planner
 
 WORKDIR /deepdecipher
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
 
-FROM lukemathwalker/cargo-chef:latest-rust-slim-buster as backend-build
+FROM lukemathwalker/cargo-chef:0.1.62-rust-1.75-slim-buster as backend-build
 WORKDIR /deepdecipher
-
-# Necessary for `reqwest` to perform https requests
-RUN apt-get update && apt-get install -y pkg-config libssl-dev
 
 # Build dependencies
 COPY  --from=planner /deepdecipher/recipe.json recipe.json
@@ -21,9 +19,6 @@ RUN cargo build --release
 
 # our final base
 FROM debian:buster-slim as backend-prod
-
-# Necessary for `reqwest` to perform https requests
-RUN apt-get update && apt-get install -y pkg-config libssl-dev
 
 # copy the build artifact from the build stage
 COPY --from=backend-build /deepdecipher/target/release/server /deepdecipher-backend
