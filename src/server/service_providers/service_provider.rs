@@ -1,6 +1,6 @@
 use std::{future::Future, pin::Pin};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use delegate::delegate;
 use serde::{Deserialize, Serialize};
@@ -46,11 +46,11 @@ pub trait ServiceProviderTrait: Clone + Serialize + Deserialize<'static> + Send 
         query: &serde_json::Value,
         model_handle: &ModelHandle,
     ) -> Result<Self::ModelPageObject> {
-        bail!(
+        Err(anyhow!(
             "No model data exists for service '{}' for model '{}'.",
             service_name,
             model_handle.name()
-        );
+        ))
     }
 
     async fn layer_object(
@@ -61,11 +61,11 @@ pub trait ServiceProviderTrait: Clone + Serialize + Deserialize<'static> + Send 
         model_handle: &ModelHandle,
         layer_index: u32,
     ) -> Result<Self::LayerPageObject> {
-        bail!(
+        Err(anyhow!(
             "No layer data exists for service '{}' for model '{}'.",
             service_name,
             model_handle.name()
-        );
+        ))
     }
 
     async fn neuron_object(
@@ -77,11 +77,11 @@ pub trait ServiceProviderTrait: Clone + Serialize + Deserialize<'static> + Send 
         layer_index: u32,
         neuron_index: u32,
     ) -> Result<Self::NeuronPageObject> {
-        bail!(
+        Err(anyhow!(
             "No neuron data exists for service '{}' for model '{}'.",
             service_name,
             model_handle.name()
-        );
+        ))
     }
 
     async fn model_binary(

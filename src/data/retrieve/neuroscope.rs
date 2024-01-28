@@ -58,7 +58,7 @@ async fn scrape_neuron_page_to_database(
     let model_name = model.name();
     let first_text = page
         .texts()
-        .get(0)
+        .first()
         .with_context(|| format!("Failed to get first text from neuroscope page for neuron {neuron_index} in model '{model_name}'."))?;
     let activation_range = first_text.max_activation() - first_text.min_activation();
 
