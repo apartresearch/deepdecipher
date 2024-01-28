@@ -61,7 +61,7 @@ impl ServiceProviderTrait for Neuron2GraphSearch {
             .split(',')
             .map(TokenSearch::from_str)
             .collect::<Result<Vec<_>>>()?;
-        let results = token_searches
+        let mut results = token_searches
             .into_iter()
             .map(|token_search| {
                 let TokenSearch {
@@ -82,6 +82,7 @@ impl ServiceProviderTrait for Neuron2GraphSearch {
             .with_context(|| "At least one token search should be provided.")?
             .into_iter()
             .collect::<Vec<_>>();
+        results.sort_unstable();
 
         Ok(results)
     }
