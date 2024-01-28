@@ -1,11 +1,10 @@
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 
+use super::{data_type::DataValidationError, DataTypeDiscriminants, ModelDataType};
 use crate::data::{
     neuron_store::SimilarNeurons, DataTypeHandle, ModelHandle, NeuronStore as NeuronStoreData,
 };
-
-use super::{data_type::DataValidationError, DataTypeDiscriminants, ModelDataType};
 
 pub struct NeuronStore {
     model: ModelHandle,
@@ -68,10 +67,23 @@ impl NeuronStore {
             .model
             .neuron_data(&self.data_type, layer_index, neuron_index)
             .await
-            .with_context(|| format!("Failed to get neuron store data for neuron l{layer_index}n{neuron_index} in model '{model_name}'.",))?
             .with_context(|| {
-                format!("Database has no neuron store data for neuron l{layer_index}n{neuron_index} in model '{model_name}'.")
+                format!(
+                    "Failed to get neuron store data for neuron l{layer_index}n{neuron_index} in \
+                     model '{model_name}'.",
+                )
+            })?
+            .with_context(|| {
+                format!(
+                    "Database has no neuron store data for neuron l{layer_index}n{neuron_index} \
+                     in model '{model_name}'."
+                )
             })?;
-        SimilarNeurons::from_binary(raw_data.as_slice()).with_context(|| format!("Failed to deserialize neuron similarities for neuron l{layer_index}n{neuron_index} in model '{model_name}'."))
+        SimilarNeurons::from_binary(raw_data.as_slice()).with_context(|| {
+            format!(
+                "Failed to deserialize neuron similarities for neuron \
+                 l{layer_index}n{neuron_index} in model '{model_name}'."
+            )
+        })
     }
 }

@@ -1,13 +1,14 @@
 //! Sets up logging.
 
-use env_logger::{fmt::Color, Logger, Target};
-use log::{Level, LevelFilter, Log};
-use multi_log::MultiLogger;
 use std::{
     fs,
     io::Write,
     path::{Path, PathBuf},
 };
+
+use env_logger::{fmt::Color, Logger, Target};
+use log::{Level, LevelFilter, Log};
+use multi_log::MultiLogger;
 
 use crate::cli;
 

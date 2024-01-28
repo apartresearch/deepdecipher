@@ -4,6 +4,7 @@ use anyhow::{Context, Result};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
+use super::service_provider::{NoData, ServiceProviderTrait};
 use crate::{
     data::{
         data_types::NeuronStore as NeuronStoreObject, DataTypeHandle, Database, ModelHandle,
@@ -11,8 +12,6 @@ use crate::{
     },
     server::State,
 };
-
-use super::service_provider::{NoData, ServiceProviderTrait};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Neuron2GraphSearch;
@@ -24,9 +23,14 @@ impl ServiceProviderTrait for Neuron2GraphSearch {
     type NeuronPageObject = NoData;
 
     async fn required_data_types(&self, database: &Database) -> Result<Vec<DataTypeHandle>> {
-        database.data_type("neuron_store").await?.context(
-            "No data object named 'neuron_store' in database. This should have been checked when service was created."
-        ).map(|data_type| vec![data_type])
+        database
+            .data_type("neuron_store")
+            .await?
+            .context(
+                "No data object named 'neuron_store' in database. This should have been checked \
+                 when service was created.",
+            )
+            .map(|data_type| vec![data_type])
     }
 
     async fn model_object(
@@ -47,7 +51,8 @@ impl ServiceProviderTrait for Neuron2GraphSearch {
             .await
             .with_context(|| {
                 format!(
-                    "Model '{}' has no 'neuron_store' data object. This should have been checked earlier.",
+                    "Model '{}' has no 'neuron_store' data object. This should have been checked \
+                     earlier.",
                     model.name()
                 )
             })?;

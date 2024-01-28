@@ -1,8 +1,7 @@
 use anyhow::{bail, Context};
 
-use crate::{data::NeuronIndex, Index};
-
 use super::{DataTypeHandle, ModelHandle};
+use crate::{data::NeuronIndex, Index};
 
 impl ModelHandle {
     pub async fn missing_model_items(

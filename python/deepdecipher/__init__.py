@@ -1,14 +1,14 @@
 from .deepdecipher import (
-    log_init,
-    start_server,
     Database,
+    DataType,
+    DataTypeHandle,
+    Index,
     ModelHandle,
     ModelMetadata,
-    DataTypeHandle,
-    DataType,
     ServiceHandle,
     ServiceProvider,
-    Index,
+    log_init,
+    start_server,
 )
 
 deepdecipher.setup_keyboard_interrupt()

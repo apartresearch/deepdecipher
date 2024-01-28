@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
+use super::service_provider::{NoData, ServiceProviderTrait};
 use crate::{
     data::{
         data_objects::NeuronExplainerPage, data_types::NeuronExplainer as NeuronExplainerData,
@@ -10,8 +11,6 @@ use crate::{
     },
     server::State,
 };
-
-use super::service_provider::{NoData, ServiceProviderTrait};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct NeuronExplainer;
@@ -39,10 +38,12 @@ impl ServiceProviderTrait for NeuronExplainer {
 
     async fn required_data_types(&self, database: &Database) -> Result<Vec<DataTypeHandle>> {
         let data_type_name = "neuron_explainer";
-        let data_type = database
-            .data_type(data_type_name)
-            .await?
-            .with_context(|| format!("No data object with name '{data_type_name}'. This should have been checked when the service was created."))?;
+        let data_type = database.data_type(data_type_name).await?.with_context(|| {
+            format!(
+                "No data object with name '{data_type_name}'. This should have been checked when \
+                 the service was created."
+            )
+        })?;
         Ok(vec![data_type])
     }
 
@@ -66,11 +67,18 @@ impl ServiceProviderTrait for NeuronExplainer {
         {
             page
         } else {
-            neuron_explainer::fetch_neuron(&Client::new(), neuron_explainer::model_url(model.name(), index)?).await.with_context(||
-                    format!("No neuron explainer page exists for neuron {index} in model '{model_name}' and fetching from source failed.", 
-                        model_name = model.name()
-                    )
-                )?
+            neuron_explainer::fetch_neuron(
+                &Client::new(),
+                neuron_explainer::model_url(model.name(), index)?,
+            )
+            .await
+            .with_context(|| {
+                format!(
+                    "No neuron explainer page exists for neuron {index} in model '{model_name}' \
+                     and fetching from source failed.",
+                    model_name = model.name()
+                )
+            })?
         };
         Ok(page)
     }

@@ -2,15 +2,14 @@ use anyhow::Context;
 use pyo3::prelude::*;
 use tokio::runtime::Runtime;
 
-use crate::{
-    data::{data_types::DataType, Database},
-    server::Service,
-};
-
 use super::{
     data_type::PyDataType, data_type_handle::PyDataTypeHandle, model_handle::PyModelHandle,
     model_metadata::PyModelMetadata, service_handle::PyServiceHandle,
     service_provider::PyServiceProvider,
+};
+use crate::{
+    data::{data_types::DataType, Database},
+    server::Service,
 };
 
 #[pyclass(name = "Database")]
@@ -77,8 +76,9 @@ impl PyDatabase {
             DataType::Json => {}
             data_type => {
                 return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
-                "Objects of data type {data_type:?} should be added with the appropriate method.",
-            )))
+                    "Objects of data type {data_type:?} should be added with the appropriate \
+                     method.",
+                )))
             }
         }
         let result = Runtime::new()

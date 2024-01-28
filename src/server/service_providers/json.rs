@@ -2,12 +2,12 @@ use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use crate::data::data_types::Json as JsonData;
-use crate::data::{DataTypeHandle, Database, ModelHandle};
-use crate::server::State;
-use crate::Index;
-
 use super::service_provider::ServiceProviderTrait;
+use crate::{
+    data::{data_types::Json as JsonData, DataTypeHandle, Database, ModelHandle},
+    server::State,
+    Index,
+};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Json(String);
@@ -45,9 +45,17 @@ async fn page(
     let model_name = model.name();
     let json_object = data_type(state.database(), model, data_type_name).await?;
     let query = query.as_object().context("Query is not an object.")?;
-    let json = json_object.page(index).await.with_context(||
-        format!("Failed to get json data object '{data_type_name}' for {index} of model '{model_name}'.", index = index.error_string())
-    )?.value;
+    let json = json_object
+        .page(index)
+        .await
+        .with_context(|| {
+            format!(
+                "Failed to get json data object '{data_type_name}' for {index} of model \
+                 '{model_name}'.",
+                index = index.error_string()
+            )
+        })?
+        .value;
     if query.is_empty() {
         Ok(json)
     } else if let Some(json_index) = query.get("get") {
@@ -57,16 +65,32 @@ async fn page(
                 if let Some(value) = json.get_mut(json_index) {
                     Some(value)
                 } else {
-                    let int_index = json_index.parse::<usize>().with_context(|| format!("No field '{json_index}' exists and the index is not an integer."))?;
+                    let int_index = json_index.parse::<usize>().with_context(|| {
+                        format!("No field '{json_index}' exists and the index is not an integer.")
+                    })?;
                     json.get_mut(int_index)
                 }
             }
-            serde_json::Value::Number(json_index) => json.get_mut(json_index.as_u64().context("Query 'get' field is not a u64.")? as usize),
+            serde_json::Value::Number(json_index) => json.get_mut(
+                json_index
+                    .as_u64()
+                    .context("Query 'get' field is not a u64.")? as usize,
+            ),
             _ => bail!("Query 'get' field is not a string or a number."),
-        }.with_context(|| format!("Failed to get json value '{json_index}' for {index} of model '{model_name}' and data object '{data_type_name}'.", index = index.error_string()))
+        }
+        .with_context(|| {
+            format!(
+                "Failed to get json value '{json_index}' for {index} of model '{model_name}' and \
+                 data object '{data_type_name}'.",
+                index = index.error_string()
+            )
+        })
         .map(serde_json::Value::take)
     } else {
-        bail!("Invalid query for json service. Query must be empty or contain a 'get' field. Query: {query:?}")
+        bail!(
+            "Invalid query for json service. Query must be empty or contain a 'get' field. Query: \
+             {query:?}"
+        )
     }
 }
 
@@ -78,10 +102,12 @@ impl ServiceProviderTrait for Json {
 
     async fn required_data_types(&self, database: &Database) -> Result<Vec<DataTypeHandle>> {
         let Self(ref data_type_name) = self;
-        let data_type = database
-            .data_type(data_type_name)
-            .await?
-            .with_context(|| format!("No data object with name '{data_type_name}'. This should have been checked when the service was created."))?;
+        let data_type = database.data_type(data_type_name).await?.with_context(|| {
+            format!(
+                "No data object with name '{data_type_name}'. This should have been checked when \
+                 the service was created."
+            )
+        })?;
         Ok(vec![data_type])
     }
 

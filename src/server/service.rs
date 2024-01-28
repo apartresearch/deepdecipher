@@ -1,12 +1,11 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
+use super::{response::Body, RequestType, ServiceProvider, State};
 use crate::{
     data::{DataTypeHandle, Database, ModelHandle},
     Index,
 };
-
-use super::{response::Body, RequestType, ServiceProvider, State};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Service {

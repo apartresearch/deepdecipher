@@ -1,14 +1,16 @@
-use std::collections::{HashMap, HashSet};
-use std::fs;
-use std::io::Write;
-use std::path::Path;
-use std::time::Instant;
-use std::{fmt::Display, str::FromStr};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Display,
+    fs,
+    io::Write,
+    path::Path,
+    str::FromStr,
+    time::Instant,
+};
 
 use anyhow::{bail, Context, Result};
 use itertools::Itertools;
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use snap::raw::{Decoder, Encoder};
 
 use super::NeuronIndex;
@@ -108,7 +110,9 @@ pub struct NeuronSimilarity {
 impl NeuronSimilarity {
     pub fn similar_neurons(&self, neuron_index: NeuronIndex) -> Result<&SimilarNeurons> {
         let index = neuron_index.flat_index(self.layer_size);
-        self.similar_neurons.get(index).with_context(|| format!("No similar neuron array for neuron index {neuron_index}."))
+        self.similar_neurons
+            .get(index)
+            .with_context(|| format!("No similar neuron array for neuron index {neuron_index}."))
     }
 }
 
@@ -148,9 +152,15 @@ impl NeuronStore {
         for (token_id, (_token, neuron_indices)) in self.activating.iter().enumerate() {
             for &neuron_index in neuron_indices {
                 let index = neuron_index.flat_index(self.layer_size);
-                activating_tokens.get_mut(index).with_context(|| 
-                    format!("Index {index} somehow greater than the number of neurons. This should not be possible")
-                )?.push(token_id as u32);
+                activating_tokens
+                    .get_mut(index)
+                    .with_context(|| {
+                        format!(
+                            "Index {index} somehow greater than the number of neurons. This \
+                             should not be possible"
+                        )
+                    })?
+                    .push(token_id as u32);
             }
         }
 
@@ -160,62 +170,110 @@ impl NeuronStore {
         for (token_id, (_token, neuron_indices)) in self.important.iter().enumerate() {
             for &neuron_index in neuron_indices {
                 let index = neuron_index.flat_index(self.layer_size);
-                important_tokens.get_mut(index).with_context(|| 
-                    format!("Index {index} somehow greater than the number of neurons. This should not be possible")
-                )?.push(token_id as u32);
+                important_tokens
+                    .get_mut(index)
+                    .with_context(|| {
+                        format!(
+                            "Index {index} somehow greater than the number of neurons. This \
+                             should not be possible"
+                        )
+                    })?
+                    .push(token_id as u32);
             }
         }
 
         println!("Finding similar neurons...");
         std::io::stdout().flush().unwrap();
-        let mut similar_neurons: Vec<SimilarNeurons> = (0..num_neurons).map(|_| SimilarNeurons { similar_neurons: vec![] }).collect();
+        let mut similar_neurons: Vec<SimilarNeurons> = (0..num_neurons)
+            .map(|_| SimilarNeurons {
+                similar_neurons: vec![],
+            })
+            .collect();
         let start = Instant::now();
-        for (neuron, (this_activating_tokens, this_important_tokens)) in activating_tokens.iter().zip(important_tokens.iter()).enumerate() {
+        for (neuron, (this_activating_tokens, this_important_tokens)) in activating_tokens
+            .iter()
+            .zip(important_tokens.iter())
+            .enumerate()
+        {
             let this_neuron_index = NeuronIndex::from_flat_index(self.layer_size, neuron);
             let neurons_per_second = (neuron as f32) / start.elapsed().as_secs_f32();
-            print!("Neuron {this_neuron_index}. Neurons per second: {neurons_per_second:.0}        \r");
-            for (other_neuron, (other_activating_tokens, other_important_tokens)) in activating_tokens.iter().zip(important_tokens.iter()).enumerate().skip(neuron + 1) {
+            print!(
+                "Neuron {this_neuron_index}. Neurons per second: {neurons_per_second:.0}        \r"
+            );
+            for (other_neuron, (other_activating_tokens, other_important_tokens)) in
+                activating_tokens
+                    .iter()
+                    .zip(important_tokens.iter())
+                    .enumerate()
+                    .skip(neuron + 1)
+            {
                 let mut total_common = 0;
-                
+
                 let mut this_activating_iter = this_activating_tokens.iter().copied().peekable();
                 let mut other_activating_iter = other_activating_tokens.iter().copied().peekable();
-                while let (Some(this_activating), Some(other_activating)) = (this_activating_iter.peek(), other_activating_iter.peek()) {
+                while let (Some(this_activating), Some(other_activating)) =
+                    (this_activating_iter.peek(), other_activating_iter.peek())
+                {
                     match this_activating.cmp(other_activating) {
-                        std::cmp::Ordering::Less => { this_activating_iter.next(); },
+                        std::cmp::Ordering::Less => {
+                            this_activating_iter.next();
+                        }
                         std::cmp::Ordering::Equal => {
                             total_common += 1;
                             this_activating_iter.next();
                             other_activating_iter.next();
-
-                        },
-                        std::cmp::Ordering::Greater => { other_activating_iter.next(); },
+                        }
+                        std::cmp::Ordering::Greater => {
+                            other_activating_iter.next();
+                        }
                     }
                 }
                 let mut this_important_iter = this_important_tokens.iter().copied().peekable();
                 let mut other_important_iter = other_important_tokens.iter().copied().peekable();
-                while let (Some(this_important), Some(other_important)) = (this_important_iter.peek(), other_important_iter.peek()) {
+                while let (Some(this_important), Some(other_important)) =
+                    (this_important_iter.peek(), other_important_iter.peek())
+                {
                     match this_important.cmp(other_important) {
-                        std::cmp::Ordering::Less => { this_important_iter.next(); },
+                        std::cmp::Ordering::Less => {
+                            this_important_iter.next();
+                        }
                         std::cmp::Ordering::Equal => {
                             total_common += 1;
                             this_important_iter.next();
                             other_important_iter.next();
-
-                        },
-                        std::cmp::Ordering::Greater => { other_important_iter.next(); },
+                        }
+                        std::cmp::Ordering::Greater => {
+                            other_important_iter.next();
+                        }
                     }
                 }
 
-                let possible_common = activating_tokens.len().min(other_activating_tokens.len()) + important_tokens.len().min(other_important_tokens.len());
+                let possible_common = activating_tokens.len().min(other_activating_tokens.len())
+                    + important_tokens.len().min(other_important_tokens.len());
                 let similarity = (total_common as f32) / (possible_common as f32);
                 if similarity >= threshold {
-                    let other_neuron_index = NeuronIndex::from_flat_index(self.layer_size, other_neuron);
-                    similar_neurons.get_mut(neuron).with_context(|| 
-                        format!("Index {neuron} of neuron somehow greater than the number of neurons. This should not be possible")
-                    )?.similar_neurons.push(SimilarNeuron::new(other_neuron_index, similarity));
-                    similar_neurons.get_mut(other_neuron).with_context(|| 
-                        format!("Index {other_neuron} of other neuron somehow greater than the number of neurons. This should not be possible")
-                    )?.similar_neurons.push(SimilarNeuron::new(this_neuron_index, similarity));
+                    let other_neuron_index =
+                        NeuronIndex::from_flat_index(self.layer_size, other_neuron);
+                    similar_neurons
+                        .get_mut(neuron)
+                        .with_context(|| {
+                            format!(
+                                "Index {neuron} of neuron somehow greater than the number of \
+                                 neurons. This should not be possible"
+                            )
+                        })?
+                        .similar_neurons
+                        .push(SimilarNeuron::new(other_neuron_index, similarity));
+                    similar_neurons
+                        .get_mut(other_neuron)
+                        .with_context(|| {
+                            format!(
+                                "Index {other_neuron} of other neuron somehow greater than the \
+                                 number of neurons. This should not be possible"
+                            )
+                        })?
+                        .similar_neurons
+                        .push(SimilarNeuron::new(this_neuron_index, similarity));
                 }
             }
         }

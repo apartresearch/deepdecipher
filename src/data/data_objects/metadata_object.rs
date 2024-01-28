@@ -1,9 +1,8 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use crate::data::{Metadata, ModelHandle};
-
 use super::{data_object, DataObject};
+use crate::data::{Metadata, ModelHandle};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MetadataObject {

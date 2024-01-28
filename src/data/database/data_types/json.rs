@@ -1,5 +1,7 @@
+use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 
+use super::{data_type::DataValidationError, DataTypeDiscriminants, ModelDataType};
 use crate::{
     data::{
         data_objects::{DataObject, JsonData},
@@ -7,10 +9,6 @@ use crate::{
     },
     Index,
 };
-
-use super::{data_type::DataValidationError, DataTypeDiscriminants, ModelDataType};
-
-use anyhow::{bail, Context, Result};
 
 pub struct Json {
     model: ModelHandle,
@@ -81,26 +79,42 @@ impl Json {
     pub async fn layer_page(&self, layer_index: u32) -> Result<JsonData> {
         let model_name = self.model.name();
         let data_type_name = self.data_type.name();
-        let raw_data = self.model
-            .layer_data( &self.data_type, layer_index)
-            .await.with_context(|| {
-                format!("Failed to get '{data_type_name}' layer data for layer {layer_index} in model '{model_name}'.")
+        let raw_data = self
+            .model
+            .layer_data(&self.data_type, layer_index)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to get '{data_type_name}' layer data for layer {layer_index} in model \
+                     '{model_name}'."
+                )
             })?
             .with_context(|| {
-                format!("Database has no '{data_type_name}' layer data for layer {layer_index} in model '{model_name}'.")
+                format!(
+                    "Database has no '{data_type_name}' layer data for layer {layer_index} in \
+                     model '{model_name}'."
+                )
             })?;
         JsonData::from_binary(raw_data.as_slice())
     }
     pub async fn neuron_page(&self, layer_index: u32, neuron_index: u32) -> Result<JsonData> {
         let model_name = self.model.name();
         let data_type_name = self.data_type.name();
-        let raw_data = self.model
-            .neuron_data( &self.data_type, layer_index, neuron_index)
-            .await.with_context(|| {
-                format!("Failed to get '{data_type_name}' neuron data for neuron l{layer_index}n{neuron_index} in model '{model_name}'.")
+        let raw_data = self
+            .model
+            .neuron_data(&self.data_type, layer_index, neuron_index)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to get '{data_type_name}' neuron data for neuron \
+                     l{layer_index}n{neuron_index} in model '{model_name}'."
+                )
             })?
             .with_context(|| {
-                format!("Database has no '{data_type_name}' neuron data for neuron l{layer_index}n{neuron_index} in model '{model_name}'.")
+                format!(
+                    "Database has no '{data_type_name}' neuron data for neuron \
+                     l{layer_index}n{neuron_index} in model '{model_name}'."
+                )
             })?;
         JsonData::from_binary(raw_data.as_slice())
     }
