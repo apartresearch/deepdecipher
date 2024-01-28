@@ -1,0 +1,29 @@
+name: Pre-merge
+
+on:
+  pull_request:
+    branches: [ "main", "ci-test" ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-Dwarnings"
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+    - uses: Swatinem/rust-cache@v2
+      with:
+        prefix-key: "rust-dependencies"
+    - name: Build
+      run: cargo build --verbose
+    - name: Clippy
+      run: cargo clippy --no-deps
+    - name: Format check
+      run: cargo fmt --check
+    - name: Run tests
+      run: cargo test --verbose
