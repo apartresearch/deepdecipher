@@ -12,9 +12,8 @@ use graphviz_rust::{
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
-use crate::data::SimilarNeurons;
-
 use super::{data_object, DataObject};
+use crate::data::SimilarNeurons;
 
 fn id_to_str(id: &Id) -> &str {
     match id {
@@ -24,9 +23,13 @@ fn id_to_str(id: &Id) -> &str {
 
 fn id_to_usize(id: &Id) -> Result<usize> {
     let id_string = id_to_str(id);
-    id_string.parse::<usize>().with_context(|| format!(
-        "Could not parse node id {} as usize. It is assumed that all N2G graphs only use positive integer node ids.", id_string
-    ))
+    id_string.parse::<usize>().with_context(|| {
+        format!(
+            "Could not parse node id {} as usize. It is assumed that all N2G graphs only use \
+             positive integer node ids.",
+            id_string
+        )
+    })
 }
 
 fn dot_node_to_id_label_importance(node: &DotNode) -> Result<(usize, String, f32)> {
@@ -40,15 +43,26 @@ fn dot_node_to_id_label_importance(node: &DotNode) -> Result<(usize, String, f32
         .find(|Attribute(key, _)| id_to_str(key) == "label")
         .with_context(|| format!("Node with id {id} has no attribute 'label'."))?;
     // Assume that the `fillcolor` attribute is a 9 character string with '"' enclosing a hexadecimal color code.
-    let color_str = get_attribute(attributes.as_slice(), "fillcolor").with_context(|| format!(
-        "Node {id} has no attribute 'fillcolor'. It is assumed that all N2G nodes have a 'fillcolor' attribute that signifies their importance."
-    ))?;
-    let importance_hex = color_str.get(4..6).with_context(|| format!(
-            "The 'fillcolor' attribute of node {id} is insufficiently long. It is expected to be 9 characters long."
-    ))?;
-    let importance = 1.-u8::from_str_radix(importance_hex, 16).with_context(|| format!(
-        "The green part of the 'fillcolor' attribute of node {id} is not a valid hexadecimal number."
-    ))? as f32 / 255.0;
+    let color_str = get_attribute(attributes.as_slice(), "fillcolor").with_context(|| {
+        format!(
+            "Node {id} has no attribute 'fillcolor'. It is assumed that all N2G nodes have a \
+             'fillcolor' attribute that signifies their importance."
+        )
+    })?;
+    let importance_hex = color_str.get(4..6).with_context(|| {
+        format!(
+            "The 'fillcolor' attribute of node {id} is insufficiently long. It is expected to be \
+             9 characters long."
+        )
+    })?;
+    let importance = 1.
+        - u8::from_str_radix(importance_hex, 16).with_context(|| {
+            format!(
+                "The green part of the 'fillcolor' attribute of node {id} is not a valid \
+                 hexadecimal number."
+            )
+        })? as f32
+            / 255.0;
 
     let label = id_to_str(label_id).to_string();
     Ok((id, label, importance))
@@ -70,7 +84,12 @@ fn subgraph_to_nodes(subgraph: &Subgraph) -> Result<Vec<(usize, String, f32)>> {
     let id_str = id_to_str(id);
     let id: usize = id_str
         .strip_prefix("cluster_")
-        .with_context(|| format!("It is assumed that all N2G subgraphs have ids starting with 'cluster_'. Subgraph id: {id_str}"))?
+        .with_context(|| {
+            format!(
+                "It is assumed that all N2G subgraphs have ids starting with 'cluster_'. Subgraph \
+                 id: {id_str}"
+            )
+        })?
         .parse::<usize>()
         .with_context(|| format!("Failed to parse subgraph id '{id_str}' as usize."))?;
     let nodes = statements
@@ -92,16 +111,34 @@ fn dot_edge_to_ids(
 ) -> Result<(usize, usize)> {
     match edge_ty {
         EdgeTy::Pair(Vertex::N(NodeId(node_id1, _)), Vertex::N(NodeId(node_id2, _))) => {
-            let id1 = id_to_usize(node_id1).with_context(|| format!("Failed to parse first id for edge {edge_ty:?}."))?;
-            let id2 = id_to_usize(node_id2).with_context(|| format!("Failed to parse second id for edge {edge_ty:?}."))?;
+            let id1 = id_to_usize(node_id1)
+                .with_context(|| format!("Failed to parse first id for edge {edge_ty:?}."))?;
+            let id2 = id_to_usize(node_id2)
+                .with_context(|| format!("Failed to parse second id for edge {edge_ty:?}."))?;
             match get_attribute(attributes, "dir") {
                 Some("back") => Ok((id2, id1)),
-                None => bail!("No direction attribute found for edge {id1}->{id2}. It is assumed that all N2G graphs only use edges with direction 'back'."),
-                _ => bail!("Only edges with direction 'back' or 'forward' are supported. It is assumed that all N2G graphs only use edges with direction 'back' or 'forward'. Edge: {:?}", edge_ty)
+                None => bail!(
+                    "No direction attribute found for edge {id1}->{id2}. It is assumed that all \
+                     N2G graphs only use edges with direction 'back'."
+                ),
+                _ => bail!(
+                    "Only edges with direction 'back' or 'forward' are supported. It is assumed \
+                     that all N2G graphs only use edges with direction 'back' or 'forward'. Edge: \
+                     {:?}",
+                    edge_ty
+                ),
             }
         }
-        EdgeTy::Pair(_, _) => bail!("Only edges between individual nodes are supported. It is assumed that N2G does not use edges between subgraphs. Edge: {:?}", edge_ty),
-        EdgeTy::Chain(_) => bail!("Only pair edges are supported. It is assumed that all N2G graphs only use pair edges. Edge: {:?}", edge_ty)
+        EdgeTy::Pair(_, _) => bail!(
+            "Only edges between individual nodes are supported. It is assumed that N2G does not \
+             use edges between subgraphs. Edge: {:?}",
+            edge_ty
+        ),
+        EdgeTy::Chain(_) => bail!(
+            "Only pair edges are supported. It is assumed that all N2G graphs only use pair \
+             edges. Edge: {:?}",
+            edge_ty
+        ),
     }
 }
 

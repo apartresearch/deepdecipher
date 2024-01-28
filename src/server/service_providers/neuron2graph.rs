@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-
 use serde::{Deserialize, Serialize};
 
+use super::service_provider::{NoData, ServiceProviderTrait};
 use crate::{
     data::{
         data_objects::Neuron2GraphData as Neuron2GraphDataObject,
@@ -11,8 +11,6 @@ use crate::{
     },
     server::State,
 };
-
-use super::service_provider::{NoData, ServiceProviderTrait};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Neuron2Graph;
@@ -62,11 +60,21 @@ impl ServiceProviderTrait for Neuron2Graph {
         let n2g_data_type = database
             .data_type(n2g_object_name)
             .await?
-            .with_context(|| format!("No data object with name '{n2g_object_name}'. This should have been checked when service was created."))?;
+            .with_context(|| {
+                format!(
+                    "No data object with name '{n2g_object_name}'. This should have been checked \
+                     when service was created."
+                )
+            })?;
         let neuron_store_data_type = database
             .data_type(neuron_store_object_name)
             .await?
-            .with_context(|| format!("No data object with name '{neuron_store_object_name}'. This should have been checked when service was created."))?;
+            .with_context(|| {
+                format!(
+                    "No data object with name '{neuron_store_object_name}'. This should have been \
+                     checked when service was created."
+                )
+            })?;
         Ok(vec![n2g_data_type, neuron_store_data_type])
     }
 

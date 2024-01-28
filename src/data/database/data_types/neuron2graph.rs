@@ -1,12 +1,11 @@
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 
+use super::{data_type::DataValidationError, DataTypeDiscriminants, ModelDataType};
 use crate::data::{
     data_objects::{DataObject, Graph},
     DataTypeHandle, ModelHandle,
 };
-
-use super::{data_type::DataValidationError, DataTypeDiscriminants, ModelDataType};
 
 pub struct Neuron2Graph {
     model: ModelHandle,
@@ -47,12 +46,21 @@ impl ModelDataType for Neuron2Graph {
 impl Neuron2Graph {
     pub async fn neuron_graph(&self, layer_index: u32, neuron_index: u32) -> Result<Graph> {
         let model_name = self.model.name();
-        let raw_data = self.model
+        let raw_data = self
+            .model
             .neuron_data(&self.data_type, layer_index, neuron_index)
             .await?
             .with_context(|| {
-                format!("Database has no neuron2graph data for neuron l{layer_index}n{neuron_index} in model '{model_name}'")
+                format!(
+                    "Database has no neuron2graph data for neuron l{layer_index}n{neuron_index} \
+                     in model '{model_name}'"
+                )
             })?;
-        Graph::from_binary(raw_data).with_context(|| format!("Failed to unpack neuron2graph graph for neuron l{layer_index}n{neuron_index} in model '{model_name}'."))
+        Graph::from_binary(raw_data).with_context(|| {
+            format!(
+                "Failed to unpack neuron2graph graph for neuron l{layer_index}n{neuron_index} in \
+                 model '{model_name}'."
+            )
+        })
     }
 }

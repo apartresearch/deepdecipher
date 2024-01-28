@@ -1,9 +1,8 @@
-use crate::server::{Service, ServiceProvider};
-
-use super::{DataTypeHandle, Database, Operation};
-
 use anyhow::{Context, Result};
 use rusqlite::OptionalExtension;
+
+use super::{DataTypeHandle, Database, Operation};
+use crate::server::{Service, ServiceProvider};
 
 #[derive(Clone)]
 pub struct ServiceHandle {

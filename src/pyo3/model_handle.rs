@@ -2,12 +2,11 @@ use anyhow::{bail, Context};
 use pyo3::prelude::*;
 use tokio::runtime::Runtime;
 
-use crate::data::{retrieve, ModelHandle};
-
 use super::{
     data_type_handle::PyDataTypeHandle, index::PyIndex, model_metadata::PyModelMetadata,
     service_handle::PyServiceHandle,
 };
+use crate::data::{retrieve, ModelHandle};
 
 #[pyclass(name = "ModelHandle")]
 pub struct PyModelHandle {
@@ -153,30 +152,33 @@ impl PyModelHandle {
         Runtime::new()
             .context("Failed to start async runtime to add JSON data.")?
             .block_on(async {
-                if !model.has_data_type(data_type).await.with_context(||
+                if !model.has_data_type(data_type).await.with_context(|| {
                     format!(
-                        "Failed to check whether model '{model_name}' has data object '{data_type_name}'.", 
-                        model_name=model.name(),
-                        data_type_name=data_type.name()
+                        "Failed to check whether model '{model_name}' has data object \
+                         '{data_type_name}'.",
+                        model_name = model.name(),
+                        data_type_name = data_type.name()
                     )
-                )? {
-                    bail!("Cannot add JSON data to data object '{data_type_name}' for {index} in model '{model_name}' because model does not have data object.", 
-                        data_type_name=data_type.name(),
-                        index=index.index.error_string(),
-                        model_name=model.name())
+                })? {
+                    bail!(
+                        "Cannot add JSON data to data object '{data_type_name}' for {index} in \
+                         model '{model_name}' because model does not have data object.",
+                        data_type_name = data_type.name(),
+                        index = index.index.error_string(),
+                        model_name = model.name()
+                    )
                 }
-                retrieve::json::store_json_data(
-                    model,
-                    data_type,
-                    index.into(),
-                    json,
-                )
-                .await.with_context(|| format!(
-                    "Failed to add JSON data to '{data_type_name}' for {index} in model '{model_name}'.", 
-                    data_type_name=data_type.name(),
-                    index=index.index.error_string(),
-                    model_name=model.name()
-                ))
+                retrieve::json::store_json_data(model, data_type, index.into(), json)
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "Failed to add JSON data to '{data_type_name}' for {index} in model \
+                             '{model_name}'.",
+                            data_type_name = data_type.name(),
+                            index = index.index.error_string(),
+                            model_name = model.name()
+                        )
+                    })
             })?;
         Ok(())
     }

@@ -1,11 +1,10 @@
-use crate::{data::Metadata, Index};
+use anyhow::{Context, Result};
+use rusqlite::OptionalExtension;
 
 use super::{
     data_types::ModelDataType, service_handle::ServiceHandle, DataTypeHandle, Database, Operation,
 };
-
-use anyhow::{Context, Result};
-use rusqlite::OptionalExtension;
+use crate::{data::Metadata, Index};
 
 #[derive(Clone)]
 pub struct ModelHandle {
@@ -269,14 +268,21 @@ impl ModelHandle {
             .await
             .context("Failed to get list of services.")?
         {
-            if self.missing_data_types(&service).await.with_context(||
-                format!("Failed to get list of missing data objects for model '{model_name}' and service '{service_name}'.", 
-                model_name = self.name(),
-                service_name = service.name()
+            if self
+                .missing_data_types(&service)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Failed to get list of missing data objects for model '{model_name}' and \
+                         service '{service_name}'.",
+                        model_name = self.name(),
+                        service_name = service.name()
                     )
-                )?.is_empty() {
+                })?
+                .is_empty()
+            {
                 services.push(service);
-                }
+            }
         }
         Ok(services)
     }
@@ -466,7 +472,8 @@ impl ModelHandle {
             .await
             .with_context(|| {
                 format!(
-                    "Failed to get layer data for layer {layer_index} data object '{}' for model '{}'.",
+                    "Failed to get layer data for layer {layer_index} data object '{}' for model \
+                     '{}'.",
                     self.name(),
                     data_type.name()
                 )
@@ -497,7 +504,8 @@ impl ModelHandle {
             .await
             .with_context(|| {
                 format!(
-                    "Failed to get neuron data for neuron l{layer_index}n{neuron_index} for data object '{}' for model '{}'.",
+                    "Failed to get neuron data for neuron l{layer_index}n{neuron_index} for data \
+                     object '{}' for model '{}'.",
                     data_type.name(),
                     self.name(),
                 )

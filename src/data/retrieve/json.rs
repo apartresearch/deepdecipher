@@ -1,3 +1,5 @@
+use anyhow::{bail, Context, Result};
+
 use crate::{
     data::{
         data_objects::{DataObject, JsonData},
@@ -6,8 +8,6 @@ use crate::{
     },
     Index,
 };
-
-use anyhow::{bail, Context, Result};
 
 pub async fn store_json_data(
     model_handle: &mut ModelHandle,
@@ -26,9 +26,13 @@ pub async fn store_json_data(
         .add_data(
             data_type_handle,
             index,
-            data.to_binary().with_context(||
-                format!("Failed to serialize JSON data of data object '{data_type_name}' for {index} in model '{model_name}'.", index = index.error_string())
-            )?,
+            data.to_binary().with_context(|| {
+                format!(
+                    "Failed to serialize JSON data of data object '{data_type_name}' for {index} \
+                     in model '{model_name}'.",
+                    index = index.error_string()
+                )
+            })?,
         )
         .await
 }

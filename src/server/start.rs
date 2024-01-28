@@ -3,7 +3,6 @@ use actix_web::{
     web, App, HttpServer,
 };
 use anyhow::{bail, Result};
-
 use utoipa_redoc::{Redoc, Servable};
 
 use crate::{

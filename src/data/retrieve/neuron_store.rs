@@ -1,11 +1,11 @@
 use std::path::Path;
 
+use anyhow::{bail, Context, Result};
+
 use crate::data::{
     data_types::DataType, neuron_store::NeuronStoreRaw, DataTypeHandle, Database, ModelHandle,
     NeuronStore,
 };
-
-use anyhow::{bail, Context, Result};
 
 pub async fn store_similar_neurons(
     model_handle: &mut ModelHandle,
@@ -16,29 +16,51 @@ pub async fn store_similar_neurons(
     let model_name = model_handle.name().to_owned();
     let model_name = model_name.as_str();
     print!("Calculating neuron similarities...");
-    let neuron_relatedness = neuron_store.neuron_similarity(similarity_threshold).with_context(|| 
-        format!("Failed to calculate neuron similarities for model '{model_name}'.",)
-    )?;
+    let neuron_relatedness = neuron_store
+        .neuron_similarity(similarity_threshold)
+        .with_context(|| {
+            format!("Failed to calculate neuron similarities for model '{model_name}'.",)
+        })?;
 
     let num_neurons = model_handle.metadata().num_total_neurons;
     let mut num_completed = 0;
     print!("Adding neuron similarities to database: {num_completed}/{num_neurons}",);
     for neuron_index in model_handle.metadata().neuron_indices() {
-        let similar_neurons =
-            neuron_relatedness.similar_neurons(neuron_index).with_context(|| 
-                format!("Failed to get similar neurons for neuron {neuron_index} in model '{model_name}'.")
-            )?;
-        let data = similar_neurons.to_binary().with_context(|| 
-            format!("Failed to serialize similar neuron vector for neuron {neuron_index} in model {model_name}.")
-        )?;
-        model_handle.add_neuron_data(data_type_handle, neuron_index.layer, neuron_index.neuron, data).await.with_context(||
-            format!("Failed to add similar neuron vector for neuron {neuron_index} in model {model_name} to database.")
-        )?;
+        let similar_neurons = neuron_relatedness
+            .similar_neurons(neuron_index)
+            .with_context(|| {
+                format!(
+                    "Failed to get similar neurons for neuron {neuron_index} in model \
+                     '{model_name}'."
+                )
+            })?;
+        let data = similar_neurons.to_binary().with_context(|| {
+            format!(
+                "Failed to serialize similar neuron vector for neuron {neuron_index} in model \
+                 {model_name}."
+            )
+        })?;
+        model_handle
+            .add_neuron_data(
+                data_type_handle,
+                neuron_index.layer,
+                neuron_index.neuron,
+                data,
+            )
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to add similar neuron vector for neuron {neuron_index} in model \
+                     {model_name} to database."
+                )
+            })?;
 
         num_completed += 1;
         print!("\rAdding neuron similarities to database: {num_completed}/{num_neurons}",);
     }
-    println!("\rAdding neuron similarities to database: {num_completed}/{num_neurons}                     ",);
+    println!(
+        "\rAdding neuron similarities to database: {num_completed}/{num_neurons}                  ",
+    );
     Ok(())
 }
 

@@ -38,7 +38,10 @@ pub fn model_url(model_name: &str, index: NeuronIndex) -> Result<String> {
     match model_name {
         "gpt2-small" => Ok(small_url(index)),
         "gpt2-xl" => Ok(xl_url(index)),
-        _ => bail!("Neuron explainer retrieval only available for models 'gpt2-small' and 'gpt2-xl'. Given model name: {model_name}"),
+        _ => bail!(
+            "Neuron explainer retrieval only available for models 'gpt2-small' and 'gpt2-xl'. \
+             Given model name: {model_name}"
+        ),
     }
 }
 
@@ -82,11 +85,15 @@ async fn fetch(
                         Ok(result) => break Some(result),
                         Err(err) => {
                             if retries == RETRY_LIMIT {
-                                log::error!("Failed to fetch neuron explainer data for neuron {index} after {retries} retries. Error: {err}");
+                                log::error!(
+                                    "Failed to fetch neuron explainer data for neuron {index} \
+                                     after {retries} retries. Error: {err}"
+                                );
                                 break None;
                             }
                             log::error!(
-                                "Failed to fetch neuron explainer data for neuron {index}. Retrying...",
+                                "Failed to fetch neuron explainer data for neuron {index}. \
+                                 Retrying...",
                             );
                             log::error!("Error: {err}");
                             retries += 1;
@@ -156,15 +163,31 @@ pub async fn retrieve_neuron_explainer_small(model_handle: &mut ModelHandle) -> 
     println!("Retrieving neuron explainer data for GPT-2 small.");
     let num_layers = model_handle.metadata().num_layers;
     let layer_size = model_handle.metadata().layer_size;
-    ensure!(num_layers == SMALL_NUM_LAYERS, "Model has wrong number of layers. GPT-2 small has {SMALL_NUM_LAYERS} but model has {num_layers}.");
-    ensure!(layer_size == SMALL_LAYER_SIZE, "Model has wrong layer size. GPT-2 small has {SMALL_LAYER_SIZE} neurons per layer, but model has {layer_size}");
+    ensure!(
+        num_layers == SMALL_NUM_LAYERS,
+        "Model has wrong number of layers. GPT-2 small has {SMALL_NUM_LAYERS} but model has \
+         {num_layers}."
+    );
+    ensure!(
+        layer_size == SMALL_LAYER_SIZE,
+        "Model has wrong layer size. GPT-2 small has {SMALL_LAYER_SIZE} neurons per layer, but \
+         model has {layer_size}"
+    );
     fetch_to_database(model_handle, small_url).await
 }
 
 pub async fn retrieve_neuron_explainer_xl(model_handle: &mut ModelHandle) -> Result<()> {
     let num_layers = model_handle.metadata().num_layers;
     let layer_size = model_handle.metadata().layer_size;
-    ensure!(num_layers == XL_NUM_LAYERS, "Model has wrong number of layers. GPT-2 XL has {XL_NUM_LAYERS} but model has {num_layers}.");
-    ensure!(layer_size == XL_LAYER_SIZE, "Model has wrong layer size. GPT-2 XL has {XL_LAYER_SIZE} neurons per layer, but model has {layer_size}");
+    ensure!(
+        num_layers == XL_NUM_LAYERS,
+        "Model has wrong number of layers. GPT-2 XL has {XL_NUM_LAYERS} but model has \
+         {num_layers}."
+    );
+    ensure!(
+        layer_size == XL_LAYER_SIZE,
+        "Model has wrong layer size. GPT-2 XL has {XL_LAYER_SIZE} neurons per layer, but model \
+         has {layer_size}"
+    );
     fetch_to_database(model_handle, xl_url).await
 }

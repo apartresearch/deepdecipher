@@ -1,5 +1,6 @@
-use crate::data::{Metadata, NeuronIndex};
 use anyhow::{anyhow, Result};
+
+use crate::data::{Metadata, NeuronIndex};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Index {
@@ -31,13 +32,19 @@ impl Index {
         let layer_size = metadata.layer_size;
 
         match self {
-            Self::Layer(layer_index) | Self::Neuron(layer_index, _) if layer_index >= num_layers => Err(anyhow!(
-                "Layer index is {layer_index} but model '{model_name}' only has {num_layers} layers."
-            )),
+            Self::Layer(layer_index) | Self::Neuron(layer_index, _)
+                if layer_index >= num_layers =>
+            {
+                Err(anyhow!(
+                    "Layer index is {layer_index} but model '{model_name}' only has {num_layers} \
+                     layers."
+                ))
+            }
             Self::Neuron(_, neuron_index) if neuron_index >= layer_size => Err(anyhow!(
-                "Neuron index is {neuron_index} but model '{model_name}' only has {layer_size} neurons per layer."
+                "Neuron index is {neuron_index} but model '{model_name}' only has {layer_size} \
+                 neurons per layer."
             )),
-            _ => Ok(())
+            _ => Ok(()),
         }
     }
 
