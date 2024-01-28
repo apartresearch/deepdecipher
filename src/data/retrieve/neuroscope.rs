@@ -1,5 +1,10 @@
 use std::{panic, sync::Arc, time::Duration};
 
+use anyhow::{bail, Context, Result};
+use reqwest::Client;
+use scraper::{Html, Selector};
+use tokio::{sync::Semaphore, task::JoinSet};
+
 use crate::{
     data::{
         data_objects::{
@@ -11,11 +16,6 @@ use crate::{
     util::Progress,
     Index,
 };
-
-use anyhow::{bail, Context, Result};
-use reqwest::Client;
-use scraper::{Html, Selector};
-use tokio::{sync::Semaphore, task::JoinSet};
 
 const NEUROSCOPE_BASE_URL: &str = "https://neuroscope.io/";
 const RETRY_LIMIT: u32 = 5;
@@ -52,14 +52,30 @@ async fn scrape_neuron_page_to_database(
         NeuroscopeNeuronPage::from_binary(page_data)?
     } else {
         let page = scrape_neuron_page(model.name(), neuron_index).await?;
-        model.add_neuron_data( data_type, neuron_index.layer, neuron_index.neuron, page.to_binary()?).await.with_context(|| format!("Failed to write neuroscope page for neuron {neuron_index} in model '{model_name}' to database.", model_name = model.name()))?;
+        model
+            .add_neuron_data(
+                data_type,
+                neuron_index.layer,
+                neuron_index.neuron,
+                page.to_binary()?,
+            )
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to write neuroscope page for neuron {neuron_index} in model \
+                     '{model_name}' to database.",
+                    model_name = model.name()
+                )
+            })?;
         page
     };
     let model_name = model.name();
-    let first_text = page
-        .texts()
-        .get(0)
-        .with_context(|| format!("Failed to get first text from neuroscope page for neuron {neuron_index} in model '{model_name}'."))?;
+    let first_text = page.texts().first().with_context(|| {
+        format!(
+            "Failed to get first text from neuroscope page for neuron {neuron_index} in model \
+             '{model_name}'."
+        )
+    })?;
     let activation_range = first_text.max_activation() - first_text.min_activation();
 
     Ok(activation_range)
@@ -96,23 +112,28 @@ async fn scrape_layer_to_database(
             join_set.spawn(async move {
                 let permit = semaphore.acquire_owned().await.unwrap();
                 let mut retries = 0;
-                    let result = loop {
-                        match scrape_neuron_page_to_database(&mut model, &data_type, neuron_index).await {
-                            Ok(result) => break result,
-                            Err(err) => {
-                                if retries == RETRY_LIMIT {
-                                    log::error!("Failed to fetch neuroscope page for neuron {neuron_index} after {retries} retries. Error: {err:?}");
-                                    return Err(err);
-                                }
+                let result = loop {
+                    match scrape_neuron_page_to_database(&mut model, &data_type, neuron_index).await
+                    {
+                        Ok(result) => break result,
+                        Err(err) => {
+                            if retries == RETRY_LIMIT {
                                 log::error!(
-                                    "Failed to fetch neuroscope page for neuron {neuron_index}. Retrying...",
+                                    "Failed to fetch neuroscope page for neuron {neuron_index} \
+                                     after {retries} retries. Error: {err:?}"
                                 );
-                                log::error!("Error: {err:?}");
-                                retries += 1;
-                                tokio::time::sleep(Duration::from_millis(5)).await;
+                                return Err(err);
                             }
+                            log::error!(
+                                "Failed to fetch neuroscope page for neuron {neuron_index}. \
+                                 Retrying...",
+                            );
+                            log::error!("Error: {err:?}");
+                            retries += 1;
+                            tokio::time::sleep(Duration::from_millis(5)).await;
                         }
-                    };
+                    }
+                };
                 drop(permit);
                 Ok::<_, anyhow::Error>((neuron_index, result))
             });

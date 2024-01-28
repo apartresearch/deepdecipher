@@ -1,17 +1,14 @@
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 
-use crate::data::{
-    data_objects::NeuroscopeLayerPage,
-    data_objects::NeuroscopeNeuronPage,
-    data_objects::{DataObject, NeuroscopeModelPage},
-    database::ModelHandle,
-    DataTypeHandle,
-};
-
 use super::{
     data_type::{DataValidationError, ModelDataType},
     DataTypeDiscriminants,
+};
+use crate::data::{
+    data_objects::{DataObject, NeuroscopeLayerPage, NeuroscopeModelPage, NeuroscopeNeuronPage},
+    database::ModelHandle,
+    DataTypeHandle,
 };
 
 pub struct Neuroscope {
@@ -63,13 +60,21 @@ impl Neuroscope {
     }
     pub async fn layer_page(&self, layer_index: u32) -> Result<NeuroscopeLayerPage> {
         let model_name = self.model.name();
-        let raw_data = self.model
-            .layer_data( &self.data_type, layer_index)
-            .await.with_context(|| {
-                format!("Failed to get neuroscope layer data for layer {layer_index} in model '{model_name}'.")
+        let raw_data = self
+            .model
+            .layer_data(&self.data_type, layer_index)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to get neuroscope layer data for layer {layer_index} in model \
+                     '{model_name}'."
+                )
             })?
             .with_context(|| {
-                format!("Database has no neuroscope layer data for layer {layer_index} in model '{model_name}'.")
+                format!(
+                    "Database has no neuroscope layer data for layer {layer_index} in model \
+                     '{model_name}'."
+                )
             })?;
         NeuroscopeLayerPage::from_binary(raw_data.as_slice())
     }
@@ -79,14 +84,25 @@ impl Neuroscope {
         neuron_index: u32,
     ) -> Result<Option<NeuroscopeNeuronPage>> {
         let model_name = self.model.name();
-        let raw_data = self.model
-            .neuron_data( &self.data_type, layer_index, neuron_index)
-            .await.with_context(|| {
-                format!("Failed to get neuroscope neuron data for neuron l{layer_index}n{neuron_index} in model '{model_name}'.")
-            })?;
-        raw_data.map(|raw_data| NeuroscopeNeuronPage::from_binary(raw_data.as_slice())
+        let raw_data = self
+            .model
+            .neuron_data(&self.data_type, layer_index, neuron_index)
+            .await
             .with_context(|| {
-                format!("Failed to deserialize neuroscope neuron data for neuron l{layer_index}n{neuron_index} in model '{model_name}'.")
-            })).transpose()
+                format!(
+                    "Failed to get neuroscope neuron data for neuron \
+                     l{layer_index}n{neuron_index} in model '{model_name}'."
+                )
+            })?;
+        raw_data
+            .map(|raw_data| {
+                NeuroscopeNeuronPage::from_binary(raw_data.as_slice()).with_context(|| {
+                    format!(
+                        "Failed to deserialize neuroscope neuron data for neuron \
+                         l{layer_index}n{neuron_index} in model '{model_name}'."
+                    )
+                })
+            })
+            .transpose()
     }
 }

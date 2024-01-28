@@ -1,8 +1,7 @@
 use pyo3::prelude::*;
 
-use crate::server::ServiceProvider;
-
 use super::data_type_handle::PyDataTypeHandle;
+use crate::server::ServiceProvider;
 
 #[pyclass(name = "ServiceProvider")]
 #[derive(Clone)]

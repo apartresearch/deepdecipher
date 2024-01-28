@@ -1,15 +1,12 @@
 use std::path::Path;
 
 use anyhow::{bail, Context, Result};
-
 use rusqlite::Transaction;
 use tokio_rusqlite::Connection;
 
-use crate::server::{Service, ServiceProvider};
-
 use self::data_types::ModelDataType;
-
 use super::{data_types::DataType, Metadata};
+use crate::server::{Service, ServiceProvider};
 
 mod model_handle;
 pub use model_handle::ModelHandle;

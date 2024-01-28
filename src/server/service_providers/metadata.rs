@@ -2,12 +2,11 @@ use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
+use super::ServiceProviderTrait;
 use crate::{
     data::{data_objects::MetadataObject, DataTypeHandle, Database, ModelHandle},
     server::State,
 };
-
-use super::ServiceProviderTrait;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Metadata;

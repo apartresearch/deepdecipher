@@ -6,13 +6,12 @@ use anyhow::{anyhow, Result};
 use reqwest::StatusCode;
 use serde_json::json;
 
+use super::{RequestType, Service};
 use crate::{
     data::{data_objects::MetadataObject, Database, ModelHandle, ServiceHandle},
     server::State,
     Index,
 };
-
-use super::{RequestType, Service};
 
 pub enum Body {
     Json(serde_json::Value),
@@ -331,7 +330,10 @@ pub async fn model(
         Ok(request_type) => request_type,
         Err(error) => return Response::error(error, StatusCode::BAD_REQUEST),
     };
-    log::debug!("Received {request_type_string} request for service '{service_name}' for model '{model_name}'.");
+    log::debug!(
+        "Received {request_type_string} request for service '{service_name}' for model \
+         '{model_name}'."
+    );
     response(
         state,
         query.deref(),
@@ -370,7 +372,10 @@ pub async fn layer(
         Ok(request_type) => request_type,
         Err(error) => return Response::error(error, StatusCode::BAD_REQUEST),
     };
-    log::debug!("Received {request_type_string} request for service '{service_name}' for layer {layer_index} in model '{model_name}'.");
+    log::debug!(
+        "Received {request_type_string} request for service '{service_name}' for layer \
+         {layer_index} in model '{model_name}'."
+    );
     response(
         state,
         query.deref(),
@@ -411,7 +416,10 @@ pub async fn neuron(
         Ok(request_type) => request_type,
         Err(error) => return Response::error(error, StatusCode::BAD_REQUEST),
     };
-    log::debug!("Received {request_type_string} request for service '{service_name}' for neuron l{layer_index}n{neuron_index} in model '{model_name}'.");
+    log::debug!(
+        "Received {request_type_string} request for service '{service_name}' for neuron \
+         l{layer_index}n{neuron_index} in model '{model_name}'."
+    );
     response(
         state,
         query.deref(),
@@ -496,7 +504,10 @@ pub async fn all_neuron(
     query: web::Query<serde_json::Value>,
 ) -> impl Responder {
     let (model_name, layer_index, neuron_index) = indices.into_inner();
-    log::debug!("Received request for all services for neuron l{layer_index}n{neuron_index} in model '{model_name}'.");
+    log::debug!(
+        "Received request for all services for neuron l{layer_index}n{neuron_index} in model \
+         '{model_name}'."
+    );
     all_response(
         state,
         query,
