@@ -47,33 +47,120 @@
 	}
 </script>
 
-<form on:submit|preventDefault={goToNeuron}>
-	<table>
-		<tr><th>Model</th><th>Layer</th><th>Neuron</th></tr>
-		<tr
-			><td>{modelMetadata.name}</td><td
-				><input
-					name="layer-index"
-					type="number"
-					bind:value={navLayerIndex}
-					min="0"
-					max={numLayers - 1}
-					placeholder="Layer index..."
-				/></td
-			><td
-				><input
-					name="neuron-index"
-					type="number"
-					bind:value={navNeuronIndex}
-					min="0"
-					max={layerSize - 1}
-					placeholder="Neuron index..."
-				/></td
-			><td
-				><button>Go!</button>
-				<button on:click|preventDefault={goToRandom}>Random</button>
-				{#if navigating}Loading...{/if}</td
-			></tr
-		>
-	</table>
+<h1>
+	{modelName}
+</h1>
+<p>Choose a neuron to visualize</p>
+<form on:submit|preventDefault={goToNeuron} class="model-form">
+	<div class="form-row">
+		<label for="layer-index">Layer</label>
+		<input
+			id="layer-index"
+			name="layer-index"
+			type="number"
+			bind:value={navLayerIndex}
+			min="0"
+			max={numLayers - 1}
+			placeholder="Layer index..."
+		/>
+	</div>
+	<div class="form-row">
+		<label for="neuron-index">Neuron</label>
+		<input
+			id="neuron-index"
+			name="neuron-index"
+			type="number"
+			bind:value={navNeuronIndex}
+			min="0"
+			max={layerSize - 1}
+			placeholder="Neuron index..."
+		/>
+	</div>
+	<div class="action-buttons">
+		<button type="submit">Go!</button>
+		<button on:click|preventDefault={goToRandom}>Random</button>
+		{#if navigating}<span class="loading-text">Loading...</span>{/if}
+	</div>
 </form>
+
+<style>
+	h1 {
+		margin-bottom: 0;
+		font-size: 24px;
+	}
+
+	p {
+		margin-top: 0;
+		margin-bottom: 0;
+	}
+
+	.model-form {
+		width: 100%;
+		display: flex;
+		flex-direction: row;
+		background: #fff;
+		border-radius: 8px;
+		gap: 10px;
+	}
+
+	.form-row {
+		display: flex;
+		flex-direction: column;
+		margin-bottom: 10px;
+		padding: 0;
+	}
+
+	label {
+		flex-basis: 20%;
+		margin-right: 10px;
+		font-size: 12px;
+		margin-bottom: -8px;
+		margin-left: 4px;
+		background-color: #fff;
+		color: #3337;
+		z-index: 1;
+		padding: 0 4px;
+	}
+
+	input {
+		flex-grow: 1;
+		min-width: 50px;
+		padding: 8px;
+		border: 1px solid #ccc;
+		border-radius: 4px;
+	}
+
+	.action-buttons {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		padding-bottom: 4px;
+		gap: 10px;
+	}
+
+	.action-buttons button {
+		padding: 8px 16px;
+		background-color: #007bff;
+		color: white;
+		border: none;
+		border-radius: 4px;
+		cursor: pointer;
+		transition: background-color 0.3s ease;
+	}
+
+	.action-buttons button:hover {
+		background-color: #0056b3;
+	}
+
+	.loading-text {
+		margin-left: 10px;
+		color: #007bff;
+	}
+
+	/* Responsive adjustments */
+	@media (max-width: 768px) {
+		.model-form {
+			width: 90%;
+		}
+	}
+</style>

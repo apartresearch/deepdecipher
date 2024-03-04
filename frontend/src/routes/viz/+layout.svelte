@@ -7,9 +7,11 @@
 
 	:global(h1) {
 		margin: 0.5em 0;
+		font-weight: 400;
 	}
 	:global(h2) {
 		white-space: pre-wrap;
+		font-weight: 400;
 	}
 	:global(.container) {
 		max-width: 60em;

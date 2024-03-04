@@ -6,7 +6,7 @@
 	import { error } from '@sveltejs/kit';
 	import NeuronChooser from './NeuronChooser.svelte';
 	import type { ModelMetadata } from '$lib/modelMetadata';
-	import Title from '$lib/Title.svelte';
+	import Nav from '$lib/Nav.svelte';
 
 	export let data: Data;
 	let searchTerm: string = '';
@@ -34,38 +34,45 @@
 	}
 </script>
 
-<h1><Title /> model page</h1>
-<NeuronChooser {modelMetadata} {serviceName} />
-{#if hasN2GSearch}
-	<h2>Neuron2Graph search</h2>
-	<div id="search-wrapper">
-		<p>
-			By searching for a token below, you'll receive a list of neurons that activate to these
-			tokens. Be aware that most tokens start with
-			<span class="code">" "</span> (e.g.
-			<span class="code">"Transformers"</span> would be
-			<span class="code">" Transformers"</span>) however, this searches over a token database that
-			is trimmed and lowercase (e.g.
-			<span class="code">" Transformers"</span> becomes
-			<span class="code">"transformers"</span>).
-		</p>
-		<form on:submit|preventDefault={n2gSearch}>
-			<input name="search-token" type="text" bind:value={searchTerm} placeholder="Search..." />
-			<button>Search</button>
-		</form>
-		<div id="search-message">{searchMessage}</div>
-		{#if searchResults !== undefined}
-			<SearchResults {modelName} {searchResults} />
-		{/if}
-	</div>
-{:else}
-	<div class="not-available">Neuron to Graph search is not available for this model.</div>
-{/if}
+<Nav />
+<div class="container">
+	<NeuronChooser {modelMetadata} {serviceName} />
+	{#if hasN2GSearch}
+		<h2>Neuron2Graph search</h2>
+		<div id="search-wrapper">
+			<p>
+				By searching for a token below, you'll receive a list of neurons that activate to these
+				tokens. Be aware that most tokens start with
+				<span class="code">" "</span> (e.g.
+				<span class="code">"Transformers"</span> would be
+				<span class="code">" Transformers"</span>) however, this searches over a token database that
+				is trimmed and lowercase (e.g.
+				<span class="code">" Transformers"</span> becomes
+				<span class="code">"transformers"</span>).
+			</p>
+			<form on:submit|preventDefault={n2gSearch}>
+				<input name="search-token" type="text" bind:value={searchTerm} placeholder="Search..." />
+				<button>Search</button>
+			</form>
+			<div id="search-message">{searchMessage}</div>
+			{#if searchResults !== undefined}
+				<SearchResults {modelName} {searchResults} />
+			{/if}
+		</div>
+	{:else}
+		<div class="not-available">Neuron to Graph search is not available for this model.</div>
+	{/if}
+</div>
 
 <style>
+	.container {
+		max-width: 1140px;
+		margin: 0 auto;
+		color: #333;
+	}
+
 	#search-wrapper {
-		width: 40%;
-		text-align: justify;
+		margin-top: 2em;
 	}
 
 	#search-message {
@@ -76,5 +83,30 @@
 
 	.code {
 		white-space: nowrap;
+	}
+	.not-available {
+		background-color: rgba(255, 0, 0, 0.1);
+		border: 1px dashed rgba(255, 0, 0, 0.5);
+		color: rgba(255, 0, 0, 0.8);
+		border-radius: 0.5em;
+		padding: 0.4em 1em;
+		display: inline-block;
+		margin-top: 1em;
+	}
+
+	#search-wrapper form {
+		display: flex;
+	}
+
+	#search-wrapper input {
+		flex: 1;
+	}
+
+	#search-wrapper button {
+		margin-left: 10px;
+	}
+
+	#search-wrapper p {
+		margin-bottom: 1em;
 	}
 </style>

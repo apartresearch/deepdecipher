@@ -8,7 +8,7 @@
 	import SimilarNeurons from './SimilarNeurons.svelte';
 	import Gpt4Explanation from './Gpt4Explanation.svelte';
 	import Neuroscope from './Neuroscope.svelte';
-	import Title from '$lib/Title.svelte';
+	import Nav from '$lib/Nav.svelte';
 	import NeuronChooser from '../../NeuronChooser.svelte';
 	import { goto } from '$app/navigation';
 
@@ -43,19 +43,14 @@
 	}
 </script>
 
+<Nav />
 <div class="container">
-	<div id="meta">
-		<h1><Title /></h1>
-		<table id="metadata-table">
-			<tr><th>Model</th><th>Layer</th><th>Neuron</th></tr>
-			<tr
-				><td><a href={modelUrl}>{modelMetadata.name}</a></td><td>{layerIndex}</td><td
-					>{neuronIndex}</td
-				><td><button on:click={navPrevNeuron}>Previous</button></td><td
-					><button on:click={navNextNeuron}>Next</button></td
-				></tr
-			>
-		</table>
+	<h1>
+		<a href={modelUrl}>{modelMetadata.name}</a> (L{layerIndex}, N{neuronIndex})
+	</h1>
+	<div class="action-buttons">
+		<button on:click={navPrevNeuron}>Previous</button>
+		<button on:click={navNextNeuron}>Next</button>
 	</div>
 	{#if availableServices.includes('neuron2graph')}
 		{#if neuron2graphFuture !== null}
@@ -153,15 +148,48 @@
 </div>
 
 <style>
-	#metadata-table tr td,
-	#metadata-table tr th {
-		padding-right: 10px;
+	.container {
+		max-width: 1140px;
+		margin: 0 auto;
+		padding: 0 20px;
 	}
-	.section-header {
-		margin: 0.5em 0;
-		padding: 0;
-		font-size: 1.2em;
-		line-height: 1em;
-		white-space: wrap;
+	h1 {
+		margin-bottom: 0;
+		font-size: 24px;
+	}
+
+	.action-buttons {
+		display: flex;
+		align-items: center;
+		justify-content: flex-start;
+		margin-top: 5px;
+		padding-bottom: 4px;
+		gap: 10px;
+	}
+
+	.action-buttons button {
+		padding: 8px 16px;
+		background-color: #007bff;
+		color: white;
+		border: none;
+		border-radius: 4px;
+		cursor: pointer;
+		transition: background-color 0.3s ease;
+	}
+
+	.action-buttons button:hover {
+		background-color: #0056b3;
+	}
+
+	.loading-text {
+		margin-left: 10px;
+		color: #007bff;
+	}
+
+	/* Responsive adjustments */
+	@media (max-width: 768px) {
+		.model-form {
+			width: 90%;
+		}
 	}
 </style>
