@@ -1,16 +1,9 @@
 <script>
-	import CardDescription from './CardDescription.svelte';
 </script>
 
 <div class="logo">
-	<img src="/logo.svg" alt="DeepDecipher logo" class="logo-img" />
+	<a href="/"><img src="/logo.svg" alt="DeepDecipher logo" class="logo-img" /></a>
 	<h1><a href="/">DeepDecipher<sup>ⓘ</sup></a></h1>
-	<div class="onhover">
-		<CardDescription
-			title="3 methods and 25 models"
-			description="The website provides data on 25 models. All models have highest activating samples as scraped from neuroscope.io, 20 models have Neuron2Graph data and 2 models (gpt2-small and gpt2-xl) have GPT-4 explanations. This will almost certainly be expanded later."
-		/>
-	</div>
 </div>
 
 <style>
@@ -23,19 +16,6 @@
 	a {
 		color: inherit;
 		text-decoration: none;
-	}
-
-	.onhover {
-		position: absolute;
-		top: 55px;
-		pointer-events: none;
-		transition: opacity 0.1s;
-		opacity: 0;
-		z-index: 3;
-	}
-
-	.logo:hover .onhover {
-		opacity: 0.95;
 	}
 
 	.logo {
