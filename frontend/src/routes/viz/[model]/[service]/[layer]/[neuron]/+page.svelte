@@ -1,16 +1,13 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import Nav from '$lib/Nav.svelte';
 	import { onMount } from 'svelte';
-	import { error } from '@sveltejs/kit';
-	import { VIZ_EXT } from '$lib/base';
+	import Gpt4Explanation from './Gpt4Explanation.svelte';
 	import Neuron2Graph from './Neuron2Graph.svelte';
+	import Neuroscope from './Neuroscope.svelte';
+	import SimilarNeurons from './SimilarNeurons.svelte';
 	import type { Data } from './data';
 	import { getServiceData } from './getData';
-	import SimilarNeurons from './SimilarNeurons.svelte';
-	import Gpt4Explanation from './Gpt4Explanation.svelte';
-	import Neuroscope from './Neuroscope.svelte';
-	import Nav from '$lib/Nav.svelte';
-	import NeuronChooser from '../../NeuronChooser.svelte';
-	import { goto } from '$app/navigation';
 
 	export let data: Data;
 
@@ -179,17 +176,5 @@
 
 	.action-buttons button:hover {
 		background-color: #0056b3;
-	}
-
-	.loading-text {
-		margin-left: 10px;
-		color: #007bff;
-	}
-
-	/* Responsive adjustments */
-	@media (max-width: 768px) {
-		.model-form {
-			width: 90%;
-		}
 	}
 </style>
