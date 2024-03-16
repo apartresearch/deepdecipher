@@ -167,7 +167,7 @@ Simply download the x86 target with the suggested command and everything should 
 
 ## Repo standards
 
-We use the [Gitmoji commit standards](gitmoji.dev).
+We use the [Gitmoji commit standards](https://gitmoji.dev/).
 
 ## References
 
