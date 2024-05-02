@@ -7,7 +7,7 @@
 <div class="navbar">
 	<div class="title"><Title /></div>
 	<div class="nav-links">
-		<a href="http://127.0.0.1:5173/doc" target="_blank">Docs</a>
+		<a href="/doc" target="_blank">Docs</a>
 		<a href="https://apartresearch.com/r/deepdecipher" target="_blank">About</a>
 		<a href="https://github.com/apartresearch/deepdecipher" target="_blank">Github</a>
 	</div>
